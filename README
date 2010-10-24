@@ -12,6 +12,8 @@ ntpclient home page: http://doolittle.faludi.com/ntpclient/
 
 To build on Linux, type "make".  Solaris and other Unix users will
 probably need to adjust the Makefile slightly.  It's not complicated.
+For changing the system clock frequency, only the Linux adjtimex(2)
+interface is implemented.
 
 Usage: ntpclient [options]
 options:
@@ -25,9 +27,10 @@ options:
  -s           simple clock set (implies -c 1)
 
 Mortal users can use this program for monitoring, but not clock setting
-(with the -s or -l switches).  The -l switch has not been well tested.
-Simulation (with -r) actually looks halfway decent, so locking should be
-OK too, but it needs some tuning.
+(with the -s or -l switches).  The -l switch has not been well tested,
+but it seems to match simulation (with the -r switch).  The lock algorithm
+needs some tuning, but already seems halfway decent, so locking should
+be functional.
 
 The test.dat file has 200 lines of sample output.  Its first few lines,
 with the output column headers that are shown when the -d option is

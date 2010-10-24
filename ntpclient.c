@@ -223,6 +223,9 @@ double ntpdiff( struct ntptime *start, struct ntptime *stop)
 	return a*1.e6 + b * (1.e6/4294967296.0);
 }
 
+/* Does more than print, so this name is bogus.
+ * It also makes time adjustments, both sudden (-s)
+ * and phase-locking (-l).  */
 void rfc1305print(char *data, struct ntptime *arrival)
 {
 /* straight out of RFC-1305 Appendix A */
@@ -295,17 +298,22 @@ void rfc1305print(char *data, struct ntptime *arrival)
 	       " day   second     elapsed    stall     skew  dispersion  freq\n",
 		(skew1-skew2)/2, freq);
 	}
-	printf("%d %5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
-		arrival->coarse/86400+15020, arrival->coarse%86400,
-		arrival->fine/4294967, etime, stime,
-		(skew1-skew2)/2, sec2u(disp), freq);
-	fflush(stdout);
+	/* Not the ideal order for printing, but we want to be sure
+	 * to do all the time-sensitive thinking (and time setting)
+	 * before we start the output, especially fflush() (which
+	 * could be slow).  Of course, if debug is turned on, speed
+	 * has gone down the drain anyway. */
 	if (live) {
 		int new_freq;
 		new_freq = contemplate_data(arrival->coarse, (skew1-skew2)/2,
 			etime+sec2u(disp), freq);
 		if (!debug && new_freq != freq) set_freq(new_freq);
 	}
+	printf("%d %5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
+		arrival->coarse/86400+15020, arrival->coarse%86400,
+		arrival->fine/4294967, etime, stime,
+		(skew1-skew2)/2, sec2u(disp), freq);
+	fflush(stdout);
 }
 
 void stuff_net_addr(struct in_addr *p, char *hostname)

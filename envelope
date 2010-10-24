@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
-# open(D, "./ntpclient -d -r < test2.dat|") || die;
-open(D, "awk '{\$3=\$3-800;print \$0}' ~/scratch/xfer/time/log.ir30gw.h | ./ntpclient -d -r|") || die;
+# print $ENV{"TIME_LOG_FILE"},"\n";
+open(D, "awk '{\$3=\$3-800;print \$0}' $ENV{TIME_LOG_FILE} | ./ntpclient -d -r|") || die;
 
 open(GC,"|gnuplot") || die;
 $oldfh=select(GC); $|=1; select($oldfh);

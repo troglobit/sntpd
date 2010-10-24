@@ -17,8 +17,8 @@
  *  GNU General Public License for more details.
  *
  *  Possible future improvements:
- *      - Write and test live mode
  *      - Subtract configurable amount from errorbar
+ *      - Build in general run-time access to tune parameters
  *      - Sculpt code so it's legible, this version is out of control
  *      - Write documentation  :-(
  */
@@ -163,14 +163,22 @@ void polygon_point(struct _seg *s)
 /* Something like linear feedback to be used when we are "close" to
  * phase lock.  Not really used at the moment:  the logic in find_df()
  * never sets the flag. */
-double find_df_center(struct _seg *min, struct _seg *max)
+double find_df_center(struct _seg *min, struct _seg *max, double gross_df)
 {
-	double slope  = 0.5 * (max->slope  + min->slope);
+	const double crit_time=1000.0;
+	double slope  = 0.5 * (max->slope  + min->slope)+gross_df;
 	double dslope =       (max->slope  - min->slope);
 	double offset = 0.5 * (max->offset + min->offset);
 	double doffset =      (max->offset - min->offset);
-	double delta = -offset/600.0 - slope;
-	double factor = 60.0/(doffset+dslope*600.0);
+	double delta1 = -offset/ 600.0 - slope;
+	double delta2 = -offset/1800.0 - slope;
+	double delta  = 0.0;
+	double factor = crit_time/(crit_time+doffset+dslope*1200.0);
+	if (offset <  0 && delta2 > 0) delta = delta2;
+	if (offset <  0 && delta1 < 0) delta = delta1;
+	if (offset >= 0 && delta1 > 0) delta = delta1;
+	if (offset >= 0 && delta2 < 0) delta = delta2;
+	if (max->offset < -crit_time || min->offset > crit_time) return 0.0;
 	if (debug) printf("find_df_center %f %f\n", delta, factor);
 	return factor*delta;
 }
@@ -265,6 +273,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 		 * with the observed data.  The order of calls to polygon_point
 		 * doesn't matter for the frequency shift determination, but
 		 * the order chosen is nice for visual display. */
+		if (!inconsistent) {
 		polygon_reset();
 		polygon_point(&save_min);
 		for (dinit=1, c=1; c<max_avail; c++) {
@@ -300,6 +309,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 
 		/* not needed for analysis, but shouldn't hurt either */
 		if (debug) polygon_point(&save_min);
+		} /* !inconsistent */
 
 		/*
 		 * Pass 5: decide on a new freq */
@@ -308,8 +318,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 		} else {
 			delta_f = find_df(&both_sides_now);
 			if (debug) printf("find_df() = %e\n", delta_f);
-			if (both_sides_now)
-				delta_f = find_df_center(&save_min,&save_max);
+			delta_f += find_df_center(&save_min,&save_max, delta_f);
 			delta_freq = delta_f*65536+.5;
 			if (debug) printf("delta_f %f  delta_freq %d  bsn %d\n", delta_f, delta_freq, both_sides_now);
 			computed_freq -= delta_freq;
