@@ -113,7 +113,7 @@ int debug=0;
 #define DEBUG_OPTION
 #endif
 
-void contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
+int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
 
 int get_current_freq()
 {
@@ -122,6 +122,23 @@ int get_current_freq()
 #ifdef linux
 	struct timex txc;
 	txc.modes=0;
+	if (__adjtimex(&txc) < 0) {
+		perror("adjtimex"); exit(1);
+	}
+	return txc.freq;
+#else
+	return 0;
+#endif
+}
+
+int set_freq(int new_freq)
+{
+	/* OS dependent routine to set a new value of clock frequency.
+	 */
+#ifdef linux
+	struct timex txc;
+	txc.modes = ADJ_FREQUENCY;
+	txc.freq = new_freq;
 	if (__adjtimex(&txc) < 0) {
 		perror("adjtimex"); exit(1);
 	}
@@ -284,8 +301,10 @@ void rfc1305print(char *data, struct ntptime *arrival)
 		(skew1-skew2)/2, sec2u(disp), freq);
 	fflush(stdout);
 	if (live) {
-		contemplate_data(arrival->coarse, (skew1-skew2)/2,
+		int new_freq;
+		new_freq = contemplate_data(arrival->coarse, (skew1-skew2)/2,
 			etime+sec2u(disp), freq);
+		if (!debug && new_freq != freq) set_freq(new_freq);
 	}
 }
 
@@ -380,6 +399,10 @@ void do_replay(void)
 	int n, day, freq, absolute;
 	float sec, etime, stime, disp;
 	double skew, errorbar;
+	int simulated_freq = 0;
+	unsigned int last_fake_time = 0;
+	double fake_delta_time = 0.0;
+
 	while (fgets(line,sizeof(line),stdin)) {
 		n=sscanf(line,"%d %f %f %f %lf %f %d",
 			&day, &sec, &etime, &stime, &skew, &disp, &freq);
@@ -387,7 +410,15 @@ void do_replay(void)
 			fputs(line,stdout);
 			absolute=(day-15020)*86400+(int)sec;
 			errorbar=etime+disp;
-			contemplate_data(absolute, skew, errorbar, freq);
+			if (debug) printf("contemplate %u %.1f %.1f %d\n",
+				absolute,skew,errorbar,freq);
+			if (last_fake_time==0) simulated_freq=freq;
+			fake_delta_time += (absolute-last_fake_time)*((double)(freq-simulated_freq))/65536;
+			if (debug) printf("fake %f %d \n", fake_delta_time, simulated_freq);
+			skew += fake_delta_time;
+			freq = simulated_freq;
+			last_fake_time=absolute;
+			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
 		} else {
 			fprintf(stderr,"Replay input error\n");
 			exit(2);

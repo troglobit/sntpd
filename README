@@ -4,8 +4,9 @@ better (or at least has the potential to function better) within
 that limited scope.  Since it is much smaller than xntpd, it is
 also more relevant for embedded computers.
 
-ntpclient is Copyright 1997, 1999, 2000 Larry Doolittle, and is
-licensed under the GNU General Public License, version 2.
+ntpclient is Copyright 1997, 1999, 2000 Larry Doolittle, and may
+be freely used and copied according to the terms of the GNU
+General Public License, version 2.
 
 ntpclient home page: http://doolittle.faludi.com/ntpclient/
 
@@ -23,9 +24,10 @@ options:
  -r           replay analysis code based on stdin
  -s           simple clock set (implies -c 1)
 
-The -l switch doesn't actually do anything yet, I'm still testing the
-algorithm with -r.  Simulation actually looks pretty good, all it should
-need is the call to adjtimex(2) added.
+Mortal users can use this program for monitoring, but not clock setting
+(with the -s or -l switches).  The -l switch has not been tested.
+Simulation (with -r) actually looks pretty good, so locking should be
+within reach!  Testing will reveal whether or not I got my signs correct.
 
 The test.dat file has 200 lines of sample output.  Its first few lines,
 with the output column headers that are shown when the -d option is
@@ -43,8 +45,11 @@ dispersion:  reported by server, see RFC-1305 (microseconds)
 freq:        local clock frequency adjustment (Linux only, ppm*65536)
 
 test.dat is suitable for piping into ntpclient -r.  I have over 53000
-samples (lines) archived for study, that I don't include here.  envelope
-is a perl script that I have used for my lock studies, it's kind of a
-hack and not worth documenting here.
+samples (lines) archived for study, that I don't include here.
+They are spaced 10 minutes apart, representing over a year of data
+logging (not continuous, unfortunately).
+
+envelope is a perl script that I have used for my lock studies.
+It's kind of a hack and not worth documenting here.
 
        - Larry Doolittle  <larry@doolittle.boa.org>

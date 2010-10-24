@@ -27,11 +27,6 @@
 
 #define ENABLE_DEBUG
 
-struct ntptime {
-	unsigned int coarse;
-	unsigned int fine;
-};
-
 #define RING_SIZE 16
 struct datum {
 	unsigned int absolute;
@@ -56,11 +51,6 @@ struct _seg {
 	double slope;
 	double offset;
 } maxseg[RING_SIZE+1], minseg[RING_SIZE+1];
-
-/* global variables (I know, bad form, but this is a short program) */
-int simulated_freq = 0;
-unsigned int last_fake_time = 0;
-double fake_delta_time = 0.0;
 
 #ifdef ENABLE_DEBUG
 extern int debug;
@@ -185,12 +175,11 @@ double find_df_center(struct _seg *min, struct _seg *max)
 	return factor*delta;
 }
 
-void contemplate_data(unsigned int absolute, double skew, double errorbar, int freq)
+int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq)
 {
 	/*  Here is the actual phase lock loop.
 	 *  Need to keep a ring buffer of points to make a rational
-	 *  decision how to proceed.  Print a lot, and don't change
-	 *  anything, if (debug).
+	 *  decision how to proceed.  if (debug) print a lot.
 	 */
 	static int rp=0, valid=0;
 	int both_sides_now=0;
@@ -202,16 +191,8 @@ void contemplate_data(unsigned int absolute, double skew, double errorbar, int f
 	int delta_freq;
 	double delta_f;
 	int inconsistent=0, max_imax, max_imin=0, min_imax, min_imin=0;
+	int computed_freq=freq;
 
-	if (debug) printf("contemplate %u %.1f %.1f %d\n",absolute,skew,errorbar,freq);
-
-	/* take care of simulations */
-	if (last_fake_time==0) simulated_freq=freq;
-	fake_delta_time += (absolute-last_fake_time)*((double)(freq-simulated_freq))/65536;
-	if (debug) printf("fake %f %d \n", fake_delta_time, simulated_freq);
-	skew += fake_delta_time;
-	freq = simulated_freq;
-	last_fake_time=absolute;
 	if (debug) printf("xontemplate %u %.1f %.1f %d\n",absolute,skew,errorbar,freq);
 	d_ring[rp].absolute = absolute;
 	d_ring[rp].skew     = skew;
@@ -331,12 +312,13 @@ void contemplate_data(unsigned int absolute, double skew, double errorbar, int f
 				delta_f = find_df_center(&save_min,&save_max);
 			delta_freq = delta_f*65536+.5;
 			if (debug) printf("delta_f %f  delta_freq %d  bsn %d\n", delta_f, delta_freq, both_sides_now);
-			simulated_freq -= delta_freq;
-			if (simulated_freq < -3000000) simulated_freq=-3000000;
-			if (simulated_freq >  3000000) simulated_freq= 3000000;
+			computed_freq -= delta_freq;
+			if (computed_freq < -3000000) computed_freq=-3000000;
+			if (computed_freq >  3000000) computed_freq= 3000000;
 			/* here is where we would actually call adjtimex(2) to
 			 * change system freq */
 		}
 	}
 	rp = (rp+1)%RING_SIZE;
+	return computed_freq;
 }
