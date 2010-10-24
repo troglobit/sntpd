@@ -343,9 +343,7 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	struct ntptime reftime, orgtime, rectime, xmttime;
 	double el_time,st_time,skew1,skew2;
 	int freq;
-#ifdef ENABLE_DEBUG
 	const char *drop_reason=NULL;
-#endif
 
 #define Data(i) ntohl(((u32 *)data)[i])
 	li      = Data(0) >> 30 & 0x03;
@@ -398,11 +396,7 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	}
 
 	/* error checking, see RFC-4330 section 5 */
-#ifdef ENABLE_DEBUG
 #define FAIL(x) do { drop_reason=(x); goto fail;} while (0)
-#else
-#define FAIL(x) goto fail;
-#endif
 	if (ntpc->cross_check) {
 		if (li == 3) FAIL("LI==3");  /* unsynchronized */
 		if (vn < 3) FAIL("VN<3");   /* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
@@ -421,7 +415,7 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 		set_time(&xmttime);
 #ifdef ENABLE_SYSLOG
                 if (logging) {
-                        syslog(LOG_NOTICE, "Time set from remote server");
+                        syslog(LOG_NOTICE, "Time set from remote server, li %d, stratum %d", li, stratum);
                 }
 #endif
 	}
@@ -448,19 +442,16 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 
 	return 0;
 fail:
-#ifdef ENABLE_DEBUG
-	if (debug) {
-		printf("ntpclient:%d %.5d.%.3d	rejected packet: %s\n",
+	if (debug || verbose) {
+		printf("ntpclient:%d %.5d.%.3d rejected packet: %s\n",
 		       arrival->coarse/86400, arrival->coarse%86400,
 		       arrival->fine/4294967, drop_reason);
-	}
-#else
-	if (verbose) {
-		printf("ntpclient:%d %.5d.%.3d  rejected packet\n",
+	} else {
+                syslog(LOG_ERR, "%d %.5d.%.3d rejected packet: %s",
 		       arrival->coarse/86400, arrival->coarse%86400,
-		       arrival->fine/4294967);
-	}
-#endif
+		       arrival->fine/4294967, drop_reason);
+        }
+
 	return 1;
 }
 
