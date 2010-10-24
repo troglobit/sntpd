@@ -1,7 +1,7 @@
 .\" man page for Larry Doolittle's ntpclient
 .\" distributed under GPL
 .\" originally written by Walter Harms
-.TH ntpclient 3 "2005-28-07-05" "" "ntpclient"
+.TH ntpclient 8 "2005-28-07-05" "" "ntpclient"
 .SH NAME
 ntpclient \- client to get time from NTP server
 .SH SYNOPSIS
@@ -76,7 +76,7 @@ simple clock set (implies -c 1)
 .B  -l
 .br
 attempt to lock local clock to server using
-.BR adjtimex (2)
+.BR adjtimex (8)
 (requires root access)
 .TP
 .B -t
@@ -96,5 +96,5 @@ if you talk to me
 you start violating GPL terms.
 
 .SH "SEE ALSO"
-.BR adjtimex (2),
+.BR adjtimex (8),
 .BR www.ntp.org
