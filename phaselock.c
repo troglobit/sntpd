@@ -1,7 +1,7 @@
 /*
  * phaselock.c - Phase locking for NTP client
  *
- * Copyright 2000  Larry Doolittle  <LRDoolittle@lbl.gov>
+ * Copyright 2000  Larry Doolittle  <larry@doolittle.boa.org>
  * Last hack: 28 November, 2000
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -28,6 +28,8 @@
 #define ENABLE_DEBUG
 
 #define RING_SIZE 16
+#define MAX_CORRECT 250   /* ppm change to system clock */
+#define MAX_C ((MAX_CORRECT)*65536)
 struct datum {
 	unsigned int absolute;
 	double skew;
@@ -109,7 +111,7 @@ struct _polygon {
 	double r_min;
 } df;
 
-void polygon_reset()
+void polygon_reset(void)
 {
 	df.l_min = MIN_INIT;
 	df.r_min = MIN_INIT;
@@ -232,7 +234,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 		 * line segments in s.max vs. absolute space, which are
 		 * points in freq vs. dt space.  Find points in order of increasing
 		 * slope == freq */
-		dinit=1; last_slope=-100;
+		dinit=1; last_slope=-2*MAX_CORRECT;
 		for (c=1, j=next_up(rp); ; j=nextj) {
 			nextj = search(rp, j, 1, 1, 0, &maxseg[c]);
 			        search(rp, j, 0, 1, 1, &check);
@@ -252,7 +254,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 		 * line segments in s.min vs. absolute space, which are
 		 * points in freq vs. dt space.  These points are found in
 		 * order of decreasing slope. */
-		dinit=1; last_slope=+100.0;
+		dinit=1; last_slope=+2*MAX_CORRECT;
 		for (c=1, j=next_up(rp); ; j=nextj) {
 			nextj = search(rp, j, 0, 0, 1, &minseg[c]);
 			        search(rp, j, 1, 0, 0, &check);
@@ -326,8 +328,8 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			printf (      " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
 			printf (" delta_f %.3f  computed_freq %d\n", delta_f, computed_freq);
 
-			if (computed_freq < -6000000) computed_freq=-6000000;
-			if (computed_freq >  6000000) computed_freq= 6000000;
+			if (computed_freq < -MAX_C) computed_freq=-MAX_C;
+			if (computed_freq >  MAX_C) computed_freq= MAX_C;
 		}
 	}
 	rp = (rp+1)%RING_SIZE;

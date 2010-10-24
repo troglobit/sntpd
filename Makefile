@@ -5,8 +5,13 @@
 #    CFLAGS += -D_GNU_SOURCE
 # To cross-compile
 #    CC = arm-linux-gcc
+# To check for lint
+# -Wundef not recognized by gcc-2.7.2.3
+CFLAGS += -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow \
+ -Waggregate-return -Wnested-externs -Winline -Wwrite-strings \
+ -Wstrict-prototypes
 
-CFLAGS += -Wall -O
+CFLAGS += -O
 
 all: ntpclient
 
@@ -15,5 +20,7 @@ test: ntpclient
 
 ntpclient: ntpclient.o phaselock.o
 
+adjtimex: adjtimex.o
+
 clean:
-	rm -f ntpclient *.o
+	rm -f ntpclient adjtimex *.o

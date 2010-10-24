@@ -1,8 +1,8 @@
 /*
  * ntpclient.c - NTP client
  *
- * Copyright 1997, 1999, 2000  Larry Doolittle  <larry@doolittle.boa.org>
- * Last hack: 2 December, 2000
+ * Copyright 1997, 1999, 2000, 2003  Larry Doolittle  <larry@doolittle.boa.org>
+ * Last hack: July 5, 2003
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License (Version 2,
@@ -22,7 +22,6 @@
  *      - Verify that the return packet came from the host we think
  *        we're talking to.  Not necessarily useful since UDP packets
  *        are so easy to forge.
- *      - Complete phase locking code.
  *      - Write more documentation  :-(
  *
  *  Compile with -D_PRECISION_SIOCGSTAMP if your machine really has it.
@@ -41,11 +40,9 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>
+#include <netdb.h>     /* gethostbyname */
 #include <arpa/inet.h>
-#include <sys/utsname.h>
 #include <time.h>
-#include <sys/time.h>
 #include <unistd.h>
 #include <errno.h>
 #ifdef _PRECISION_SIOCGSTAMP
@@ -58,9 +55,12 @@ extern char *optarg;
 
 /* XXXX fixme - non-automatic build configuration */
 #ifdef linux
+#include <sys/utsname.h>
+#include <sys/time.h>
 typedef u_int32_t __u32;
 #include <sys/timex.h>
 #else
+extern struct hostent *gethostbyname(const char *name);
 extern int h_errno;
 #define herror(hostname) \
 	fprintf(stderr,"Error %d looking up hostname %s\n", h_errno,hostname)
@@ -95,16 +95,24 @@ struct ntptime {
 	unsigned int fine;
 };
 
+/* prototype for function defined in phaselock.c */
+int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
+
+/* prototypes for some local routines */
 void send_packet(int usd);
-void rfc1305print(char *data, struct ntptime *arrival);
+int rfc1305print(uint32_t *data, struct ntptime *arrival);
 void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len);
 
-/* global variables (I know, bad form, but this is a short program) */
-char incoming[1500];
-struct timeval time_of_send;
-int live=0;
-int set_clock=0;   /* non-zero presumably needs root privs */
+/* variables with file scope
+ * (I know, bad form, but this is a short program) */
+static uint32_t incoming_word[325];
+#define incoming ((char *) incoming_word)
+#define sizeof_incoming (sizeof(incoming_word)*sizeof(uint32_t))
+static struct timeval time_of_send;
+static int live=0;
+static int set_clock=0;   /* non-zero presumably needs root privs */
 
+/* when present, debug is a true global, shared with phaselock.c */
 #ifdef ENABLE_DEBUG
 int debug=0;
 #define DEBUG_OPTION "d"
@@ -113,9 +121,7 @@ int debug=0;
 #define DEBUG_OPTION
 #endif
 
-int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
-
-int get_current_freq()
+int get_current_freq(void)
 {
 	/* OS dependent routine to get the current value of clock frequency.
 	 */
@@ -164,7 +170,7 @@ void send_packet(int usd)
 		fprintf(stderr,"size error\n");
 		return;
 	}
-	bzero(data,sizeof(data));
+	bzero((char *) data,sizeof(data));
 	data[0] = htonl (
 		( LI << 30 ) | ( VN << 27 ) | ( MODE << 24 ) |
 		( STRATUM << 16) | ( POLL << 8 ) | ( PREC & 0xff ) );
@@ -177,12 +183,9 @@ void send_packet(int usd)
 	time_of_send=now;
 }
 
-
-void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len)
+void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 {
 	struct timeval udp_arrival;
-	struct ntptime udp_arrival_ntp;
-
 #ifdef _PRECISION_SIOCGSTAMP
 	if ( ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0 ) {
 		perror("ioctl-SIOCGSTAMP");
@@ -191,9 +194,13 @@ void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, i
 #else
 	gettimeofday(&udp_arrival,NULL);
 #endif
-	udp_arrival_ntp.coarse = udp_arrival.tv_sec + JAN_1970;
-	udp_arrival_ntp.fine   = NTPFRAC(udp_arrival.tv_usec);
+	udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
+	udp_arrival_ntp->fine   = NTPFRAC(udp_arrival.tv_usec);
+}
 
+void check_source(int data_len, struct sockaddr *sa_source, int sa_len)
+{
+	/* This is where one could check that the source is the server we expect */
 	if (debug) {
 		struct sockaddr_in *sa_in=(struct sockaddr_in *)sa_source;
 		printf("packet of length %d received\n",data_len);
@@ -204,7 +211,6 @@ void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, i
 			printf("Source: Address family %d\n",sa_source->sa_family);
 		}
 	}
-	rfc1305print(data,&udp_arrival_ntp);
 }
 
 double ntpdiff( struct ntptime *start, struct ntptime *stop)
@@ -226,16 +232,17 @@ double ntpdiff( struct ntptime *start, struct ntptime *stop)
 /* Does more than print, so this name is bogus.
  * It also makes time adjustments, both sudden (-s)
  * and phase-locking (-l).  */
-void rfc1305print(char *data, struct ntptime *arrival)
+/* return value is number of microseconds uncertainty in answer */
+int rfc1305print(uint32_t *data, struct ntptime *arrival)
 {
 /* straight out of RFC-1305 Appendix A */
 	int li, vn, mode, stratum, poll, prec;
 	int delay, disp, refid;
 	struct ntptime reftime, orgtime, rectime, xmttime;
-	double etime,stime,skew1,skew2;
+	double el_time,st_time,skew1,skew2;
 	int freq;
 
-#define Data(i) ntohl(((unsigned int *)data)[i])
+#define Data(i) ntohl(((uint32_t *)data)[i])
 	li      = Data(0) >> 30 & 0x03;
 	vn      = Data(0) >> 27 & 0x07;
 	mode    = Data(0) >> 24 & 0x07;
@@ -283,8 +290,8 @@ void rfc1305print(char *data, struct ntptime *arrival)
 	printf("Transmit  %u.%.10u\n", xmttime.coarse, xmttime.fine);
 	printf("Our recv  %u.%.10u\n", arrival->coarse, arrival->fine);
 	}
-	etime=ntpdiff(&orgtime,arrival);
-	stime=ntpdiff(&rectime,&xmttime);
+	el_time=ntpdiff(&orgtime,arrival);   /* elapsed */
+	st_time=ntpdiff(&rectime,&xmttime);  /* stall */
 	skew1=ntpdiff(&orgtime,&rectime);
 	skew2=ntpdiff(&xmttime,arrival);
 	freq=get_current_freq();
@@ -292,7 +299,7 @@ void rfc1305print(char *data, struct ntptime *arrival)
 	printf("Total elapsed: %9.2f\n"
 	       "Server stall:  %9.2f\n"
 	       "Slop:          %9.2f\n",
-		etime, stime, etime-stime);
+		el_time, st_time, el_time-st_time);
 	printf("Skew:          %9.2f\n"
 	       "Frequency:     %9d\n"
 	       " day   second     elapsed    stall     skew  dispersion  freq\n",
@@ -306,14 +313,15 @@ void rfc1305print(char *data, struct ntptime *arrival)
 	if (live) {
 		int new_freq;
 		new_freq = contemplate_data(arrival->coarse, (skew1-skew2)/2,
-			etime+sec2u(disp), freq);
+			el_time+sec2u(disp), freq);
 		if (!debug && new_freq != freq) set_freq(new_freq);
 	}
-	printf("%d %5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
-		arrival->coarse/86400+15020, arrival->coarse%86400,
-		arrival->fine/4294967, etime, stime,
+	printf("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
+		arrival->coarse/86400, arrival->coarse%86400,
+		arrival->fine/4294967, el_time, st_time,
 		(skew1-skew2)/2, sec2u(disp), freq);
 	fflush(stdout);
+	return(el_time-st_time);
 }
 
 void stuff_net_addr(struct in_addr *p, char *hostname)
@@ -357,12 +365,13 @@ void setup_transmit(int usd, char *host, short port)
 		{perror("connect");exit(1);}
 }
 
-void primary_loop(int usd, int num_probes, int interval)
+void primary_loop(int usd, int num_probes, int interval, int goodness)
 {
 	fd_set fds;
 	struct sockaddr sa_xmit;
-	int i, pack_len, sa_xmit_len, probes_sent;
+	int i, pack_len, sa_xmit_len, probes_sent, error;
 	struct timeval to;
+	struct ntptime udp_arrival_ntp;
 
 	if (debug) printf("Listening...\n");
 
@@ -387,16 +396,21 @@ void primary_loop(int usd, int num_probes, int interval)
 			}	
 			continue;
 		}
-		pack_len=recvfrom(usd,incoming,sizeof(incoming),0,
+		pack_len=recvfrom(usd,incoming,sizeof_incoming,0,
 		                  &sa_xmit,&sa_xmit_len);
+		error = goodness+1;
 		if (pack_len<0) {
 			perror("recvfrom");
-		} else if (pack_len>0 && pack_len<sizeof(incoming)){
-			udp_handle(usd,incoming,pack_len,&sa_xmit,sa_xmit_len);
+		} else if (pack_len>0 && (unsigned)pack_len<sizeof_incoming){
+			get_packet_timestamp(usd, &udp_arrival_ntp);
+			check_source(pack_len, &sa_xmit, sa_xmit_len);
+			error = rfc1305print(incoming_word, &udp_arrival_ntp);
+			/* udp_handle(usd,incoming,pack_len,&sa_xmit,sa_xmit_len); */
 		} else {
 			printf("Ooops.  pack_len=%d\n",pack_len);
 			fflush(stdout);
 		}
+		if ( error < goodness && goodness != 0) break;
 		if (probes_sent >= num_probes && num_probes != 0) break;
 	}
 }
@@ -405,7 +419,7 @@ void do_replay(void)
 {
 	char line[100];
 	int n, day, freq, absolute;
-	float sec, etime, stime, disp;
+	float sec, el_time, st_time, disp;
 	double skew, errorbar;
 	int simulated_freq = 0;
 	unsigned int last_fake_time = 0;
@@ -413,11 +427,11 @@ void do_replay(void)
 
 	while (fgets(line,sizeof(line),stdin)) {
 		n=sscanf(line,"%d %f %f %f %lf %f %d",
-			&day, &sec, &etime, &stime, &skew, &disp, &freq);
+			&day, &sec, &el_time, &st_time, &skew, &disp, &freq);
 		if (n==7) {
 			fputs(line,stdout);
-			absolute=(day-15020)*86400+(int)sec;
-			errorbar=etime+disp;
+			absolute=day*86400+(int)sec;
+			errorbar=el_time+disp;
 			if (debug) printf("contemplate %u %.1f %.1f %d\n",
 				absolute,skew,errorbar,freq);
 			if (last_fake_time==0) simulated_freq=freq;
@@ -437,8 +451,8 @@ void do_replay(void)
 void usage(char *argv0)
 {
 	fprintf(stderr,
-	"Usage: %s [-c count] [-d] -h hostname [-i interval] [-l]\n"
-	"\t[-p port] [-r] [-s] \n",
+	"Usage: %s [-c count] [-d] [-g goodness] -h hostname [-i interval]\n"
+	"\t[-l] [-p port] [-r] [-s] \n",
 	argv0);
 }
 
@@ -451,11 +465,12 @@ int main(int argc, char *argv[]) {
 	int cycle_time=600;           /* seconds */
 	int probe_count=0;            /* default of 0 means loop forever */
 	/* int debug=0; is a global above */
+	int goodness=0;
 	char *hostname=NULL;          /* must be set */
 	int replay=0;                 /* replay mode overrides everything */
 
 	for (;;) {
-		c = getopt( argc, argv, "c:" DEBUG_OPTION "h:i:lp:rs");
+		c = getopt( argc, argv, "c:" DEBUG_OPTION "g:h:i:lp:rs");
 		if (c == EOF) break;
 		switch (c) {
 			case 'c':
@@ -466,6 +481,9 @@ int main(int argc, char *argv[]) {
 				++debug;
 				break;
 #endif
+			case 'g':
+				goodness = atoi(optarg);
+				break;
 			case 'h':
 				hostname = optarg;
 				break;
@@ -502,12 +520,13 @@ int main(int argc, char *argv[]) {
 		printf("Configuration:\n"
 		"  -c probe_count %d\n"
 		"  -d (debug)     %d\n"
+		"  -g goodness    %d\n"
 		"  -h hostname    %s\n"
 		"  -i interval    %d\n"
 		"  -l live        %d\n"
 		"  -p local_port  %d\n"
 		"  -s set_clock   %d\n",
-		probe_count, debug, hostname, cycle_time,
+		probe_count, debug, goodness, hostname, cycle_time,
 		live, udp_local_port, set_clock );
 	}
 
@@ -519,7 +538,7 @@ int main(int argc, char *argv[]) {
 
 	setup_transmit(usd, hostname, NTP_PORT);
 
-	primary_loop(usd, probe_count, cycle_time);
+	primary_loop(usd, probe_count, cycle_time, goodness);
 
 	close(usd);
 	return 0;
