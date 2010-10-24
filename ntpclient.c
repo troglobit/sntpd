@@ -65,7 +65,7 @@
 
 #ifdef ENABLE_DEBUG
 #define DEBUG_OPTION "d"
-int debug=0;
+int debug = 0;
 #else
 #define DEBUG_OPTION
 #endif
@@ -201,9 +201,11 @@ static void set_time(struct ntptime *new)
 		perror("ntpclient:Failed clock_settime()");
 		exit(1);
 	}
+#ifdef ENABLE_DEBUG
 	if (debug) {
 		printf("ntpclient:set time to %lu.%.9lu\n", tv_set.tv_sec, tv_set.tv_nsec);
 	}
+#endif
 #else
 	/* Traditional Linux way to set the system clock
 	 */
@@ -216,9 +218,11 @@ static void set_time(struct ntptime *new)
 		perror("ntpclient:Failed settimeofday()");
 		exit(1);
 	}
+#ifdef ENABLE_DEBUG
 	if (debug) {
 		printf("ntpclient:set time to %lu.%.6lu\n", tv_set.tv_sec, tv_set.tv_usec);
 	}
+#endif
 #endif
 }
 
@@ -251,7 +255,9 @@ static void send_packet(int usd, u32 time_sent[2])
 #define POLL 4
 #define PREC -6
 
+#ifdef ENABLE_DEBUG
 	if (debug) fprintf(stderr,"ntpclient:Sending ...\n");
+#endif
 	if (sizeof data != 48) {
 		fprintf(stderr,"ntpclient:size error\n");
 		return;
@@ -288,16 +294,22 @@ static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 static int check_source(int data_len, struct sockaddr *sa_source, unsigned int sa_len, struct ntp_control *ntpc)
 {
 	struct sockaddr_in *sa_in=(struct sockaddr_in *)sa_source;
-	(void) sa_len;  /* not used */
+
+	(void) data_len;	/* not used */
+	(void) sa_len;		/* not used */
+
+#ifdef ENABLE_DEBUG
 	if (debug) {
-		printf("ntpclient:packet of length %d received\n",data_len);
-		if (sa_source->sa_family==AF_INET) {
+		printf("ntpclient:packet of length %d received\n", data_len);
+		if (sa_source->sa_family == AF_INET) {
 			printf("ntpclient:Source: INET Port %d host %s\n",
 				ntohs(sa_in->sin_port),inet_ntoa(sa_in->sin_addr));
 		} else {
 			printf("ntpclient:Source: Address family %d\n",sa_source->sa_family);
 		}
 	}
+#endif
+
 	/* we could check that the source is the server we expect, but
 	 * Denis Vlasenko recommends against it: multihomed hosts get it
 	 * wrong too often. */
@@ -311,6 +323,7 @@ static int check_source(int data_len, struct sockaddr *sa_source, unsigned int s
 	if (NTP_PORT != ntohs(sa_in->sin_port)) {
 		return 1;  /* fault */
 	}
+
 	return 0;
 }
 
@@ -367,34 +380,40 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	xmttime.fine   = Data(11);
 #undef Data
 
+#ifdef ENABLE_DEBUG
 	if (debug) {
-	printf("ntpclient:LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d\n",
-		li, vn, mode, stratum, poll, prec);
-	printf("ntpclient:Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u\n",
-		sec2u(delay),sec2u(disp),
-		refid>>24&0xff, refid>>16&0xff, refid>>8&0xff, refid&0xff);
-	printf("ntpclient:Reference %u.%.6u\n", reftime.coarse, USEC(reftime.fine));
-	printf("ntpclient:(sent)    %u.%.6u\n", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
-	printf("ntpclient:Originate %u.%.6u\n", orgtime.coarse, USEC(orgtime.fine));
-	printf("ntpclient:Receive   %u.%.6u\n", rectime.coarse, USEC(rectime.fine));
-	printf("ntpclient:Transmit  %u.%.6u\n", xmttime.coarse, USEC(xmttime.fine));
-	printf("ntpclient:Our recv  %u.%.6u\n", arrival->coarse, USEC(arrival->fine));
+                printf("ntpclient:LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d\n",
+		       li, vn, mode, stratum, poll, prec);
+		printf("ntpclient:Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u\n",
+		       sec2u(delay),sec2u(disp),
+		       refid>>24&0xff, refid>>16&0xff, refid>>8&0xff, refid&0xff);
+		printf("ntpclient:Reference %u.%.6u\n", reftime.coarse, USEC(reftime.fine));
+		printf("ntpclient:(sent)    %u.%.6u\n", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
+		printf("ntpclient:Originate %u.%.6u\n", orgtime.coarse, USEC(orgtime.fine));
+		printf("ntpclient:Receive   %u.%.6u\n", rectime.coarse, USEC(rectime.fine));
+		printf("ntpclient:Transmit  %u.%.6u\n", xmttime.coarse, USEC(xmttime.fine));
+		printf("ntpclient:Our recv  %u.%.6u\n", arrival->coarse, USEC(arrival->fine));
 	}
-	el_time=ntpdiff(&orgtime,arrival);   /* elapsed */
-	st_time=ntpdiff(&rectime,&xmttime);  /* stall */
-	skew1=ntpdiff(&orgtime,&rectime);
-	skew2=ntpdiff(&xmttime,arrival);
-	freq=get_current_freq();
+#endif
+
+	el_time = ntpdiff(&orgtime,arrival);   /* elapsed */
+	st_time = ntpdiff(&rectime,&xmttime);  /* stall */
+	skew1   = ntpdiff(&orgtime,&rectime);
+	skew2   = ntpdiff(&xmttime,arrival);
+	freq    = get_current_freq();
+
+#ifdef ENABLE_DEBUG
 	if (debug) {
-	printf("ntpclient:Total elapsed: %9.2f\n"
-	       "ntpclient:Server stall:  %9.2f\n"
-	       "ntpclient:Slop:          %9.2f\n",
-		el_time, st_time, el_time-st_time);
-	printf("ntpclient:Skew:          %9.2f\n"
-	       "ntpclient:Frequency:     %9d\n"
-	       " day   second     elapsed    stall     skew  dispersion  freq\n",
-		(skew1-skew2)/2, freq);
+		printf("ntpclient:Total elapsed: %9.2f\n"
+		       "ntpclient:Server stall:  %9.2f\n"
+		       "ntpclient:Slop:          %9.2f\n",
+		       el_time, st_time, el_time-st_time);
+		printf("ntpclient:Skew:          %9.2f\n"
+		       "ntpclient:Frequency:     %9d\n"
+		       " day   second     elapsed    stall     skew  dispersion  freq\n",
+		       (skew1-skew2)/2, freq);
 	}
+#endif
 
 	/* error checking, see RFC-4330 section 5 */
 #define FAIL(x) do { drop_reason=(x); goto fail;} while (0)
@@ -529,12 +548,14 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 #define incoming ((char *) incoming_word)
 #define sizeof_incoming (sizeof incoming_word)
 
+#ifdef ENABLE_DEBUG
 	if (debug) printf("ntpclient:Listening...\n");
+#endif
+	probes_sent = 0;
+	sa_xmit_len = sizeof(sa_xmit);
+	to.tv_sec   = 0;
+	to.tv_usec  = 0;
 
-	probes_sent=0;
-	sa_xmit_len=sizeof sa_xmit;
-	to.tv_sec=0;
-	to.tv_usec=0;
 	for (;;) {
 		FD_ZERO(&fds);
 		FD_SET(usd,&fds);
@@ -597,16 +618,20 @@ static void do_replay(void)
 			&day, &sec, &el_time, &st_time, &skew, &disp, &freq);
 		if (n==7) {
 			fputs(line,stdout);
-			absolute=day*86400+(int)sec;
-			errorbar=el_time+disp;
+			absolute = day*86400 + (int)sec;
+			errorbar = el_time + disp;
+#ifdef ENABLE_DEBUG
 			if (debug) printf("ntpclient:contemplate %u %.1f %.1f %d\n",
-				absolute,skew,errorbar,freq);
-			if (last_fake_time==0) simulated_freq=freq;
+					  absolute,skew,errorbar,freq);
+#endif
+			if (last_fake_time == 0) simulated_freq = freq;
 			fake_delta_time += (absolute-last_fake_time)*((double)(freq-simulated_freq))/65536;
+#ifdef ENABLE_DEBUG
 			if (debug) printf("ntpclient:fake %f %d \n", fake_delta_time, simulated_freq);
+#endif
 			skew += fake_delta_time;
-			freq = simulated_freq;
-			last_fake_time=absolute;
+			freq  = simulated_freq;
+			last_fake_time = absolute;
 			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
 		} else {
 			fprintf(stderr,"ntpclient:Replay input error\n");
@@ -672,8 +697,9 @@ int main(int argc, char *argv[]) {
 #endif
 			case 'f':
 				initial_freq = atoi(optarg);
-				if (debug) printf("ntpclient:initial frequency %d\n",
-						initial_freq);
+#ifdef ENABLE_DEBUG
+				if (debug) printf("ntpclient:initial frequency %d\n", initial_freq);
+#endif
 				set_freq(initial_freq);
 				break;
 			case 'g':
@@ -732,30 +758,31 @@ int main(int argc, char *argv[]) {
 		ntpc.cycle_time=MIN_INTERVAL;
 	}
 
+#ifdef ENABLE_DEBUG
 	if (debug) {
 		printf("Configuration:\n"
-		"  -c probe_count %d\n"
-		"  -d (debug)     %d\n"
-		"  -g goodness    %d\n"
-		"  -h hostname    %s\n"
-		"  -i interval    %d\n"
-		"  -l live        %d\n"
-		"  -p local_port  %d\n"
-		"  -q min_delay   %f\n"
-		"  -s set_clock   %d\n"
-		"  -t cross_check %d\n"
+		       "  -c probe_count %d\n"
+		       "  -d (debug)     %d\n"
+		       "  -g goodness    %d\n"
+		       "  -h hostname    %s\n"
+		       "  -i interval    %d\n"
+		       "  -l live        %d\n"
+		       "  -p local_port  %d\n"
+		       "  -q min_delay   %f\n"
+		       "  -s set_clock   %d\n"
+		       "  -t cross_check %d\n"
 #ifdef ENABLE_SYSLOG
-		"  -L logging     %d\n"
+		       "  -L logging     %d\n"
 #endif
-		, ntpc.probe_count, debug, ntpc.goodness,
-		hostname, ntpc.cycle_time, ntpc.live, udp_local_port, min_delay,
-		ntpc.set_clock, ntpc.cross_check 
+		       , ntpc.probe_count, debug, ntpc.goodness,
+		       hostname, ntpc.cycle_time, ntpc.live, udp_local_port, min_delay,
+		       ntpc.set_clock, ntpc.cross_check 
 #ifdef ENABLE_SYSLOG
-	       , logging
+		       , logging
 #endif
-		);
+			);
 	}
-
+#endif /* ENABLE_DEBUG */
 	/* Startup sequence */
 	if ((usd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP))==-1)
 		{perror("ntpclient:Failed creating UDP socket()");exit(1);}
@@ -781,5 +808,7 @@ int main(int argc, char *argv[]) {
 /**
  * Local Variables:
  *  c-file-style: "linux"
+ *  version-control: t
+ *  indent-tabs-mode: t
  * End:
  */
