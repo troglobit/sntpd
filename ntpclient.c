@@ -104,8 +104,9 @@ typedef uint32_t u32;  /* universal for C99 */
 #else
 extern struct hostent *gethostbyname(const char *name);
 extern int h_errno;
-#define herror(hostname) \
-	fprintf(stderr,"ntpclient:Error %d looking up hostname %s\n", h_errno,hostname)
+char __hstrerror_buf[10];
+#define hstrerror(errnum) \
+	snprintf(__hstrerror_buf, sizeof(__hstrerror_buf), "Error %d", errnum)
 #endif
 /* end configuration for host systems */
 
@@ -447,9 +448,13 @@ fail:
 		       arrival->coarse/86400, arrival->coarse%86400,
 		       arrival->fine/4294967, drop_reason);
 	} else {
-                syslog(LOG_ERR, "%d %.5d.%.3d rejected packet: %s",
-		       arrival->coarse/86400, arrival->coarse%86400,
-		       arrival->fine/4294967, drop_reason);
+#ifdef ENABLE_SYSLOG
+                if (logging) {
+                        syslog(LOG_ERR, "%d %.5d.%.3d rejected packet: %s",
+                               arrival->coarse/86400, arrival->coarse%86400,
+                               arrival->fine/4294967, drop_reason);
+                }
+#endif
         }
 
 	return 1;
@@ -458,11 +463,18 @@ fail:
 static void stuff_net_addr(struct in_addr *p, char *hostname)
 {
 	struct hostent *ntpserver;
-	ntpserver=gethostbyname(hostname);
+
+	ntpserver = gethostbyname(hostname);
 	if (ntpserver == NULL) {
-		herror(hostname);
+                if (verbose)
+                        fprintf(stderr, "ntpclient: Unable lookup %s: %s", hostname, hstrerror(h_errno));
+#ifdef ENABLE_SYSLOG
+                if (logging)
+                        syslog(LOG_ERR, "Unable lookup %s: %s", hostname, hstrerror(h_errno));
+#endif
 		exit(1);
 	}
+
 	if (ntpserver->h_length != 4) {
 		/* IPv4 only, until I get a chance to test IPv6 */
 		fprintf(stderr,"ntpclient:oops h_length=%d, only IPv4 supported currently.\n",ntpserver->h_length);
