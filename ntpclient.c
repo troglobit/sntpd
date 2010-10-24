@@ -295,7 +295,7 @@ void rfc1305print(char *data, struct ntptime *arrival)
 	       " day   second     elapsed    stall     skew  dispersion  freq\n",
 		(skew1-skew2)/2, freq);
 	}
-	printf("%d %d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
+	printf("%d %5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
 		arrival->coarse/86400+15020, arrival->coarse%86400,
 		arrival->fine/4294967, etime, stime,
 		(skew1-skew2)/2, sec2u(disp), freq);

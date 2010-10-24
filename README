@@ -25,9 +25,9 @@ options:
  -s           simple clock set (implies -c 1)
 
 Mortal users can use this program for monitoring, but not clock setting
-(with the -s or -l switches).  The -l switch has not been tested.
-Simulation (with -r) actually looks pretty good, so locking should be
-within reach!  Testing will reveal whether or not I got my signs correct.
+(with the -s or -l switches).  The -l switch has not been well tested.
+Simulation (with -r) actually looks halfway decent, so locking should be
+OK too, but it needs some tuning.
 
 The test.dat file has 200 lines of sample output.  Its first few lines,
 with the output column headers that are shown when the -d option is

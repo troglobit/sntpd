@@ -3,6 +3,8 @@
 #    LDLIBS += -lnsl -lsocket
 # Some versions of Linux may need
 #    CFLAGS += -D_GNU_SOURCE
+# To cross-compile
+#    CC = arm-linux-gcc
 
 CFLAGS += -Wall -O
 

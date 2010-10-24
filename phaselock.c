@@ -143,7 +143,7 @@ double find_shift(double slope, double offset)
 	double shift  = slope - offset/600.0;
 	double shift2 = slope + 0.3 - offset/6000.0;
 	if (shift2 < shift) shift = shift2;
-	printf("find_shift %f %f -> %f\n", slope, offset, shift);
+	if (debug) printf("find_shift %f %f -> %f\n", slope, offset, shift);
 	if (shift  < 0) return 0.0;
 	return shift;
 }
@@ -196,7 +196,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 	if (debug) printf("xontemplate %u %.1f %.1f %d\n",absolute,skew,errorbar,freq);
 	d_ring[rp].absolute = absolute;
 	d_ring[rp].skew     = skew;
-	d_ring[rp].errorbar = errorbar;
+	d_ring[rp].errorbar = errorbar - 800.0;   /* quick hack to speed things up */
 	d_ring[rp].freq     = freq;
 
 	if (valid<RING_SIZE) ++valid;
@@ -304,7 +304,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 		/*
 		 * Pass 5: decide on a new freq */
 		if (inconsistent) {
-			if (debug) printf("inconsistent\n");
+			printf("# inconsistent\n");
 		} else {
 			delta_f = find_df(&both_sides_now);
 			if (debug) printf("find_df() = %e\n", delta_f);
@@ -313,10 +313,12 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			delta_freq = delta_f*65536+.5;
 			if (debug) printf("delta_f %f  delta_freq %d  bsn %d\n", delta_f, delta_freq, both_sides_now);
 			computed_freq -= delta_freq;
-			if (computed_freq < -3000000) computed_freq=-3000000;
-			if (computed_freq >  3000000) computed_freq= 3000000;
-			/* here is where we would actually call adjtimex(2) to
-			 * change system freq */
+			printf ("# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
+			printf (      " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
+			printf (" delta_f %.3f  computed_freq %d\n", delta_f, computed_freq);
+
+			if (computed_freq < -6000000) computed_freq=-6000000;
+			if (computed_freq >  6000000) computed_freq= 6000000;
 		}
 	}
 	rp = (rp+1)%RING_SIZE;
