@@ -91,7 +91,7 @@ typedef uint32_t u32;  /* universal for C99 */
 extern struct hostent *gethostbyname(const char *name);
 extern int h_errno;
 #define herror(hostname) \
-	fprintf(stderr,"Error %d looking up hostname %s\n", h_errno,hostname)
+	fprintf(stderr,"ntpclient:Error %d looking up hostname %s\n", h_errno,hostname)
 #endif
 /* end configuration for host systems */
 
@@ -147,7 +147,7 @@ static int get_current_freq(void)
 	struct timex txc;
 	txc.modes=0;
 	if (adjtimex(&txc) < 0) {
-		perror("adjtimex"); exit(1);
+		perror("ntpclient:Failed adjtimex(GET)"); exit(1);
 	}
 	return txc.freq;
 #else
@@ -164,7 +164,7 @@ static int set_freq(int new_freq)
 	txc.modes = ADJ_FREQUENCY;
 	txc.freq = new_freq;
 	if (adjtimex(&txc) < 0) {
-		perror("adjtimex"); exit(1);
+		perror("ntpclient:Failed adjtimex(SET)"); exit(1);
 	}
 	return txc.freq;
 #else
@@ -183,11 +183,11 @@ static void set_time(struct ntptime *new)
 	/* divide xmttime.fine by 4294.967296 */
 	tv_set.tv_nsec = USEC(new->fine)*1000;
 	if (clock_settime(CLOCK_REALTIME, &tv_set)<0) {
-		perror("clock_settime");
+		perror("ntpclient:Failed clock_settime()");
 		exit(1);
 	}
 	if (debug) {
-		printf("set time to %lu.%.9lu\n", tv_set.tv_sec, tv_set.tv_nsec);
+		printf("ntpclient:set time to %lu.%.9lu\n", tv_set.tv_sec, tv_set.tv_nsec);
 	}
 #else
 	/* Traditional Linux way to set the system clock
@@ -198,11 +198,11 @@ static void set_time(struct ntptime *new)
 	/* divide xmttime.fine by 4294.967296 */
 	tv_set.tv_usec = USEC(new->fine);
 	if (settimeofday(&tv_set,NULL)<0) {
-		perror("settimeofday");
+		perror("ntpclient:Failed settimeofday()");
 		exit(1);
 	}
 	if (debug) {
-		printf("set time to %lu.%.6lu\n", tv_set.tv_sec, tv_set.tv_usec);
+		printf("ntpclient:set time to %lu.%.6lu\n", tv_set.tv_sec, tv_set.tv_usec);
 	}
 #endif
 }
@@ -236,9 +236,9 @@ static void send_packet(int usd, u32 time_sent[2])
 #define POLL 4
 #define PREC -6
 
-	if (debug) fprintf(stderr,"Sending ...\n");
+	if (debug) fprintf(stderr,"ntpclient:Sending ...\n");
 	if (sizeof data != 48) {
-		fprintf(stderr,"size error\n");
+		fprintf(stderr,"ntpclient:size error\n");
 		return;
 	}
 	memset(data,0,sizeof data);
@@ -259,7 +259,7 @@ static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 	/* XXX broken */
 	struct timeval udp_arrival;
 	if ( ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0 ) {
-		perror("ioctl-SIOCGSTAMP");
+		perror("ntpclient:Failed ioctl(SIOCGSTAMP)");
 		gettimeofday(&udp_arrival,NULL);
 	}
 	udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
@@ -275,12 +275,12 @@ static int check_source(int data_len, struct sockaddr *sa_source, unsigned int s
 	struct sockaddr_in *sa_in=(struct sockaddr_in *)sa_source;
 	(void) sa_len;  /* not used */
 	if (debug) {
-		printf("packet of length %d received\n",data_len);
+		printf("ntpclient:packet of length %d received\n",data_len);
 		if (sa_source->sa_family==AF_INET) {
-			printf("Source: INET Port %d host %s\n",
+			printf("ntpclient:Source: INET Port %d host %s\n",
 				ntohs(sa_in->sin_port),inet_ntoa(sa_in->sin_addr));
 		} else {
-			printf("Source: Address family %d\n",sa_source->sa_family);
+			printf("ntpclient:Source: Address family %d\n",sa_source->sa_family);
 		}
 	}
 	/* we could check that the source is the server we expect, but
@@ -355,17 +355,17 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 #undef Data
 
 	if (debug) {
-	printf("LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d\n",
+	printf("ntpclient:LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d\n",
 		li, vn, mode, stratum, poll, prec);
-	printf("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u\n",
+	printf("ntpclient:Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u\n",
 		sec2u(delay),sec2u(disp),
 		refid>>24&0xff, refid>>16&0xff, refid>>8&0xff, refid&0xff);
-	printf("Reference %u.%.6u\n", reftime.coarse, USEC(reftime.fine));
-	printf("(sent)    %u.%.6u\n", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
-	printf("Originate %u.%.6u\n", orgtime.coarse, USEC(orgtime.fine));
-	printf("Receive   %u.%.6u\n", rectime.coarse, USEC(rectime.fine));
-	printf("Transmit  %u.%.6u\n", xmttime.coarse, USEC(xmttime.fine));
-	printf("Our recv  %u.%.6u\n", arrival->coarse, USEC(arrival->fine));
+	printf("ntpclient:Reference %u.%.6u\n", reftime.coarse, USEC(reftime.fine));
+	printf("ntpclient:(sent)    %u.%.6u\n", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
+	printf("ntpclient:Originate %u.%.6u\n", orgtime.coarse, USEC(orgtime.fine));
+	printf("ntpclient:Receive   %u.%.6u\n", rectime.coarse, USEC(rectime.fine));
+	printf("ntpclient:Transmit  %u.%.6u\n", xmttime.coarse, USEC(xmttime.fine));
+	printf("ntpclient:Our recv  %u.%.6u\n", arrival->coarse, USEC(arrival->fine));
 	}
 	el_time=ntpdiff(&orgtime,arrival);   /* elapsed */
 	st_time=ntpdiff(&rectime,&xmttime);  /* stall */
@@ -373,12 +373,12 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	skew2=ntpdiff(&xmttime,arrival);
 	freq=get_current_freq();
 	if (debug) {
-	printf("Total elapsed: %9.2f\n"
-	       "Server stall:  %9.2f\n"
-	       "Slop:          %9.2f\n",
+	printf("ntpclient:Total elapsed: %9.2f\n"
+	       "ntpclient:Server stall:  %9.2f\n"
+	       "ntpclient:Slop:          %9.2f\n",
 		el_time, st_time, el_time-st_time);
-	printf("Skew:          %9.2f\n"
-	       "Frequency:     %9d\n"
+	printf("ntpclient:Skew:          %9.2f\n"
+	       "ntpclient:Frequency:     %9d\n"
 	       " day   second     elapsed    stall     skew  dispersion  freq\n",
 		(skew1-skew2)/2, freq);
 	}
@@ -428,11 +428,11 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	return 0;
 fail:
 #ifdef ENABLE_DEBUG
-	printf("%d %.5d.%.3d  rejected packet: %s\n",
+	printf("ntpclient:%d %.5d.%.3d  rejected packet: %s\n",
 		arrival->coarse/86400, arrival->coarse%86400,
 		arrival->fine/4294967, drop_reason);
 #else
-	printf("%d %.5d.%.3d  rejected packet\n",
+	printf("ntpclient:%d %.5d.%.3d  rejected packet\n",
 		arrival->coarse/86400, arrival->coarse%86400,
 		arrival->fine/4294967);
 #endif
@@ -449,7 +449,7 @@ static void stuff_net_addr(struct in_addr *p, char *hostname)
 	}
 	if (ntpserver->h_length != 4) {
 		/* IPv4 only, until I get a chance to test IPv6 */
-		fprintf(stderr,"oops %d\n",ntpserver->h_length);
+		fprintf(stderr,"ntpclient:oops h_length=%d, only IPv4 supported currently.\n",ntpserver->h_length);
 		exit(1);
 	}
 	memcpy(&(p->s_addr),ntpserver->h_addr_list[0],4);
@@ -463,8 +463,7 @@ static void setup_receive(int usd, unsigned int interface, short port)
 	sa_rcvr.sin_addr.s_addr=htonl(interface);
 	sa_rcvr.sin_port=htons(port);
 	if(bind(usd,(struct sockaddr *) &sa_rcvr,sizeof sa_rcvr) == -1) {
-		perror("bind");
-		fprintf(stderr,"could not bind to udp port %d\n",port);
+		fprintf(stderr,"ntpclient:Failed binding to UDP port %d: %s\n", port, strerror(errno));
 		exit(1);
 	}
 	/* listen(usd,3); this isn't TCP; thanks Alexander! */
@@ -479,7 +478,7 @@ static void setup_transmit(int usd, char *host, short port, struct ntp_control *
 	memcpy(ntpc->serv_addr,&(sa_dest.sin_addr),4); /* XXX asumes IPv4 */
 	sa_dest.sin_port=htons(port);
 	if (connect(usd,(struct sockaddr *)&sa_dest,sizeof sa_dest)==-1)
-		{perror("connect");exit(1);}
+		{perror("ntpclient:Failed connect()");exit(1);}
 }
 
 static void primary_loop(int usd, struct ntp_control *ntpc)
@@ -494,7 +493,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 #define incoming ((char *) incoming_word)
 #define sizeof_incoming (sizeof incoming_word)
 
-	if (debug) printf("Listening...\n");
+	if (debug) printf("ntpclient:Listening...\n");
 
 	probes_sent=0;
 	sa_xmit_len=sizeof sa_xmit;
@@ -506,7 +505,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 		i=select(usd+1,&fds,NULL,NULL,&to);  /* Wait on read or error */
 		if ((i!=1)||(!FD_ISSET(usd,&fds))) {
 			if (i<0) {
-				if (errno != EINTR) perror("select");
+				if (errno != EINTR) perror("ntpclient:Failed select()");
 				continue;
 			}
 			if (to.tv_sec == 0) {
@@ -523,14 +522,14 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 		                  &sa_xmit,&sa_xmit_len);
 		error = ntpc->goodness;
 		if (pack_len<0) {
-			perror("recvfrom");
+			perror("ntpclient:Failed recvfrom()");
 		} else if (pack_len>0 && (unsigned)pack_len<sizeof_incoming){
 			get_packet_timestamp(usd, &udp_arrival_ntp);
 			if (check_source(pack_len, &sa_xmit, sa_xmit_len, ntpc)!=0) continue;
 			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error)!=0) continue;
 			/* udp_handle(usd,incoming,pack_len,&sa_xmit,sa_xmit_len); */
 		} else {
-			printf("Ooops.  pack_len=%d\n",pack_len);
+			printf("ntpclient:Ooops.  pack_len=%d\n",pack_len);
 			fflush(stdout);
 		}
 		/* best rollover option: specify -g, -s, and -l.
@@ -564,17 +563,17 @@ static void do_replay(void)
 			fputs(line,stdout);
 			absolute=day*86400+(int)sec;
 			errorbar=el_time+disp;
-			if (debug) printf("contemplate %u %.1f %.1f %d\n",
+			if (debug) printf("ntpclient:contemplate %u %.1f %.1f %d\n",
 				absolute,skew,errorbar,freq);
 			if (last_fake_time==0) simulated_freq=freq;
 			fake_delta_time += (absolute-last_fake_time)*((double)(freq-simulated_freq))/65536;
-			if (debug) printf("fake %f %d \n", fake_delta_time, simulated_freq);
+			if (debug) printf("ntpclient:fake %f %d \n", fake_delta_time, simulated_freq);
 			skew += fake_delta_time;
 			freq = simulated_freq;
 			last_fake_time=absolute;
 			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
 		} else {
-			fprintf(stderr,"Replay input error\n");
+			fprintf(stderr,"ntpclient:Replay input error\n");
 			exit(2);
 		}
 	}
@@ -627,7 +626,7 @@ int main(int argc, char *argv[]) {
 #endif
 			case 'f':
 				initial_freq = atoi(optarg);
-				if (debug) printf("initial frequency %d\n",
+				if (debug) printf("ntpclient:initial frequency %d\n",
 						initial_freq);
 				set_freq(initial_freq);
 				break;
@@ -701,7 +700,7 @@ int main(int argc, char *argv[]) {
 
 	/* Startup sequence */
 	if ((usd=socket(AF_INET,SOCK_DGRAM,IPPROTO_UDP))==-1)
-		{perror ("socket");exit(1);}
+		{perror("ntpclient:Failed creating UDP socket()");exit(1);}
 
 	setup_receive(usd, INADDR_ANY, udp_local_port);
 
