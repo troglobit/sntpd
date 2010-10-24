@@ -24,13 +24,12 @@
  */
 
 #include <stdio.h>
-
-#define ENABLE_DEBUG
+#include "ntpclient.h"
 
 #define RING_SIZE 16
 #define MAX_CORRECT 250   /* ppm change to system clock */
 #define MAX_C ((MAX_CORRECT)*65536)
-struct datum {
+static struct datum {
 	unsigned int absolute;
 	double skew;
 	double errorbar;
@@ -49,32 +48,26 @@ struct datum {
 	 */
 } d_ring[RING_SIZE];
 
-struct _seg {
+static struct _seg {
 	double slope;
 	double offset;
 } maxseg[RING_SIZE+1], minseg[RING_SIZE+1];
 
-#ifdef ENABLE_DEBUG
-extern int debug;
-#define DEBUG_OPTION "d"
-#else
-#define debug 0
-#define DEBUG_OPTION
-#endif
-
+#if 0
 /* draw a line from a to c, what the offset is of that line
  * where that line matches b's slope coordinate.
  */
-double interpolate(struct _seg *a, struct _seg *b, struct _seg *c)
+static double interpolate(struct _seg *a, struct _seg *b, struct _seg *c)
 {
 	double x, y;
 	x = (b->slope - a->slope) / (c->slope  - a->slope) ;
 	y =         a->offset + x * (c->offset - a->offset);
 	return y;
 }
+#endif
 
-int next_up(int i) { int r = i+1; if (r>=RING_SIZE) r=0; return r;}
-int next_dn(int i) { int r = i-1; if (r<0) r=RING_SIZE-1; return r;}
+static int next_up(int i) { int r = i+1; if (r>=RING_SIZE) r=0; return r;}
+static int next_dn(int i) { int r = i-1; if (r<0) r=RING_SIZE-1; return r;}
 
 /* Looks at the line segments that start at point j, that end at
  * all following points (ending at index rp).  The initial point
@@ -82,7 +75,7 @@ int next_dn(int i) { int r = i-1; if (r<0) r=RING_SIZE-1; return r;}
  * (s.min vs. s.max) is based on the index in ss[].  The scan
  * looks for the largest (sign=0) or smallest (sign=1) slope.
  */
-int search(int rp, int j, int s0, int s1, int sign, struct _seg *answer)
+static int search(int rp, int j, int s0, int s1, int sign, struct _seg *answer)
 {
 	double dt, slope;
 	int n, nextj=0, cinit=1;
@@ -106,18 +99,18 @@ int search(int rp, int j, int s0, int s1, int sign, struct _seg *answer)
 
 /* Pseudo-class for finding consistent frequency shift */
 #define MIN_INIT 20
-struct _polygon {
+static struct _polygon {
 	double l_min;
 	double r_min;
 } df;
 
-void polygon_reset(void)
+static void polygon_reset(void)
 {
 	df.l_min = MIN_INIT;
 	df.r_min = MIN_INIT;
 }
 
-double find_df(int *flag)
+static double find_df(int *flag)
 {
 	if (df.l_min == 0.0) {
 		if (df.r_min == 0.0) {
@@ -140,7 +133,7 @@ double find_df(int *flag)
  * target line in delta-f/delta-t phase space.  Any line is OK
  * as long as it's not convex and never returns greater than
  * MIN_INIT. */
-double find_shift(double slope, double offset)
+static double find_shift(double slope, double offset)
 {
 	double shift  = slope - offset/600.0;
 	double shift2 = slope + 0.3 - offset/6000.0;
@@ -150,7 +143,7 @@ double find_shift(double slope, double offset)
 	return shift;
 }
 
-void polygon_point(struct _seg *s)
+static void polygon_point(struct _seg *s)
 {
 	double l, r;
 	if (debug) printf("loop %f %f\n", s->slope, s->offset);
@@ -165,7 +158,7 @@ void polygon_point(struct _seg *s)
 /* Something like linear feedback to be used when we are "close" to
  * phase lock.  Not really used at the moment:  the logic in find_df()
  * never sets the flag. */
-double find_df_center(struct _seg *min, struct _seg *max, double gross_df)
+static double find_df_center(struct _seg *min, struct _seg *max, double gross_df)
 {
 	const double crit_time=1000.0;
 	double slope  = 0.5 * (max->slope  + min->slope)+gross_df;

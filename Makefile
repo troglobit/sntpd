@@ -1,17 +1,21 @@
-# Under Solaris, you need to 
+# A long time ago, far, far away, under Solaris, you needed to 
 #    CFLAGS += -xO2 -Xc
 #    LDLIBS += -lnsl -lsocket
-# Some versions of Linux may need
-#    CFLAGS += -D_GNU_SOURCE
 # To cross-compile
 #    CC = arm-linux-gcc
 # To check for lint
 # -Wundef not recognized by gcc-2.7.2.3
-CFLAGS += -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow \
+CFLAGS += -std=c99 -W -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow \
  -Waggregate-return -Wnested-externs -Winline -Wwrite-strings \
- -Wstrict-prototypes
+ -Wstrict-prototypes -W
 
-CFLAGS += -O
+CFLAGS += -O2
+# CFLAGS += -DPRECISION_SIOCGSTAMP
+CFLAGS += -DENABLE_DEBUG
+CFLAGS += -DENABLE_REPLAY
+# CFLAGS += -DUSE_OBSOLETE_GETTIMEOFDAY
+
+LDFLAGS += -lrt
 
 all: ntpclient
 
@@ -19,6 +23,8 @@ test: ntpclient
 	./ntpclient -d -r <test.dat
 
 ntpclient: ntpclient.o phaselock.o
+
+ntpclient.o phaselock.o: ntpclient.h
 
 adjtimex: adjtimex.o
 
