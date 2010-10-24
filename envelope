@@ -23,7 +23,7 @@ sub closeout {
 	if ($rawplot) { $cmd = "plot \"rawmax.dat\", \"rawmin.dat\"$xplots$nplots\n"; }
 	      # else    { $cmd = "plot \"max.dat\", \"min.dat\", \"rawmax.dat\", \"rawmin.dat\", \"loop.dat\"\n"; }
 	      else    { $cmd = "plot \"max.dat\", \"min.dat\", \"loop.dat\" with lines, 0.9*x>0.3?-(x-0.3)*6000:-x*600, 0.9*x<-0.3?-(x+0.3)*6000:-x*600\n"; }
-	
+
 	if ($use) {
 		print GC $cmd || die;
 		$user=<>;

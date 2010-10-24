@@ -1,8 +1,8 @@
 /*
  * ntpclient.c - NTP client
  *
- * Copyright 1997, 1999, 2000, 2003, 2006  Larry Doolittle  <larry@doolittle.boa.org>
- * Last hack: November 13, 2006
+ * Copyright 1997, 1999, 2000, 2003, 2006, 2007  Larry Doolittle  <larry@doolittle.boa.org>
+ * Last hack: December 30, 2007
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License (Version 2,
@@ -58,6 +58,11 @@
 
 #include "ntpclient.h"
 
+/* Default to the RFC-4330 specified value */
+#ifndef MIN_INTERVAL
+#define MIN_INTERVAL 15
+#endif
+
 #ifdef ENABLE_DEBUG
 #define DEBUG_OPTION "d"
 int debug=0;
@@ -73,18 +78,20 @@ int debug=0;
 
 extern char *optarg;  /* according to man 2 getopt */
 
+#include <stdint.h>
+typedef uint32_t u32;  /* universal for C99 */
+/* typedef u_int32_t u32;   older Linux installs? */
+
 /* XXX fixme - non-automatic build configuration */
 #ifdef __linux__
 #include <sys/utsname.h>
 #include <sys/time.h>
-typedef u_int32_t u32;
 #include <sys/timex.h>
 #else
 extern struct hostent *gethostbyname(const char *name);
 extern int h_errno;
 #define herror(hostname) \
 	fprintf(stderr,"Error %d looking up hostname %s\n", h_errno,hostname)
-typedef uint32_t u32;
 #endif
 /* end configuration for host systems */
 
@@ -129,7 +136,7 @@ struct ntp_control {
 
 /* prototypes for some local routines */
 static void send_packet(int usd, u32 time_sent[2]);
-static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
+static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
 /* static void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len); */
 
 static int get_current_freq(void)
@@ -226,7 +233,7 @@ static void send_packet(int usd, u32 time_sent[2])
 #define VN 3
 #define MODE 3
 #define STRATUM 0
-#define POLL 4 
+#define POLL 4
 #define PREC -6
 
 	if (debug) fprintf(stderr,"Sending ...\n");
@@ -304,17 +311,17 @@ static double ntpdiff( struct ntptime *start, struct ntptime *stop)
 		b = ~b;
 		a -= 1;
 	}
-	
+
 	return a*1.e6 + b * (1.e6/4294967296.0);
 }
 
 /* Does more than print, so this name is bogus.
  * It also makes time adjustments, both sudden (-s)
- * and phase-locking (-l). 
+ * and phase-locking (-l).
  * sets *error to the number of microseconds uncertainty in answer
  * returns 0 normally, 1 if the message fails sanity checks
  */
-static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
+static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
 {
 /* straight out of RFC-1305 Appendix A */
 	int li, vn, mode, stratum, poll, prec;
@@ -326,7 +333,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	const char *drop_reason=NULL;
 #endif
 
-#define Data(i) ntohl(((uint32_t *)data)[i])
+#define Data(i) ntohl(((u32 *)data)[i])
 	li      = Data(0) >> 30 & 0x03;
 	vn      = Data(0) >> 27 & 0x07;
 	mode    = Data(0) >> 24 & 0x07;
@@ -394,7 +401,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 		if (stratum == 0) FAIL("STRATUM==0");  /* kiss o' death */
 #undef FAIL
 	}
-	
+
 	/* XXX should I do this if debug flag is set? */
 	if (ntpc->set_clock) { /* you'd better be root, or ntpclient will crash! */
 		set_time(&xmttime);
@@ -460,7 +467,7 @@ static void setup_receive(int usd, unsigned int interface, short port)
 		fprintf(stderr,"could not bind to udp port %d\n",port);
 		exit(1);
 	}
-	listen(usd,3);
+	/* listen(usd,3); this isn't TCP; thanks Alexander! */
 }
 
 static void setup_transmit(int usd, char *host, short port, struct ntp_control *ntpc)
@@ -483,9 +490,9 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	unsigned int sa_xmit_len;
 	struct timeval to;
 	struct ntptime udp_arrival_ntp;
-	static uint32_t incoming_word[325];
+	static u32 incoming_word[325];
 #define incoming ((char *) incoming_word)
-#define sizeof_incoming (sizeof incoming_word*sizeof(uint32_t))
+#define sizeof_incoming (sizeof incoming_word)
 
 	if (debug) printf("Listening...\n");
 
@@ -509,7 +516,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 				++probes_sent;
 				to.tv_sec=ntpc->cycle_time;
 				to.tv_usec=0;
-			}	
+			}
 			continue;
 		}
 		pack_len=recvfrom(usd,incoming,sizeof_incoming,0,
@@ -582,7 +589,7 @@ static void usage(char *argv0)
 	" [-d]"
 #endif
 	" [-f frequency] [-g goodness] -h hostname\n"
-	"\t[-i interval] [-l] [-p port]"
+	"\t[-i interval] [-l] [-p port] [-q min_delay]"
 #ifdef ENABLE_REPLAY
 	" [-r]"
 #endif
@@ -607,7 +614,7 @@ int main(int argc, char *argv[]) {
 	ntpc.cross_check=1;
 
 	for (;;) {
-		c = getopt( argc, argv, "c:" DEBUG_OPTION "f:g:h:i:lp:" REPLAY_OPTION "st");
+		c = getopt( argc, argv, "c:" DEBUG_OPTION "f:g:h:i:lp:q:" REPLAY_OPTION "st");
 		if (c == EOF) break;
 		switch (c) {
 			case 'c':
@@ -632,14 +639,15 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'i':
 				ntpc.cycle_time = atoi(optarg);
-				/* respect only applicable MUST of RFC-4330 */
-				if (ntpc.cycle_time < 15) ntpc.cycle_time=15;
 				break;
 			case 'l':
 				(ntpc.live)++;
 				break;
 			case 'p':
 				udp_local_port = atoi(optarg);
+				break;
+			case 'q':
+				min_delay = atof(optarg);
 				break;
 #ifdef ENABLE_REPLAY
 			case 'r':
@@ -669,6 +677,11 @@ int main(int argc, char *argv[]) {
 		ntpc.probe_count = 1;
 	}
 
+	/* respect only applicable MUST of RFC-4330 */
+	if (ntpc.probe_count != 1 && ntpc.cycle_time < MIN_INTERVAL) {
+		ntpc.cycle_time=MIN_INTERVAL;
+	}
+
 	if (debug) {
 		printf("Configuration:\n"
 		"  -c probe_count %d\n"
@@ -678,10 +691,11 @@ int main(int argc, char *argv[]) {
 		"  -i interval    %d\n"
 		"  -l live        %d\n"
 		"  -p local_port  %d\n"
+		"  -q min_delay   %f\n"
 		"  -s set_clock   %d\n"
 		"  -x cross_check %d\n",
 		ntpc.probe_count, debug, ntpc.goodness,
-		hostname, ntpc.cycle_time, ntpc.live, udp_local_port,
+		hostname, ntpc.cycle_time, ntpc.live, udp_local_port, min_delay,
 		ntpc.set_clock, ntpc.cross_check );
 	}
 

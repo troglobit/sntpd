@@ -69,7 +69,7 @@ static const char *ret_code_descript[] = {
 
 static void usage(char *prog)
 {
-	fprintf(stderr, 
+	fprintf(stderr,
 		"Usage: %s [ -q ] [ -o offset ] [ -f frequency ] [ -p timeconstant ] [ -t tick ]\n",
 		prog);
 }
@@ -116,7 +116,7 @@ int main(int argc, char ** argv)
 	ret = adjtimex(&txc);
 
 	if (ret < 0) perror("adjtimex");
-	
+
 	if (!quiet && ret>=0) {
 		printf(
 			"    mode:         %d\n"
@@ -149,7 +149,7 @@ int main(int argc, char ** argv)
 			"    return value: %d (%s)\n",
 		txc.constant,
 		txc.precision, txc.tolerance, txc.tick,
-		txc.time.tv_sec, txc.time.tv_usec, ret, 
+		txc.time.tv_sec, txc.time.tv_usec, ret,
 		(ret >= 0 && ret <= 5) ? ret_code_descript[ret] : "error" );
 	}
 	return (ret<0);

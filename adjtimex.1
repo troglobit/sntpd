@@ -14,7 +14,7 @@ adjtimex \- access to kernel time controls and readouts
 .B adjtimex
 reads and optionally sets adjustment parameters for the Linux system clock.
 This program provides shell-level access
-to the system call 
+to the system call
 .I adjtimex(2),
 which actually manipulates the
 .I timex
@@ -32,7 +32,7 @@ Mortal users may view all these parameters; only the superuser may change them.
 .SH OPTIONS
 .TP 8
 .B -q
-quiet mode - do not print 
+quiet mode - do not print
 .TP 8
 .BI \-o " offset"
 Time offset in microseconds.
@@ -46,7 +46,7 @@ Microseconds per tick, nominally 10000.  Coarse corrections (within
 100 ppm) to clock frequency are better made here than with -f.
 .TP 8
 .BI \-p " timeconstant"
-rate 
+rate
 .SH SEE ALSO
 adjtimex(2), tickadj(1), /usr/include/linux/timex.h.
 An independent implementation of similar functionality was

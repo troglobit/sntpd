@@ -4,7 +4,7 @@ better (or at least has the potential to function better) within
 that limited scope.  Since it is much smaller than xntpd, it is
 also more relevant for embedded computers.
 
-ntpclient is Copyright 1997, 1999, 2000, 2003, 2006 Larry Doolittle,
+ntpclient is Copyright 1997, 1999, 2000, 2003, 2006, 2007 Larry Doolittle,
 and may be freely copied and modified according to the terms of the GNU
 General Public License, version 2.  If you want to distribute ntpclient
 under other terms, contact me.  I might agree to some other arrangement,
@@ -18,7 +18,7 @@ For changing the system clock frequency, only the Linux adjtimex(2)
 interface is implemented at this time.  Non-Linux systems can only
 use ntpclient to measure time differences and set the system clock,
 by way of the POSIX 1003.1-2001 standard routines clock_gettime() and
-clock_settime().
+clock_settime().  Also see "Bugs", below.
 
 There are a few compile-time configurations possible, which require
 editing the Makefile.  Either do or don't define
@@ -31,7 +31,7 @@ featured ntpclient, that uses modern POSIX time functions, and works
 reasonably with any Linux kernel.  There are comments in ntpclient.c
 that you should read before experimenting with PRECISION_SIOCGSTAMP.
 
-Some older but otherwise (almost) servicable Linux systems (e.g., Redhat
+Some older but otherwise (almost) serviceable Linux systems (e.g., Red Hat
 EL-3.0 and Ubuntu 4.10) have a totally broken POSIX clock_settime()
 implementation.  If you get "clock_settime: Invalid argument" when you
 run ntpclient -s, rebuild with -DUSE_OBSOLETE_GETTIMEOFDAY.  Linux systems
@@ -41,12 +41,13 @@ Usage: ntpclient [options]
 options:
  -c count     stop after count time measurements (default 0 means go forever)
  -d           print diagnostics (feature can be disabled at compile time)
- -g goodness  causes ntpclient to stop after getting a result more accurate 
+ -g goodness  causes ntpclient to stop after getting a result more accurate
                    than goodness (microseconds, default 0 means go forever)
  -h hostname  (mandatory) NTP server, against which to measure system time
  -i interval  check time every interval seconds (default 600)
  -l           attempt to lock local clock to server using adjtimex(2)
  -p port      local NTP client UDP port (default 0 means "any available")
+ -q min_delay minimum packet delay for transaction (default 800 microseconds)
  -r           replay analysis code based on stdin
  -s           simple clock set (implies -c 1)
  -t           trust network and server, no RFC-4330 recommended cross-checks
@@ -59,6 +60,14 @@ environments should study ntpclient's behavior, and be prepared to adjust
 internal tuning parameters.  A long description of how and why to use
 ntpclient is in the HOWTO file.  ntpclient always sends packets to the
 server's UDP port 123.
+
+One commonly needed tuning parameter for lock mode is min_delay, the
+shortest possible round-trip transaction time.  This can be set with the
+command line -q switch.  The historical default of 800 microseconds was
+good for local Ethernet hardware a few years ago.  If it is set too high,
+you will get a lot of "inconsistent" lines in the log file when time locking
+(-l switch).  The only true future-proof value is 0, but that will cause the
+local time to wander more than it should.  I use 200 on my workstation.
 
 The test.dat file has 200 lines of sample output.  Its first few lines,
 with the output column headers that are shown when the -d option is
@@ -75,7 +84,7 @@ skew:        difference between local time and server time (microseconds)
 dispersion:  reported by server, see RFC-1305 (microseconds)
 freq:        local clock frequency adjustment (Linux only, ppm*65536)
 
-A new feature as of this release is a series of sanity checks on
+A relatively new feature is a series of sanity checks on
 UDP packets received, generally as recommended by RFC-4330.  If it
 fails one of these tests, the line described above is replaced by
 36765 01380.381  rejected packet
@@ -128,12 +137,23 @@ Changes since the widely distributed ntpclient_2003_194 version:
  -- most subroutines are now flagged static to the compiler
  -- structural changes to the code, such as the new ntpclient.h file
  -- dropped (mostly) obsolete patches from Linksys and Andy Warner
- 
+
+Changes since ntpclient_2006_318:
+ -- adjustable min_delay parameter, used to be hard-coded 800 microseconds
+ -- remove useless listen() call, thanks to Alexander Indenbaum
+ -- fix length passed to recvfrom(), thanks to Alexander Indenbaum
+ -- tidy up 32-bit integer declarations, prodding from Brian McAllister
+ -- added rate2.awk, contributed by Lou Sortman
+ -- provide easy way to override 15 second MIN_INTERVAL at compile time
+ -- relax MIN_INTERVAL enforcement for one-shot use, thanks to Mihai Buha
+
 Bugs:
  -- Doesn't understand the LI (Leap second Indicator) field of an NTP packet
  -- Doesn't interact with adjtimex(2) status value
  -- Can't query multiple servers
  -- IPv4 only
+ -- Requires Linux-style select() semantics, where timeout value is modified
+ -- Always returns success (0)
 
 Adherence to RFC-4330 chapter 10, Best practices:
  1.  enforced, unless someone tinkers with the source code

@@ -1,8 +1,8 @@
 /*
  * phaselock.c - Phase locking for NTP client
  *
- * Copyright 2000  Larry Doolittle  <larry@doolittle.boa.org>
- * Last hack: 28 November, 2000
+ * Copyright 2000, 2007  Larry Doolittle  <larry@doolittle.boa.org>
+ * Last hack: 30 December, 2007
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License (Version 2,
@@ -25,6 +25,8 @@
 
 #include <stdio.h>
 #include "ntpclient.h"
+
+double min_delay = 800.0;  /* global, user-changeable, units are microseconds */
 
 #define RING_SIZE 16
 #define MAX_CORRECT 250   /* ppm change to system clock */
@@ -199,7 +201,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 	if (debug) printf("xontemplate %u %.1f %.1f %d\n",absolute,skew,errorbar,freq);
 	d_ring[rp].absolute = absolute;
 	d_ring[rp].skew     = skew;
-	d_ring[rp].errorbar = errorbar - 800.0;   /* quick hack to speed things up */
+	d_ring[rp].errorbar = errorbar - min_delay;   /* quick hack to speed things up */
 	d_ring[rp].freq     = freq;
 
 	if (valid<RING_SIZE) ++valid;

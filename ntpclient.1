@@ -7,9 +7,9 @@ ntpclient \- client to get time from NTP server
 .SH SYNOPSIS
 .B ntpclient -h hostname [-c count] [-d] [-f frequency] [-g goodness]
 .in 14
-.B             [-i interval] [-l] [-p port] [-r] [-s] 
+.B             [-i interval] [-l] [-p port] [-r] [-s]
 .SH DESCRIPTION
-.B ntpclient 
+.B ntpclient
 is an NTP (RFC-1305) client for unix-alike computers.
 Its functionality is a small subset of xntpd, but has the potential
 to function better within
@@ -37,7 +37,7 @@ freq:        local clock frequency adjustment (Linux only, ppm*65536)
 .fi
 .SS "Options"
 .TP
-.BI  -h " hostname"  
+.BI  -h " hostname"
 (mandatory) NTP server, against which to measure system time
 .TP
 .BI -c " count"
@@ -47,15 +47,18 @@ top after count time measurements (default 0 means go forever)
 .br
 print diagnostics (feature can be disabled at compile time)
 .TP
-.BI  -g " goodness"  
-causes ntpclient to stop after getting a result more accurate 
+.BI  -g " goodness"
+causes ntpclient to stop after getting a result more accurate
 than goodness (microseconds, default 0 means go forever)
 .TP
-.BI  -i " interval"  
+.BI  -i " interval"
 check time every interval seconds (default 600)
 .TP
-.BI -p " port" 
+.BI -p " port"
 local NTP client UDP port (default 0 means "any available")
+.TP
+.BI  -q " min_delay"
+minimum packet delay for transaction (default 800 microseconds)
 .TP
 .B  -r
 .br
@@ -72,7 +75,7 @@ simple clock set (implies -c 1)
 .TP
 .B  -l
 .br
-attempt to lock local clock to server using 
+attempt to lock local clock to server using
 .BR adjtimex (2)
 (requires root access)
 .TP
@@ -84,11 +87,11 @@ trust network and server, no RFC-4330 recommended cross-checks
  Larry Doolittle
  ntpclient home page: http://doolittle.icarus.com/ntpclient/
 .SH COPYRIGHT
-ntpclient is Copyright 1997, 1999, 2000, 2003, 2006 Larry Doolittle, and
+ntpclient is Copyright 1997, 1999, 2000, 2003, 2006, 2007 Larry Doolittle, and
 may be freely copied and modified according to the terms of the GNU
 General Public License, version 2.  If you want to distribute ntpclient
 under other terms, contact me.  I might agree to some other arrangement,
-if you talk to me 
+if you talk to me
 .I before
 you start violating GPL terms.
 

@@ -1,4 +1,4 @@
-Ask on newsgroup about making sanity checks mandatory, default, or optional 
+Ask on newsgroup about making sanity checks mandatory, default, or optional
    Rob Landley says disable checks with CONFIG to save space
    good to know why something fails
    Denis Vlasenko recommends not checking UDP source, since that can

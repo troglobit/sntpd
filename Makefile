@@ -1,4 +1,4 @@
-# A long time ago, far, far away, under Solaris, you needed to 
+# A long time ago, far, far away, under Solaris, you needed to
 #    CFLAGS += -xO2 -Xc
 #    LDLIBS += -lnsl -lsocket
 # To cross-compile
@@ -6,8 +6,7 @@
 # To check for lint
 # -Wundef not recognized by gcc-2.7.2.3
 CFLAGS += -std=c99 -W -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow \
- -Waggregate-return -Wnested-externs -Winline -Wwrite-strings \
- -Wstrict-prototypes -W
+ -Waggregate-return -Wnested-externs -Winline -Wwrite-strings -Wstrict-prototypes
 
 CFLAGS += -O2
 # CFLAGS += -DPRECISION_SIOCGSTAMP

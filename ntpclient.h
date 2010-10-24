@@ -5,5 +5,8 @@ extern int debug;
 #define debug 0
 #endif
 
+/* global tuning parameter */
+extern double min_delay;
+
 /* prototype for function defined in phaselock.c */
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
