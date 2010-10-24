@@ -146,7 +146,7 @@ static int get_current_freq(void)
 #ifdef __linux__
 	struct timex txc;
 	txc.modes=0;
-	if (__adjtimex(&txc) < 0) {
+	if (adjtimex(&txc) < 0) {
 		perror("adjtimex"); exit(1);
 	}
 	return txc.freq;
@@ -163,7 +163,7 @@ static int set_freq(int new_freq)
 	struct timex txc;
 	txc.modes = ADJ_FREQUENCY;
 	txc.freq = new_freq;
-	if (__adjtimex(&txc) < 0) {
+	if (adjtimex(&txc) < 0) {
 		perror("adjtimex"); exit(1);
 	}
 	return txc.freq;
