@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include "ntpclient.h"
 
+extern int verbose;
 double min_delay = 800.0;  /* global, user-changeable, units are microseconds */
 
 #define RING_SIZE 16
@@ -311,7 +312,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 		/*
 		 * Pass 5: decide on a new freq */
 		if (inconsistent) {
-			printf("# inconsistent\n");
+			if (debug) printf("# inconsistent\n");
 		} else {
 			delta_f = find_df(&both_sides_now);
 			if (debug) printf("find_df() = %e\n", delta_f);
@@ -319,10 +320,11 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			delta_freq = delta_f*65536+.5;
 			if (debug) printf("delta_f %f  delta_freq %d  bsn %d\n", delta_f, delta_freq, both_sides_now);
 			computed_freq -= delta_freq;
-			printf ("# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
-			printf (      " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
-			printf (" delta_f %.3f  computed_freq %d\n", delta_f, computed_freq);
-
+			if (verbose) {
+				printf ("# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
+				printf (      " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
+				printf (" delta_f %.3f	computed_freq %d\n", delta_f, computed_freq);
+			}
 			if (computed_freq < -MAX_C) computed_freq=-MAX_C;
 			if (computed_freq >  MAX_C) computed_freq= MAX_C;
 		}

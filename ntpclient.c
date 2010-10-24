@@ -69,12 +69,26 @@ int debug=0;
 #else
 #define DEBUG_OPTION
 #endif
+int verbose = 0;                /* verbose flag, produce useful output on stdout */
 
 #ifdef ENABLE_REPLAY
 #define  REPLAY_OPTION   "r"
 #else
 #define  REPLAY_OPTION
 #endif
+
+#ifdef ENABLE_SYSLOG
+# include <syslog.h>
+# include <sys/utsname.h>
+# include <sys/time.h>
+# define SYSLOG_IDENT    "ntpclient"
+# define SYSLOG_OPTIONS  (LOG_NOWAIT | LOG_PID)
+# define SYSLOG_FACILITY LOG_CRON
+# define LOG_OPTION      "L"
+#else
+#define LOG_OPTION
+#endif
+int logging = 0 ;
 
 extern char *optarg;  /* according to man 2 getopt */
 
@@ -405,6 +419,11 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	/* XXX should I do this if debug flag is set? */
 	if (ntpc->set_clock) { /* you'd better be root, or ntpclient will crash! */
 		set_time(&xmttime);
+#ifdef ENABLE_SYSLOG
+                if (logging) {
+                        syslog(LOG_NOTICE, "Time set from remote server");
+                }
+#endif
 	}
 
 	/* Not the ideal order for printing, but we want to be sure
@@ -418,23 +437,29 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 			el_time+sec2u(disp), freq);
 		if (!debug && new_freq != freq) set_freq(new_freq);
 	}
-	printf("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
-		arrival->coarse/86400, arrival->coarse%86400,
-		arrival->fine/4294967, el_time, st_time,
-		(skew1-skew2)/2, sec2u(disp), freq);
-	fflush(stdout);
+        if (verbose) {
+                printf("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d\n",
+                       arrival->coarse/86400, arrival->coarse%86400,
+                       arrival->fine/4294967, el_time, st_time,
+                       (skew1-skew2)/2, sec2u(disp), freq);
+                fflush(stdout);
+        }
 	*error = el_time-st_time;
 
 	return 0;
 fail:
 #ifdef ENABLE_DEBUG
-	printf("ntpclient:%d %.5d.%.3d  rejected packet: %s\n",
-		arrival->coarse/86400, arrival->coarse%86400,
-		arrival->fine/4294967, drop_reason);
+	if (debug) {
+		printf("ntpclient:%d %.5d.%.3d	rejected packet: %s\n",
+		       arrival->coarse/86400, arrival->coarse%86400,
+		       arrival->fine/4294967, drop_reason);
+	}
 #else
-	printf("ntpclient:%d %.5d.%.3d  rejected packet\n",
-		arrival->coarse/86400, arrival->coarse%86400,
-		arrival->fine/4294967);
+	if (verbose) {
+		printf("ntpclient:%d %.5d.%.3d  rejected packet\n",
+		       arrival->coarse/86400, arrival->coarse%86400,
+		       arrival->fine/4294967);
+	}
 #endif
 	return 1;
 }
@@ -477,8 +502,16 @@ static void setup_transmit(int usd, char *host, short port, struct ntp_control *
 	stuff_net_addr(&(sa_dest.sin_addr),host);
 	memcpy(ntpc->serv_addr,&(sa_dest.sin_addr),4); /* XXX asumes IPv4 */
 	sa_dest.sin_port=htons(port);
-	if (connect(usd,(struct sockaddr *)&sa_dest,sizeof sa_dest)==-1)
-		{perror("ntpclient:Failed connect()");exit(1);}
+	while (connect(usd,(struct sockaddr *)&sa_dest,sizeof sa_dest)==-1) {
+                if (ntpc->live) {
+                        /* Wait here a while, networking is probably not up yet. */
+                        sleep (1);
+                        continue;
+                }
+
+		perror("ntpclient:Failed connect()");
+                exit(1);
+        }
 }
 
 static void primary_loop(int usd, struct ntp_control *ntpc)
@@ -592,7 +625,11 @@ static void usage(char *argv0)
 #ifdef ENABLE_REPLAY
 	" [-r]"
 #endif
-	" [-s] [-t]\n",
+	" [-s] [-t]"
+#ifdef ENABLE_SYSLOG
+	" [-L]"
+#endif
+	"\n",
 	argv0);
 }
 
@@ -612,8 +649,14 @@ int main(int argc, char *argv[]) {
 	ntpc.goodness=0;
 	ntpc.cross_check=1;
 
-	for (;;) {
-		c = getopt( argc, argv, "c:" DEBUG_OPTION "f:g:h:i:lp:q:" REPLAY_OPTION "st");
+#ifdef ENABLE_SYSLOG
+	openlog(SYSLOG_IDENT, SYSLOG_OPTIONS, SYSLOG_FACILITY);
+#endif
+
+	while (1) {
+		char opts[] = "c:" DEBUG_OPTION "f:g:h:i:lp:q:" REPLAY_OPTION "st" LOG_OPTION;
+
+		c = getopt(argc, argv, opts);
 		if (c == EOF) break;
 		switch (c) {
 			case 'c':
@@ -662,6 +705,11 @@ int main(int argc, char *argv[]) {
 				(ntpc.cross_check)=0;
 				break;
 
+#ifdef ENABLE_SYSLOG
+			case 'L':
+				logging++;
+				break ;
+#endif
 			default:
 				usage(argv[0]);
 				exit(1);
@@ -692,10 +740,17 @@ int main(int argc, char *argv[]) {
 		"  -p local_port  %d\n"
 		"  -q min_delay   %f\n"
 		"  -s set_clock   %d\n"
-		"  -x cross_check %d\n",
-		ntpc.probe_count, debug, ntpc.goodness,
+		"  -t cross_check %d\n"
+#ifdef ENABLE_SYSLOG
+		"  -L logging     %d\n"
+#endif
+		, ntpc.probe_count, debug, ntpc.goodness,
 		hostname, ntpc.cycle_time, ntpc.live, udp_local_port, min_delay,
-		ntpc.set_clock, ntpc.cross_check );
+		ntpc.set_clock, ntpc.cross_check 
+#ifdef ENABLE_SYSLOG
+	       , logging
+#endif
+		);
 	}
 
 	/* Startup sequence */
@@ -706,8 +761,22 @@ int main(int argc, char *argv[]) {
 
 	setup_transmit(usd, hostname, NTP_PORT, &ntpc);
 
+#ifdef ENABLE_SYSLOG
+	if (logging) {
+		syslog(LOG_NOTICE, "Using server: %s", hostname);
+	}
+#endif
 	primary_loop(usd, &ntpc);
 
 	close(usd);
+#ifdef ENABLE_SYSLOG
+	closelog();
+#endif
 	return 0;
 }
+
+/**
+ * Local Variables:
+ *  c-file-style: "linux"
+ * End:
+ */
