@@ -2,7 +2,7 @@
 
 # Larry's versioning scheme: YYYY_DOY, i.e., "%Y_%j"
 #VERSION      ?= $(shell git tag -l | tail -1)
-VERSION      ?= 2010_10-rc1
+VERSION      ?= 2010_298
 NAME          = ntpclient
 EXECS        ?= $(NAME) adjtimex
 PKG           = $(NAME)-$(VERSION)

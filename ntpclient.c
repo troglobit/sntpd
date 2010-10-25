@@ -39,6 +39,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -76,6 +77,9 @@
 int debug   = 0;
 int verbose = 0;                /* Verbose flag, produce useful output on stdout */
 int logging = 0;
+
+static int sighandled = 0;
+#define	GOT_SIGINT	0x01
 
 extern char *optarg;  /* according to man 2 getopt */
 
@@ -456,7 +460,7 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	if (ntpc->set_clock) { /* you'd better be root, or ntpclient will exit here! */
 		set_time(&xmttime);
 		if (verbose) {
-			logit(LOG_NOTICE, 0, "Time set from remote server %s", server);
+			logit(LOG_NOTICE, 0, "Time synchronized to server %s, stratum %d", server, stratum);
 		}
 	}
 
@@ -548,6 +552,37 @@ static void setup_transmit(int usd, char *host, short port, struct ntp_control *
         }
 }
 
+/*
+ * Signal handler.  Take note of the fact that the signal arrived
+ * so that the main loop can take care of it.
+ */
+static void handler(int sig)
+{
+	switch (sig) {
+		case SIGINT:
+		case SIGTERM:
+		case SIGHUP:
+		case SIGUSR1:
+		case SIGUSR2:
+			sighandled |= GOT_SIGINT;
+			break;
+	}
+}
+
+static void setup_signals(void)
+{
+	struct sigaction sa;
+
+	sa.sa_handler = handler;
+	sa.sa_flags = 0;	/* Interrupt system calls */
+	sigemptyset(&sa.sa_mask);
+	sigaction(SIGHUP, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGUSR1, &sa, NULL);
+	sigaction(SIGUSR2, &sa, NULL);
+}
+
 static void primary_loop(int usd, struct ntp_control *ntpc)
 {
 	fd_set fds;
@@ -569,6 +604,11 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	to.tv_usec  = 0;
 
 	while (1) {
+		if (sighandled) {
+			ntpc->live = 0;
+			break;
+		}
+
 		FD_ZERO(&fds);
 		FD_SET(usd, &fds);
 		i = select(usd + 1, &fds, NULL, NULL, &to);  /* Wait on read or error */
@@ -689,6 +729,7 @@ int main(int argc, char *argv[])
 	int c;
 	/* These parameters are settable from the command line
 	   the initializations here provide default behavior */
+	int daemonize = 1;	      /* Act as stand-alone daemon by default. */
 	short int udp_local_port=0;   /* default of 0 means kernel chooses */
 	int initial_freq;             /* initial freq value to use */
 	struct ntp_control ntpc;
@@ -704,7 +745,7 @@ int main(int argc, char *argv[])
 #endif
 
 	while (1) {
-		char opts[] = "c:" DEBUG_OPTION "f:g:h:i:lp:q:" REPLAY_OPTION "st" LOG_OPTION "v";
+		char opts[] = "c:" DEBUG_OPTION "f:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "v";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF) break;
@@ -736,6 +777,9 @@ int main(int argc, char *argv[])
 				break;
 			case 'l':
 				(ntpc.live)++;
+				break;
+			case 'n':
+				daemonize = 0;
 				break;
 			case 'p':
 				udp_local_port = atoi(optarg);
@@ -802,21 +846,42 @@ int main(int argc, char *argv[])
 #endif
 	}
 #endif /* ENABLE_DEBUG */
+
 	/* Startup sequence */
+	if (daemonize) {
+		if (-1 == daemon(0, 0)) {
+			logit(LOG_ERR, errno, "Failed daemonizing, aborting");
+			exit(1);
+		}
+#ifdef ENABLE_SYSLOG
+		/* Daemonzing implicates all log messages to syslog. */
+		logging++;
+#endif
+		/* If no syslog available, disable verbose or debug messages since
+		 * we no longer have any way of communicating with the user after
+		 * being daemonized. */
+		if (!logging) {
+			debug = 0;
+			verbose = 0;
+		}
+		logit(LOG_NOTICE, 0, "Starting ntpclient v" VERSION_STRING);
+	}
+
 	if ((usd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
 		logit(LOG_ERR, errno, "Failed creating UDP socket()");
 		exit(1);
 	}
 
 	setup_receive(usd, INADDR_ANY, udp_local_port);
-
 	setup_transmit(usd, server, NTP_PORT, &ntpc);
+	setup_signals();
 
 	if (verbose) {
 		logit(LOG_NOTICE, 0, "Using time sync server: %s", server);
 	}
 	primary_loop(usd, &ntpc);
 
+	logit(LOG_NOTICE, 0, "Stopping ntpclient v" VERSION_STRING);
 	close(usd);
 #ifdef ENABLE_SYSLOG
 	closelog();
