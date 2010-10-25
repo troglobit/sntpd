@@ -26,7 +26,6 @@
 #include <stdio.h>
 #include "ntpclient.h"
 
-extern int verbose;
 double min_delay = 800.0;  /* global, user-changeable, units are microseconds */
 
 #define RING_SIZE 16
@@ -358,10 +357,10 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			if (debug)
 				logit(LOG_DEBUG, 0, "delta_f %f  delta_freq %d  bsn %d", delta_f, delta_freq, both_sides_now);
 			computed_freq -= delta_freq;
-			if (verbose) {
+			if (debug) {
 				logit(LOG_NOTICE, 0, "# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
-				logit(LOG_NOTICE, 0, " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
-				logit(LOG_NOTICE, 0, " delta_f %.3f	computed_freq %d", delta_f, computed_freq);
+				logit(LOG_NOTICE, 0, "       ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
+				logit(LOG_NOTICE, 0, " delta_f %.3f computed_freq %d", delta_f, computed_freq);
 			}
 			if (computed_freq < -MAX_C) computed_freq=-MAX_C;
 			if (computed_freq >  MAX_C) computed_freq= MAX_C;
