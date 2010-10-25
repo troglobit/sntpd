@@ -81,14 +81,20 @@ static int next_dn(int i) { int r = i-1; if (r<0) r=RING_SIZE-1; return r;}
 static int search(int rp, int j, int s0, int s1, int sign, struct _seg *answer)
 {
 	double dt, slope;
-	int n, nextj=0, cinit=1;
-	for (n=next_up(j); n!=next_up(rp); n=next_up(n)) {
-		if (0 && debug) printf("d_ring[%d].s.ss[%d]=%f d_ring[%d].s.ss[%d]=%f\n",
-			n, s0, d_ring[n].s.ss[s0], j, s1, d_ring[j].s.ss[s1]);
+	int n, nextj = 0, cinit = 1;
+
+	for (n = next_up(j); n != next_up(rp); n = next_up(n)) {
+#ifdef ENABLE_DEBUG
+		if (debug)
+			logit(LOG_DEBUG, 0, "d_ring[%d].s.ss[%d]=%f d_ring[%d].s.ss[%d]=%f",
+			      n, s0, d_ring[n].s.ss[s0], j, s1, d_ring[j].s.ss[s1]);
+#endif
 		dt = d_ring[n].absolute - d_ring[j].absolute;
 		slope = (d_ring[n].s.ss[s0] - d_ring[j].s.ss[s1]) / dt;
-		if (0 && debug) printf("slope %d%d%d [%d,%d] = %f\n",
-			s0, s1, sign, j, n, slope);
+#ifdef ENABLE_DEBUG
+		if (debug) 
+			logit(LOG_DEBUG, 0, "slope %d%d%d [%d,%d] = %f", s0, s1, sign, j, n, slope);
+#endif
 		if (cinit || (slope < answer->slope) ^ sign) {
 			answer->slope = slope;
 			answer->offset = d_ring[n].s.ss[s0] +
@@ -140,22 +146,30 @@ static double find_shift(double slope, double offset)
 {
 	double shift  = slope - offset/600.0;
 	double shift2 = slope + 0.3 - offset/6000.0;
+
 	if (shift2 < shift) shift = shift2;
-	if (debug) printf("find_shift %f %f -> %f\n", slope, offset, shift);
-	if (shift  < 0) return 0.0;
+	if (debug) logit(LOG_DEBUG, 0, "find_shift %f %f -> %f", slope, offset, shift);
+	if (shift  < 0)
+           return 0.0;
+
 	return shift;
 }
 
 static void polygon_point(struct _seg *s)
 {
 	double l, r;
-	if (debug) printf("loop %f %f\n", s->slope, s->offset);
+
+	if (debug) logit(LOG_DEBUG, 0, "loop %f %f", s->slope, s->offset);
+
 	l = find_shift(- s->slope,   s->offset);
 	r = find_shift(  s->slope, - s->offset);
 	if (l < df.l_min) df.l_min = l;
 	if (r < df.r_min) df.r_min = r;
-	if (debug) printf("constraint left:  %f %f \n", l, df.l_min);
-	if (debug) printf("constraint right: %f %f \n", r, df.r_min);
+
+	if (debug) {
+		logit(LOG_DEBUG, 0, "constraint left:  %f %f", l, df.l_min);
+		logit(LOG_DEBUG, 0, "constraint right: %f %f", r, df.r_min);
+        }
 }
 
 /* Something like linear feedback to be used when we are "close" to
@@ -172,13 +186,17 @@ static double find_df_center(struct _seg *min, struct _seg *max, double gross_df
 	double delta2 = -offset/1800.0 - slope;
 	double delta  = 0.0;
 	double factor = crit_time/(crit_time+doffset+dslope*1200.0);
+
 	if (offset <  0 && delta2 > 0) delta = delta2;
 	if (offset <  0 && delta1 < 0) delta = delta1;
 	if (offset >= 0 && delta1 > 0) delta = delta1;
 	if (offset >= 0 && delta2 < 0) delta = delta2;
 	if (max->offset < -crit_time || min->offset > crit_time) return 0.0;
-	if (debug) printf("find_df_center %f %f\n", delta, factor);
-	return factor*delta;
+
+	if (debug)
+		logit(LOG_DEBUG, 0, "find_df_center %f %f", delta, factor);
+
+	return factor * delta;
 }
 
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq)
@@ -199,7 +217,9 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 	int inconsistent=0, max_imax, max_imin=0, min_imax, min_imin=0;
 	int computed_freq=freq;
 
-	if (debug) printf("xontemplate %u %.1f %.1f %d\n",absolute,skew,errorbar,freq);
+	if (debug)
+		logit(LOG_DEBUG, 0, "xontemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
+
 	d_ring[rp].absolute = absolute;
 	d_ring[rp].skew     = skew;
 	d_ring[rp].errorbar = errorbar - min_delay;   /* quick hack to speed things up */
@@ -210,13 +230,16 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 		/*
 		 * Pass 1: correct for wandering freq's */
 		cum = 0.0;
-		if (debug) printf("\n");
+		if (debug) logit(LOG_DEBUG, 0, "");
 		for (j=rp; ; j=n) {
 			d_ring[j].s.s.max = d_ring[j].skew - cum + d_ring[j].errorbar;
 			d_ring[j].s.s.min = d_ring[j].skew - cum - d_ring[j].errorbar;
-			if (debug) printf("hist %d %d %f %f %f\n",j,d_ring[j].absolute-absolute,
-				cum,d_ring[j].s.s.min,d_ring[j].s.s.max);
-			n=next_dn(j);
+
+			if (debug)
+				logit(LOG_DEBUG, 0, "hist %d %d %f %f %f", j, d_ring[j].absolute - absolute,
+				      cum, d_ring[j].s.s.min, d_ring[j].s.s.max);
+
+			n = next_dn(j);
 			if (n == rp) break;
 			/* Assume the freq change took place immediately after
 			 * the data was taken; this is valid for the case where
@@ -235,15 +258,22 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			nextj = search(rp, j, 1, 1, 0, &maxseg[c]);
 			        search(rp, j, 0, 1, 1, &check);
 			if (check.slope < maxseg[c].slope && check.slope > last_slope &&
-			    (dinit || check.slope < save_min.slope)) {dinit=0; save_min=check; }
-			if (debug) printf("maxseg[%d] = %f *x+ %f\n",
-				 c, maxseg[c].slope, maxseg[c].offset);
+			    (dinit || check.slope < save_min.slope)) {
+				dinit = 0;
+				save_min=check;
+			}
+
+			if (debug)
+				logit(LOG_DEBUG, 0, "maxseg[%d] = %f *x+ %f",
+				      c, maxseg[c].slope, maxseg[c].offset);
+
 			last_slope = maxseg[c].slope;
 			c++;
 			if (nextj == rp) break;
 		}
 		if (dinit==1) inconsistent=1;
-		if (debug && dinit==0) printf ("mincross %f *x+ %f\n", save_min.slope, save_min.offset);
+		if (debug && dinit==0)
+			logit(LOG_DEBUG, 0, "mincross %f *x+ %f", save_min.slope, save_min.offset);
 		max_avail=c;
 		/*
 		 * Pass 3: find the convex up envelope of s.min, composed of
@@ -256,14 +286,16 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			        search(rp, j, 1, 0, 0, &check);
 			if (check.slope > minseg[c].slope && check.slope < last_slope &&
 			    (dinit || check.slope < save_max.slope)) {dinit=0; save_max=check; }
-			if (debug) printf("minseg[%d] = %f *x+ %f\n",
-				 c, minseg[c].slope, minseg[c].offset);
+			if (debug)
+				logit(LOG_DEBUG, 0, "minseg[%d] = %f *x+ %f",
+				      c, minseg[c].slope, minseg[c].offset);
 			last_slope = minseg[c].slope;
 			c++;
 			if (nextj == rp) break;
 		}
 		if (dinit==1) inconsistent=1;
-		if (debug && dinit==0) printf ("maxcross %f *x+ %f\n", save_max.slope, save_max.offset);
+		if (debug && dinit==0)
+			logit(LOG_DEBUG, 0, "maxcross %f *x+ %f", save_max.slope, save_max.offset);
 		min_avail=c;
 		/*
 		 * Pass 4: splice together the convex polygon that forms
@@ -284,7 +316,8 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 				break;
 			if (dinit==0) polygon_point(&maxseg[c]);
 		}
-		if (dinit && debug) printf("found maxseg vs. save_min inconsistency\n");
+		if (dinit && debug)
+			logit(LOG_DEBUG, 0, "found maxseg vs. save_min inconsistency");
 		if (dinit) inconsistent=1;
 		max_imax = c;
 		maxseg[max_imax] = save_max;
@@ -300,35 +333,49 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 				break;
 			if (dinit==0) polygon_point(&minseg[c]);
 		}
-		if (dinit && debug) printf("found minseg vs. save_max inconsistency\n");
+		if (dinit && debug)
+			logit(LOG_DEBUG, 0, "found minseg vs. save_max inconsistency");
 		if (dinit) inconsistent=1;
 		min_imax = c;
 		minseg[min_imax] = save_max;
 
 		/* not needed for analysis, but shouldn't hurt either */
-		if (debug) polygon_point(&save_min);
+		if (debug)
+			polygon_point(&save_min);
 		} /* !inconsistent */
 
 		/*
 		 * Pass 5: decide on a new freq */
 		if (inconsistent) {
-			if (debug) printf("# inconsistent\n");
+			if (debug)
+				logit(LOG_DEBUG, 0, "# inconsistent");
 		} else {
 			delta_f = find_df(&both_sides_now);
-			if (debug) printf("find_df() = %e\n", delta_f);
+			if (debug)
+				logit(LOG_DEBUG, 0, "find_df() = %e", delta_f);
 			delta_f += find_df_center(&save_min,&save_max, delta_f);
 			delta_freq = delta_f*65536+.5;
-			if (debug) printf("delta_f %f  delta_freq %d  bsn %d\n", delta_f, delta_freq, both_sides_now);
+			if (debug)
+				logit(LOG_DEBUG, 0, "delta_f %f  delta_freq %d  bsn %d", delta_f, delta_freq, both_sides_now);
 			computed_freq -= delta_freq;
 			if (verbose) {
-				printf ("# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
-				printf (      " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
-				printf (" delta_f %.3f	computed_freq %d\n", delta_f, computed_freq);
+				logit(LOG_NOTICE, 0, "# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
+				logit(LOG_NOTICE, 0, " ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
+				logit(LOG_NOTICE, 0, " delta_f %.3f	computed_freq %d", delta_f, computed_freq);
 			}
 			if (computed_freq < -MAX_C) computed_freq=-MAX_C;
 			if (computed_freq >  MAX_C) computed_freq= MAX_C;
 		}
 	}
 	rp = (rp+1)%RING_SIZE;
+
 	return computed_freq;
 }
+
+/**
+ * Local Variables:
+ *  c-file-style: "linux"
+ *  version-control: t
+ *  indent-tabs-mode: t
+ * End:
+ */

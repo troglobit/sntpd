@@ -1,5 +1,6 @@
 # Makefile for ntpclient, an RFC-1305 client for UNIX systems   -*-Makefile-*-
 
+# Larry's versioning scheme: YYYY_DOY, i.e., "%Y_%j"
 #VERSION      ?= $(shell git tag -l | tail -1)
 VERSION      ?= 2010_10-rc1
 NAME          = ntpclient
@@ -18,12 +19,13 @@ mandir        = $(prefix)/share/man/man8
 
 OBJS	      = ntpclient.o phaselock.o
 CFLAGS        = -DVERSION_STRING=\"$(VERSION)\" $(CFG_INC) $(EXTRA_CFLAGS)
-CFLAGS       += -O2 -std=c99 -D_GNU_SOURCE
+CFLAGS       += -O2 -std=c99 -D_BSD_SOURCE
 CFLAGS       += -W -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow
 CFLAGS       += -Waggregate-return -Wnested-externs -Winline -Wwrite-strings
-CFLAGS       += -Wstrict-prototypes
+CFLAGS       += -Wstrict-prototypes -Wno-strict-aliasing
 #CFLAGS       += -DPRECISION_SIOCGSTAMP
 #CFLAGS       += -DENABLE_DEBUG
+#CFLAGS       += -DENABLE_SYSLOG
 #CFLAGS       += -DUSE_OBSOLETE_GETTIMEOFDAY
 CFLAGS       += -DENABLE_REPLAY
 LDLIBS       += -lrt
