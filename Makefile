@@ -23,11 +23,11 @@ CFLAGS       += -O2 -std=c99 -D_BSD_SOURCE
 CFLAGS       += -W -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow
 CFLAGS       += -Waggregate-return -Wnested-externs -Winline -Wwrite-strings
 CFLAGS       += -Wstrict-prototypes -Wno-strict-aliasing
+CFLAGS       += -DENABLE_SYSLOG
 #CFLAGS       += -DPRECISION_SIOCGSTAMP
 #CFLAGS       += -DENABLE_DEBUG
-#CFLAGS       += -DENABLE_SYSLOG
 #CFLAGS       += -DUSE_OBSOLETE_GETTIMEOFDAY
-CFLAGS       += -DENABLE_REPLAY
+#CFLAGS       += -DENABLE_REPLAY
 LDLIBS       += -lrt
 DISTFILES     = README HOWTO
 
