@@ -4,7 +4,7 @@
 #VERSION      ?= $(shell git tag -l | tail -1)
 VERSION      ?= `date +"%Y_%j"`
 NAME          = ntpclient
-EXECS        ?= $(NAME) adjtimex
+EXECS        ?= $(NAME) adjtimex mini-ntpclient
 PKG           = $(NAME)-$(VERSION)
 ARCHIVE       = $(PKG).tar.bz2
 MANS          = $(addsuffix .8, $(EXECS))
@@ -54,6 +54,10 @@ ntpclient: $(OBJS)
 ntpclient.o phaselock.o: ntpclient.h
 
 adjtimex: adjtimex.o
+	@printf "  LINK    $@\n"
+	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+mini-ntpclient: mini-ntpclient.o
 	@printf "  LINK    $@\n"
 	@$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
