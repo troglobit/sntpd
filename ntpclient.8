@@ -6,21 +6,21 @@
 ntpclient \- client to get time from NTP server
 .SH SYNOPSIS
 .B ntpclient -h hostname [-c count] [-d] [-f frequency] [-g goodness]
-.in 14
-.B             [-i interval] [-l] [-p port] [-r] [-s]
+.in 16
+.B             [-i interval] [-l] [-n] [-p port] [-r] [-s] [-v]
 .SH DESCRIPTION
 .B ntpclient
-is an NTP (RFC-1305) client for unix-alike computers.
-Its functionality is a small subset of xntpd, but has the potential
-to function better within
-that limited scope.  Since it is much smaller than xntpd, it is
-also more relevant for embedded computers.
+is an NTP (RFC-1305) client for UNIX-alike computers.  Its functionality is a
+small subset of xntpd, but has the potential to function better within that
+limited scope.  Since it is much smaller than xntpd, it is also more relevant
+for embedded computers.
 .PP
-Without any argument (except -h) the program produces output
-similar to this:
+If run as root the program daemonizes itself by default and starts synchronizing
+with the given NTP server using default settins.  When run as a regular user the
+program produces output similar to this:
 .sp
 .nf
- day   second     elapsed    stall     skew  dispersion  freq
+ Day   Second     Elapsed    Stall     Skew  Dispersion  Freq
 36765 00180.386    1398.0     40.3  953773.9    793.5  -1240000
 36765 00780.382    1358.0     41.3  954329.0    915.5  -1240000
 36765 01380.381    1439.0     56.0  954871.3    915.5  -1240000
@@ -28,12 +28,12 @@ similar to this:
 .sp
 The columns have the following meaning:
 .nf
-day, second: time of measurement, UTC, relative to NTP epoch (Jan 1, 1900)
-elapsed:     total time from query to response (microseconds)
-stall:       time the server reports that it sat on the request (microseconds)
-skew:        difference between local time and server time (microseconds)
-dispersion:  reported by server, see RFC-1305 (microseconds)
-freq:        local clock frequency adjustment (Linux only, ppm*65536)
+Day, Second: time of measurement, UTC, relative to NTP epoch (Jan 1, 1900)
+Elapsed:     total time from query to response (microseconds)
+Stall:       time the server reports that it sat on the request (microseconds)
+Skew:        difference between local time and server time (microseconds)
+Dispersion:  reported by server, see RFC-1305 (microseconds)
+Freq:        local clock frequency adjustment (Linux only, ppm*65536)
 .fi
 .SS "Options"
 .TP
@@ -79,22 +79,32 @@ attempt to lock local clock to server using
 .BR adjtimex (8)
 (requires root access)
 .TP
+.B -n
+.br
+Don't fork.  Prevents ntpclient from daemonizing.
+.TP
 .B -t
 .br
 trust network and server, no RFC-4330 recommended cross-checks
-
-.SH AUTHOR
- Larry Doolittle
+.TP
+.B -v
+.br
+Be verbose.  This option will cause time sync events, and version
+information at start/stop to be logged.
+.SH AUTHORS
+ Larry Doolittle and Joachim Nilsson
  ntpclient home page: http://doolittle.icarus.com/ntpclient/
 .SH COPYRIGHT
-ntpclient is Copyright 1997, 1999, 2000, 2003, 2006, 2007 Larry Doolittle, and
-may be freely copied and modified according to the terms of the GNU
-General Public License, version 2.  If you want to distribute ntpclient
-under other terms, contact me.  I might agree to some other arrangement,
-if you talk to me
+The
+.B ntpclient
+pacakge is Copyright 1997, 1999, 2000, 2003, 2006, 2007 Larry Doolittle, and
+Copyright 2010 Joachim Nilsson.  It may be freely copied and modified according
+to the terms of the GNU General Public License, version 2.  If you want to
+distribute ntpclient under other terms, contact us.  We might agree to other
+arrangements, if you talk to us
 .I before
-you start violating GPL terms.
+you start violating the terms of the license.
 
 .SH "SEE ALSO"
 .BR adjtimex (8),
-.BR www.ntp.org
+.BR http://www.ntp.org

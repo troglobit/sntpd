@@ -22,10 +22,12 @@ clock_settime().  Also see "Bugs", below.
 
 There are a few compile-time configurations possible, which require
 editing the Makefile.  Either do or don't define
+
   ENABLE_DEBUG
   ENABLE_REPLAY
   USE_OBSOLETE_GETTIMEOFDAY
   PRECISION_SIOCGSTAMP
+
 Try it first without changing the default: that will give you a full-
 featured ntpclient, that uses modern POSIX time functions, and works
 reasonably with any Linux kernel.  There are comments in ntpclient.c
@@ -38,19 +40,24 @@ run ntpclient -s, rebuild with -DUSE_OBSOLETE_GETTIMEOFDAY.  Linux systems
 that are even older won't even compile without that switch set.
 
 Usage: ntpclient [options]
-options:
- -c count     stop after count time measurements (default 0 means go forever)
- -d           print diagnostics (feature can be disabled at compile time)
- -g goodness  causes ntpclient to stop after getting a result more accurate
-                   than goodness (microseconds, default 0 means go forever)
- -h hostname  (mandatory) NTP server, against which to measure system time
- -i interval  check time every interval seconds (default 600)
- -l           attempt to lock local clock to server using adjtimex(2)
- -p port      local NTP client UDP port (default 0 means "any available")
- -q min_delay minimum packet delay for transaction (default 800 microseconds)
- -r           replay analysis code based on stdin
- -s           simple clock set (implies -c 1)
- -t           trust network and server, no RFC-4330 recommended cross-checks
+ -c count     Stop after count time measurements. Default: 0 (forever)
+ -d           Debug, or diagnostics mode  Possible to enable more at compile
+ -g goodness  Stop after getting a result more accurate than goodness msec,
+              microseconds. Default: 0 (forever)
+ -h hostname  NTP server, mandatory(!), against which to sync system time
+ -i interval  Check time every interval seconds.  Default: 600
+ -l           Attempt to lock local clock to server using adjtimex(2)
+ -L           Use syslog instead of stdout for log messages, enabled
+              by default when started as root
+ -n           Don't fork.  Prevents ntpclient from daemonizing by default
+              Only when running as root, does nothing for regular users
+ -p port      NTP client UDP port.  Default: 0 ("any available")
+ -q min_delay Minimum packet delay for transaction (default 800 microseconds)
+ -s           Simple clock set, implies -c 1 unliess -l is also set
+ -t           Trust network and server, no RFC-4330 recommended validation
+ -v           Be verbose.  This option will cause time sync events, hostname
+              lookup errors and program version to be displayed
+ -V           Display version and copyright information
 
 Mortal users can use this program for monitoring, but not clock setting
 (with the -s or -l switches).  The -l switch is designed to be robust
@@ -146,6 +153,14 @@ Changes since ntpclient_2006_318:
  -- added rate2.awk, contributed by Lou Sortman
  -- provide easy way to override 15 second MIN_INTERVAL at compile time
  -- relax MIN_INTERVAL enforcement for one-shot use, thanks to Mihai Buha
+
+Changes since ntpclietn_2007_368:
+ -- New maintainer
+ -- Fix adjtimex() compile error on uClibc, from OpenEmbedded
+ -- Prefix all log messages with "ntpclient:"
+ -- Merge the adnyw.patch
+ -- Refactor logging to stdout/syslog using one logit() function
+ -- Support for daemonizing ntpclient by default if run as root, assumes syslog output.
 
 Bugs:
  -- Doesn't understand the LI (Leap second Indicator) field of an NTP packet

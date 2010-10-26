@@ -1,34 +1,34 @@
 /* NTP client
  *
- * Copyright 1997, 1999, 2000, 2003, 2006, 2007  Larry Doolittle  <larry@doolittle.boa.org>
- * Last hack: December 30, 2007
+ * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007  Larry Doolittle <larry@doolittle.boa.org>
+ * Copyright (C) 2010  Joachim Nilsson <troglobit@vmlinux.org>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License (Version 2,
- *  June 1991) as published by the Free Software Foundation.  At the
- *  time of writing, that license was published by the FSF with the URL
- *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
- *  reference.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License (Version 2,
+ * June 1991) as published by the Free Software Foundation.  At the
+ * time of writing, that license was published by the FSF with the URL
+ * http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
+ * reference.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
  *
- *  Possible future improvements:
- *      - Write more documentation  :-(
- *      - Support leap second processing
- *      - Support IPv6
- *      - Support multiple (interleaved) servers
+ * Possible future improvements:
+ *    - Write more documentation  :-(
+ *    - Support leap second processing
+ *    - Support IPv6
+ *    - Support multiple (interleaved) servers
  *
- *  Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
- *  There are patches floating around to add this to Linux, but
- *  usually you only get an answer to the nearest jiffy.
- *  Hint for Linux hacker wannabes: look at the usage of get_fast_time()
- *  in net/core/dev.c, and its definition in kernel/time.c .
+ * Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
+ * There are patches floating around to add this to Linux, but
+ * usually you only get an answer to the nearest jiffy.
+ * Hint for Linux hacker wannabes: look at the usage of get_fast_time()
+ * in net/core/dev.c, and its definition in kernel/time.c .
  *
- *  If the compile gives you any flak, check below in the section
- *  labelled "XXX fixme - non-automatic build configuration".
+ * If the compile gives you any flak, check below in the section
+ * labelled "XXX fixme - non-automatic build configuration".
  */
 
 #define _POSIX_C_SOURCE 199309
@@ -69,19 +69,15 @@
 #define  REPLAY_OPTION
 #endif
 
-#ifdef ENABLE_DEBUG
-#define DEBUG_OPTION "d"
-#else
-#define DEBUG_OPTION
-#endif
 int debug   = 0;
-int verbose = 0;                /* Verbose flag, produce useful output on stdout */
+int verbose = 0;                /* Verbose flag, produce useful output to log */
 int logging = 0;
 
 static int sighandled = 0;
 #define	GOT_SIGINT	0x01
 
 extern char *optarg;  /* according to man 2 getopt */
+extern char *__progname;
 
 #include <stdint.h>
 typedef uint32_t u32;  /* universal for C99 */
@@ -131,6 +127,7 @@ struct ntptime {
 
 struct ntp_control {
 	u32 time_of_send[2];
+	int usermode;
 	int live;
 	int set_clock;   /* non-zero presumably needs root privs */
 	int probe_count;
@@ -168,7 +165,6 @@ void logit(int severity, int syserr, const char *format, ...)
 	    return;
     }
 #endif
-    fputs("ntpclient: ", stderr);
     if (severity == LOG_WARNING)
 	    fputs("Warning - ", stderr);
     else if (severity == LOG_ERR)
@@ -229,11 +225,8 @@ static void set_time(struct ntptime *new)
 		logit(LOG_ERR, errno, "Failed clock_settime()");
 		exit(1);
 	}
-#ifdef ENABLE_DEBUG
-	if (debug) {
+	if (debug)
 		logit(LOG_DEBUG, 0, "Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
-	}
-#endif
 #else
 	/* Traditional Linux way to set the system clock
 	 */
@@ -246,11 +239,8 @@ static void set_time(struct ntptime *new)
 		logit(LOG_ERR, errno, "Failed settimeofday()");
 		exit(1);
 	}
-#ifdef ENABLE_DEBUG
-	if (debug) {
+	if (debug)
 		logit(LOG_DEBUG, 0, "Set time to %lu.%.6lu", tv_set.tv_sec, tv_set.tv_usec);
-	}
-#endif
 #endif
 }
 
@@ -476,7 +466,9 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 		if (!debug && new_freq != freq)
 			set_freq(new_freq);
 	}
-        if (debug) {
+
+	/* Display by default for regular users, root users need to supply -d. */
+	if (debug || ntpc->usermode) {
                 logit(LOG_NOTICE, 0, "%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
 		      arrival->coarse/86400, arrival->coarse%86400,
 		      arrival->fine/4294967, el_time, st_time,
@@ -509,9 +501,7 @@ static void stuff_net_addr(struct in_addr *p, char *hostname)
 
 	if (ntpserver->h_length != 4) {
 		/* IPv4 only, until I get a chance to test IPv6 */
-		if (debug) {
-			logit(LOG_WARNING, 0, "Oops h_length=%d, only IPv4 supported currently.",ntpserver->h_length);
-		}
+		logit(LOG_NOTICE, 0, "Oops h_length=%d, only IPv4 supported currently.", ntpserver->h_length);
 		exit(1);
 	}
 	memcpy(&(p->s_addr),ntpserver->h_addr_list[0],4);
@@ -674,16 +664,12 @@ static void do_replay(void)
 		n=sscanf(line,"%d %f %f %f %lf %f %d",
 			&day, &sec, &el_time, &st_time, &skew, &disp, &freq);
 		if (n==7) {
-#ifdef ENABLE_DEBUG
-			if (debug)
-				logit(LOG_DEBUG, 0, "%s", line);
-#endif
+			logit(LOG_DEBUG, 0, "%s", line);
 			absolute = day*86400 + (int)sec;
 			errorbar = el_time + disp;
 #ifdef ENABLE_DEBUG
 			if (debug)
-				logit(LOG_DEBUG, 0, "Contemplate %u %.1f %.1f %d",
-				      absolute, skew, errorbar, freq);
+				logit(LOG_DEBUG, 0, "Contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
 #endif
 			if (last_fake_time == 0) simulated_freq = freq;
 			fake_delta_time += (absolute - last_fake_time) * ((double)(freq - simulated_freq)) / 65536;
@@ -703,49 +689,95 @@ static void do_replay(void)
 }
 #endif
 
-static void usage(char *argv0)
+static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: %s [-c count]"
-#ifdef ENABLE_DEBUG
-		" [-d]"
-#endif
-		" [-f frequency] [-g goodness] -h hostname\n"
-		"\t[-i interval] [-l] [-p port] [-q min_delay]"
+		"Usage: %s [-dlnstv] [-c count] [-f frequency] [-g goodness] -h hostname\n"
+		"                 [-i interval] [-p port] [-q min_delay]"
 #ifdef ENABLE_REPLAY
 		" [-r]"
 #endif
-		" [-s] [-t]"
 #ifdef ENABLE_SYSLOG
 		" [-L]"
 #endif
-		" [-v]"
-		"\n", argv0);
+		"\n", __progname);
+
+	fprintf(stderr,	"Options:\n"
+		" -c count     Stop after count time measurements. Default: 0 (forever)\n"
+		" -d           Debug, or diagnostics mode  Possible to enable more at compile\n"
+		" -g goodness  Stop after getting a result more accurate than goodness msec,\n"
+		"              microseconds. Default: 0 (forever)\n"
+		" -h hostname  NTP server, mandatory(!), against which to sync system time\n"
+		" -i interval  Check time every interval seconds.  Default: 600\n"
+		" -l           Attempt to lock local clock to server using adjtimex(2)\n");
+#ifdef ENABLE_SYSLOG
+	fprintf(stderr, " -L           Use syslog instead of stdout for log messages, enabled\n"
+		"              by default when started as root\n");
+#endif
+	fprintf(stderr, " -n           Don't fork.  Prevents %s from daemonizing by default\n"
+		"              Only when running as root, does nothing for regular users\n"
+		" -p port      NTP client UDP port.  Default: 0 (\"any available\")\n"
+		" -q min_delay Minimum packet delay for transaction (default 800 microseconds)\n",
+		__progname);
+#ifdef ENABLE_REPLAY
+	fprintf(stderr, " -r           Replay analysis code based on stdin\n");
+#endif
+	fprintf(stderr, " -s           Simple clock set, implies -c 1 unliess -l is also set\n"
+		" -t           Trust network and server, no RFC-4330 recommended validation\n"
+		" -v           Be verbose.  This option will cause time sync events, hostname\n"
+		"              lookup errors and program version to be displayed\n"
+		" -V           Display version and copyright information\n");
+	fprintf(stderr, "\nReport %s bugs to troglobit@vmlinux.org\n", __progname);
+	fprintf(stderr, "Home page: http://troglobit.com/ntpclient.shtml\n");
+
+	return 1;
+}
+
+static int version(void)
+{
+	fprintf(stderr, "Larry Doolittle's ntpclient v" VERSION_STRING "\n\n");
+	fprintf(stderr, "Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007  Larry Doolittle <larry@doolittle.boa.org>\n"
+		"Copyright (C) 2010  Joachim Nilsson <troglobit@vmlinux.org>\n\n");
+	fprintf(stderr, "License GPLv2: GNU GPL version 2 <http://gnu.org/licenses/gpl2.html>\n"
+		"This is free software: you are free to change and redistribute it.\n"
+		"There is NO WARRANTY, to the extent permitted by law.\n");
+
+	return 1;
 }
 
 int main(int argc, char *argv[])
 {
-	int usd;  /* socket */
-	int c;
+	int c, usd;  /* socket */
 	/* These parameters are settable from the command line
 	   the initializations here provide default behavior */
-	int daemonize = 1;	      /* Act as stand-alone daemon by default. */
+	int daemonize = 0;
 	short int udp_local_port=0;   /* default of 0 means kernel chooses */
 	int initial_freq;             /* initial freq value to use */
 	struct ntp_control ntpc;
-	ntpc.live=0;
-	ntpc.set_clock=0;
-	ntpc.probe_count=0;           /* default of 0 means loop forever */
-	ntpc.cycle_time=600;          /* seconds */
-	ntpc.goodness=0;
-	ntpc.cross_check=1;
+
+	/* Setup application defaults depending on root/user mode */
+	ntpc.probe_count = 0;	/* default of 0 means loop forever */
+	ntpc.cycle_time  = 600;	/* seconds */
+	ntpc.goodness    = 0;
+	ntpc.set_clock   = 0;
+	if (geteuid() == 0) {
+		logging          = 1;
+		daemonize        = 1;
+		ntpc.usermode    = 0;
+		ntpc.live        = 1;
+		ntpc.cross_check = 0;
+	} else {
+		ntpc.usermode    = 1;
+		ntpc.live        = 0;
+		ntpc.cross_check = 1;
+	}
 
 #ifdef ENABLE_SYSLOG
 	openlog(SYSLOG_IDENT, SYSLOG_OPTIONS, SYSLOG_FACILITY);
 #endif
 
 	while (1) {
-		char opts[] = "c:" DEBUG_OPTION "f:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "v";
+		char opts[] = "c:df:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF) break;
@@ -753,16 +785,13 @@ int main(int argc, char *argv[])
 			case 'c':
 				ntpc.probe_count = atoi(optarg);
 				break;
-#ifdef ENABLE_DEBUG
 			case 'd':
-				++debug;
+				debug++;
 				break;
-#endif
 			case 'f':
 				initial_freq = atoi(optarg);
 #ifdef ENABLE_DEBUG
-				if (debug)
-					logit(LOG_DEBUG, 0, "Initial frequency %d", initial_freq);
+				logit(LOG_DEBUG, 0, "Initial frequency %d", initial_freq);
 #endif
 				set_freq(initial_freq);
 				break;
@@ -776,7 +805,7 @@ int main(int argc, char *argv[])
 				ntpc.cycle_time = atoi(optarg);
 				break;
 			case 'l':
-				(ntpc.live)++;
+				ntpc.live++;
 				break;
 			case 'n':
 				daemonize = 0;
@@ -794,11 +823,11 @@ int main(int argc, char *argv[])
 				break;
 #endif
 			case 's':
-				(ntpc.set_clock)++;
+				ntpc.set_clock++;
 				break;
 
 			case 't':
-				(ntpc.cross_check)=0;
+				ntpc.cross_check = 0;
 				break;
 
 #ifdef ENABLE_SYSLOG
@@ -809,14 +838,17 @@ int main(int argc, char *argv[])
 			case 'v':
 				++verbose;
 				break;
+			case 'V':
+				return version();
+				break;
+			case '?':
 			default:
-				usage(argv[0]);
-				exit(1);
+				return usage();
 		}
 	}
+
 	if (server == NULL) {
-		usage(argv[0]);
-		exit(1);
+		return usage();
 	}
 
 	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count) {
@@ -853,10 +885,7 @@ int main(int argc, char *argv[])
 			logit(LOG_ERR, errno, "Failed daemonizing, aborting");
 			exit(1);
 		}
-#ifdef ENABLE_SYSLOG
-		/* Daemonzing implicates all log messages to syslog. */
-		logging++;
-#endif
+
 		/* If no syslog available, disable verbose or debug messages since
 		 * we no longer have any way of communicating with the user after
 		 * being daemonized. */
@@ -864,7 +893,9 @@ int main(int argc, char *argv[])
 			debug = 0;
 			verbose = 0;
 		}
-		logit(LOG_NOTICE, 0, "Starting ntpclient v" VERSION_STRING);
+		if (verbose) {
+			logit(LOG_NOTICE, 0, "Starting ntpclient v" VERSION_STRING);
+		}
 	}
 
 	if ((usd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
@@ -881,7 +912,9 @@ int main(int argc, char *argv[])
 	}
 	primary_loop(usd, &ntpc);
 
-	logit(LOG_NOTICE, 0, "Stopping ntpclient v" VERSION_STRING);
+	if (verbose) {
+		logit(LOG_NOTICE, 0, "Stopping ntpclient v" VERSION_STRING);
+	}
 	close(usd);
 #ifdef ENABLE_SYSLOG
 	closelog();
