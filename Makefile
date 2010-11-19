@@ -2,8 +2,8 @@
 
 # Larry's versioning scheme: YYYY_DOY, i.e., "%Y_%j"
 #VERSION      ?= $(shell git tag -l | tail -1)
-#VERSION      ?= `date +"%Y_%j"`
-VERSION      ?= 2010_300
+VERSION      ?= `date +"%Y_%j"`
+#VERSION      ?= 2010_300
 NAME          = ntpclient
 EXECS        ?= $(NAME) adjtimex mini-ntpclient
 PKG           = $(NAME)-$(VERSION)
@@ -98,5 +98,5 @@ distclean: clean
 dist:
 	@echo "Building bzip2 tarball of $(PKG) in parent dir..."
 	git archive --format=tar --prefix=$(PKG)/ $(VERSION) | bzip2 >../$(ARCHIVE)
-	@(cd ..; md5sum $(ARCHIVE) | tee >$(ARCHIVE).md5)
+	@(cd ..; md5sum $(ARCHIVE) | tee $(ARCHIVE).md5)
 
