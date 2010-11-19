@@ -72,9 +72,8 @@
 int debug   = 0;
 int verbose = 0;                /* Verbose flag, produce useful output to log */
 int logging = 0;
-
-static int sighandled = 0;
-#define	GOT_SIGINT	0x01
+static int sighup  = 0;
+static int sigterm = 0;
 
 extern char *optarg;  /* according to man 2 getopt */
 extern char *__progname;
@@ -129,11 +128,14 @@ struct ntp_control {
 	u32 time_of_send[2];
 	int usermode;
 	int live;
-	int set_clock;   /* non-zero presumably needs root privs */
+	int set_clock;		/* non-zero presumably needs root privs */
 	int probe_count;
 	int cycle_time;
 	int goodness;
 	int cross_check;
+
+	short local_udp_port;
+	char *server;		/* must be set */
 	char serv_addr[4];
 };
 
@@ -141,8 +143,6 @@ struct ntp_control {
 static void send_packet(int usd, u32 time_sent[2]);
 static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
 /* static void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len); */
-
-char *server = NULL;          /* must be set */
 
 void logit(int severity, int syserr, const char *format, ...)
 {
@@ -450,7 +450,7 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	if (ntpc->set_clock) { /* you'd better be root, or ntpclient will exit here! */
 		set_time(&xmttime);
 		if (verbose) {
-			logit(LOG_NOTICE, 0, "Time synchronized to server %s, stratum %d", server, stratum);
+			logit(LOG_NOTICE, 0, "Time synchronized to server %s, stratum %d", ntpc->server, stratum);
 		}
 	}
 
@@ -542,6 +542,19 @@ static void setup_transmit(int usd, char *host, short port, struct ntp_control *
         }
 }
 
+static int setup_socket(struct ntp_control *ntpc)
+{
+	int sd;
+
+	if ((sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+		return -1;
+
+	setup_receive(sd, INADDR_ANY, ntpc->local_udp_port);
+	setup_transmit(sd, ntpc->server, NTP_PORT, ntpc);
+
+	return sd;
+}
+
 /*
  * Signal handler.  Take note of the fact that the signal arrived
  * so that the main loop can take care of it.
@@ -549,12 +562,17 @@ static void setup_transmit(int usd, char *host, short port, struct ntp_control *
 static void handler(int sig)
 {
 	switch (sig) {
-		case SIGINT:
-		case SIGTERM:
 		case SIGHUP:
+			/* Trigger NTP sync */
+			sighup = 1;
+			break;
+
+		case SIGINT:
+		case SIGQUIT:
+		case SIGTERM:
 		case SIGUSR1:
 		case SIGUSR2:
-			sighandled |= GOT_SIGINT;
+			sigterm = 1;
 			break;
 	}
 }
@@ -567,8 +585,9 @@ static void setup_signals(void)
 	sa.sa_flags = 0;	/* Interrupt system calls */
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGHUP, &sa, NULL);
-	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGQUIT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGUSR1, &sa, NULL);
 	sigaction(SIGUSR2, &sa, NULL);
 }
@@ -594,15 +613,27 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	to.tv_usec  = 0;
 
 	while (1) {
-		if (sighandled) {
+		if (sigterm) {
 			ntpc->live = 0;
 			break;
+		}
+		if (sighup) {
+			sighup     = 0;
+			to.tv_sec  = 0;
+			to.tv_usec = 0;
+			close (usd);
+			usd = setup_socket(ntpc);
+			if (-1 == usd) {
+				logit(LOG_ERR, errno, "Failed reopening NTP socket");
+				return;
+			}
+			logit(LOG_DEBUG, 0, "Got SIGHUP, triggering resync with NTP server.");
 		}
 
 		FD_ZERO(&fds);
 		FD_SET(usd, &fds);
 		i = select(usd + 1, &fds, NULL, NULL, &to);  /* Wait on read or error */
-		if ((i != 1) || (!FD_ISSET(usd,&fds))) {
+		if ((i != 1) || (!FD_ISSET(usd, &fds))) {
 			if (i < 0) {
 				if (errno != EINTR)
 					logit(LOG_ERR, errno, "Failed select()");
@@ -612,10 +643,10 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 				if (probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)
 					break;
 
-				send_packet(usd,ntpc->time_of_send);
+				send_packet(usd, ntpc->time_of_send);
 				++probes_sent;
-				to.tv_sec=ntpc->cycle_time;
-				to.tv_usec=0;
+				to.tv_sec = ntpc->cycle_time;
+				to.tv_usec = 0;
 			}
 			continue;
 		}
@@ -751,11 +782,11 @@ int main(int argc, char *argv[])
 	/* These parameters are settable from the command line
 	   the initializations here provide default behavior */
 	int daemonize = 0;
-	short int udp_local_port=0;   /* default of 0 means kernel chooses */
 	int initial_freq;             /* initial freq value to use */
 	struct ntp_control ntpc;
 
 	/* Setup application defaults depending on root/user mode */
+	memset(&ntpc, 0, sizeof(ntpc));
 	ntpc.probe_count = 0;	/* default of 0 means loop forever */
 	ntpc.cycle_time  = 600;	/* seconds */
 	ntpc.goodness    = 0;
@@ -799,7 +830,7 @@ int main(int argc, char *argv[])
 				ntpc.goodness = atoi(optarg);
 				break;
 			case 'h':
-				server = optarg;
+				ntpc.server = optarg;
 				break;
 			case 'i':
 				ntpc.cycle_time = atoi(optarg);
@@ -811,7 +842,7 @@ int main(int argc, char *argv[])
 				daemonize = 0;
 				break;
 			case 'p':
-				udp_local_port = atoi(optarg);
+				ntpc.local_udp_port = atoi(optarg);
 				break;
 			case 'q':
 				min_delay = atof(optarg);
@@ -847,7 +878,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (server == NULL) {
+	if (ntpc.server == NULL) {
 		return usage();
 	}
 
@@ -869,7 +900,7 @@ int main(int argc, char *argv[])
 		logit(LOG_DEBUG, 0, "  -h hostname    %s", server);
 		logit(LOG_DEBUG, 0, "  -i interval    %d", ntpc.cycle_time);
 		logit(LOG_DEBUG, 0, "  -l live        %d", ntpc.live);
-		logit(LOG_DEBUG, 0, "  -p local_port  %d", udp_local_port);
+		logit(LOG_DEBUG, 0, "  -p local_port  %d", ntpc.local_udp_port);
 		logit(LOG_DEBUG, 0, "  -q min_delay   %f", min_delay);
 		logit(LOG_DEBUG, 0, "  -s set_clock   %d", ntpc.set_clock);
 		logit(LOG_DEBUG, 0, "  -t cross_check %d", ntpc.cross_check);
@@ -898,17 +929,16 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if ((usd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
-		logit(LOG_ERR, errno, "Failed creating UDP socket()");
+	usd = setup_socket(&ntpc);
+	if (usd == -1) {
+		logit(LOG_ERR, errno, "Failed creating UDP socket() to SNTP server");
 		exit(1);
 	}
 
-	setup_receive(usd, INADDR_ANY, udp_local_port);
-	setup_transmit(usd, server, NTP_PORT, &ntpc);
 	setup_signals();
 
 	if (verbose) {
-		logit(LOG_NOTICE, 0, "Using time sync server: %s", server);
+		logit(LOG_NOTICE, 0, "Using time sync server: %s", ntpc.server);
 	}
 	primary_loop(usd, &ntpc);
 
@@ -924,7 +954,8 @@ int main(int argc, char *argv[])
 
 /**
  * Local Variables:
- *  c-file-style: "linux"
+ *  c-file-style: "ellemtel"
+ *  c-basic-offset: 8
  *  version-control: t
  *  indent-tabs-mode: t
  * End:
