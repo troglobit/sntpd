@@ -2,8 +2,8 @@
 
 # Larry's versioning scheme: YYYY_DOY, i.e., "%Y_%j"
 #VERSION      ?= $(shell git tag -l | tail -1)
-VERSION      ?= `date +"%Y_%j"`
-#VERSION      ?= 2010_300
+#VERSION      ?= `date +"%Y_%j"`
+VERSION      ?= 2010_323
 NAME          = ntpclient
 EXECS        ?= $(NAME) adjtimex mini-ntpclient
 PKG           = $(NAME)-$(VERSION)
