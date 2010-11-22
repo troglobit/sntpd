@@ -5,9 +5,9 @@
 .SH NAME
 ntpclient \- client to get time from NTP server
 .SH SYNOPSIS
-.B ntpclient -h hostname [-c count] [-d] [-f frequency] [-g goodness]
-.in 16
-.B             [-i interval] [-l] [-n] [-p port] [-r] [-s] [-v]
+.B ntpclient [-h hostname] [-c count] [-d] [-f frequency] [-g goodness]
+.in 17
+.B           [-i interval] [-l] [-n] [-p port] [-r] [-s] [-v] hostname
 .SH DESCRIPTION
 .B ntpclient
 is an NTP (RFC-1305) client for UNIX-alike computers.  Its functionality is a
@@ -38,7 +38,10 @@ Freq:        local clock frequency adjustment (Linux only, ppm*65536)
 .SS "Options"
 .TP
 .BI  -h " hostname"
-(mandatory) NTP server, against which to measure system time
+NTP server, against which to measure system time.  Can also be supplied
+without the -h switch.  This is a
+.B mandatory
+argument.
 .TP
 .BI -c " count"
 top after count time measurements (default 0 means go forever)

@@ -723,7 +723,7 @@ static void do_replay(void)
 static int usage(void)
 {
 	fprintf(stderr,
-		"Usage: %s [-dlnstv] [-c count] [-f frequency] [-g goodness] -h hostname\n"
+		"Usage: %s [-dlnstv] [-c count] [-f frequency] [-g goodness] [-h hostname]\n"
 		"                 [-i interval] [-p port] [-q min_delay]"
 #ifdef ENABLE_REPLAY
 		" [-r]"
@@ -731,7 +731,7 @@ static int usage(void)
 #ifdef ENABLE_SYSLOG
 		" [-L]"
 #endif
-		"\n", __progname);
+		" hostname\n", __progname);
 
 	fprintf(stderr,	"Options:\n"
 		" -c count     Stop after count time measurements. Default: 0 (forever)\n"
@@ -792,7 +792,6 @@ int main(int argc, char *argv[])
 	ntpc.goodness    = 0;
 	ntpc.set_clock   = 0;
 	if (geteuid() == 0) {
-		logging          = 1;
 		daemonize        = 1;
 		ntpc.usermode    = 0;
 		ntpc.live        = 1;
@@ -878,12 +877,21 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (optind < argc && ntpc.server == NULL)
+		ntpc.server = argv[optind];
+
 	if (ntpc.server == NULL) {
+		fprintf(stderr, "Missing NTP server argument.\n");
 		return usage();
 	}
 
-	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count) {
+	/* If root user supplies -s, then override any other options. */
+	if (ntpc.set_clock) {
+		daemonize = 0;
+		ntpc.live = 0;
+		ntpc.goodness = 0;
 		ntpc.probe_count = 1;
+		verbose = 1;
 	}
 
 	/* respect only applicable MUST of RFC-4330 */
@@ -917,13 +925,9 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-		/* If no syslog available, disable verbose or debug messages since
-		 * we no longer have any way of communicating with the user after
-		 * being daemonized. */
-		if (!logging) {
-			debug = 0;
-			verbose = 0;
-		}
+		/* Force output to syslog, since we no longer have any way
+		 * of communicating with the user after being daemonized. */
+		logging = 1;
 		if (verbose) {
 			logit(LOG_NOTICE, 0, "Starting ntpclient v" VERSION_STRING);
 		}
@@ -937,12 +941,12 @@ int main(int argc, char *argv[])
 
 	setup_signals();
 
-	if (verbose) {
+	if (daemonize && verbose) {
 		logit(LOG_NOTICE, 0, "Using time sync server: %s", ntpc.server);
 	}
 	primary_loop(usd, &ntpc);
 
-	if (verbose) {
+	if (daemonize && verbose) {
 		logit(LOG_NOTICE, 0, "Stopping ntpclient v" VERSION_STRING);
 	}
 	close(usd);
