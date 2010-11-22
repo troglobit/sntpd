@@ -885,18 +885,19 @@ int main(int argc, char *argv[])
 		return usage();
 	}
 
-	/* If root user supplies -s, then override any other options. */
-	if (ntpc.set_clock) {
-		daemonize = 0;
-		ntpc.live = 0;
-		ntpc.goodness = 0;
+	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count) {
 		ntpc.probe_count = 1;
+	}
+
+	/* If suer gives a probe count, then assume non-live run and verbose reporting. */
+	if (ntpc.probe_count > 0) {
+		ntpc.live = 0;
 		verbose = 1;
 	}
 
 	/* respect only applicable MUST of RFC-4330 */
 	if (ntpc.probe_count != 1 && ntpc.cycle_time < MIN_INTERVAL) {
-		ntpc.cycle_time=MIN_INTERVAL;
+		ntpc.cycle_time = MIN_INTERVAL;
 	}
 
 #ifdef ENABLE_DEBUG
