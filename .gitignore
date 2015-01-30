@@ -1,0 +1,14 @@
+*~
+*.o
+*.d
+*.map
+*.html
+TAGS
+adjtimex
+ntpclient
+debian/files
+debian/uftpd.*
+/GPATH
+/GRTAGS
+/GSYMS
+/GTAGS
