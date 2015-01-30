@@ -12,6 +12,12 @@ if you talk to me _before_ you start violating GPL terms.
 
 ntpclient home page: http://doolittle.icarus.com/ntpclient/
 
+Joachim Nilsson created a fork of ntpclient that he maintains at
+https://github.com/troglobit/ntpclient/  We don't have the same
+maintainance and build system sensibilities; some people may prefer his.
+In particular, he has converted his ntpclient to daemon and syslog.
+The basic functionality of the two versions should be identical.
+
 To build on Linux, type "make".  Solaris and other Unix users will
 probably need to adjust the Makefile slightly.  It's not complex.
 For changing the system clock frequency, only the Linux adjtimex(2)
@@ -155,12 +161,20 @@ Changes since ntpclient_2006_318:
  -- relax MIN_INTERVAL enforcement for one-shot use, thanks to Mihai Buha
 
 Changes since ntpclietn_2007_368:
- -- New maintainer
+ -- Released by Joachim Nilsson
  -- Fix adjtimex() compile error on uClibc, from OpenEmbedded
  -- Prefix all log messages with "ntpclient:"
  -- Merge the adnyw.patch
  -- Refactor logging to stdout/syslog using one logit() function
  -- Support for daemonizing ntpclient by default if run as root, assumes syslog output.
+
+Changes since ntpclient_2007_365:
+ -- Released by Larry Doolittle
+ -- fixed type of sa_xmit_len, thanks vapier
+ -- dropped underscores in spelling of adjtimex(2), might make uClibc happier
+ -- include netdb.h and always define _BSD_SOURCE to get prototype for herror
+ -- minor formatting to align with Nilsson's fork
+ -- add -fno-strict-aliasing as needed by traditional network coding style
 
 Bugs:
  -- Doesn't understand the LI (Leap second Indicator) field of an NTP packet
@@ -178,6 +192,6 @@ Adherence to RFC-4330 chapter 10, Best practices:
  5.  not in scope for the upstream source
  6.  supported
  7.  not supported
- 8.  not supported (scary opportunity for DOS)
+ 8.  not supported (scary opportunity to DOS the _client_)
 
        - Larry Doolittle  <larry@doolittle.boa.org>

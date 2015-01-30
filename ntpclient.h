@@ -16,8 +16,8 @@
  * GNU General Public License for more details.
  */
 
-#ifndef __NTPCLIENT_H__
-#define __NTPCLIENT_H__
+#ifndef NTPCLIENT_H_
+#define NTPCLIENT_H_
 
 # include <stdarg.h>		/* vsyslog(), vfprintf(), use -D_BSD_SOURCE */
 #ifdef ENABLE_SYSLOG
@@ -48,5 +48,4 @@ void logit(int severity, int syserr, const char *format, ...);
 /* prototype for function defined in phaselock.c */
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
 
-#endif /* __NTPCLIENT_H__ */
-
+#endif /* NTPCLIENT_H_ */

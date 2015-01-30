@@ -5,7 +5,7 @@
 #VERSION      ?= `date +"%Y_%j"`
 VERSION      ?= 2010_326
 NAME          = ntpclient
-EXECS        ?= $(NAME) adjtimex mini-ntpclient
+EXECS        ?= $(NAME) adjtimex #mini-ntpclient
 PKG           = $(NAME)-$(VERSION)
 ARCHIVE       = $(PKG).tar.bz2
 MANS          = ntpclient.8 adjtimex.1
@@ -20,7 +20,7 @@ mandir        = $(prefix)/share/man
 
 OBJS	      = ntpclient.o phaselock.o
 CFLAGS        = -DVERSION_STRING=\"$(VERSION)\" $(CFG_INC) $(EXTRA_CFLAGS)
-CFLAGS       += -O2 -std=c99 -D_BSD_SOURCE
+CFLAGS       += -O2 -std=c89
 CFLAGS       += -W -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow
 CFLAGS       += -Waggregate-return -Wnested-externs -Winline -Wwrite-strings
 CFLAGS       += -Wstrict-prototypes -Wno-strict-aliasing
@@ -73,7 +73,7 @@ install: $(EXECS)
 	@install -d $(DESTDIR)$(mandir)/man8
 	@install -d $(DESTDIR)$(mandir)/man1
 	@install -m 0755 ntpclient $(DESTDIR)$(prefix)/sbin/ntpclient
-	@install -m 0755 mini-ntpclient $(DESTDIR)$(prefix)/sbin/mini-ntpclient
+#	@install -m 0755 mini-ntpclient $(DESTDIR)$(prefix)/sbin/mini-ntpclient
 	@install -m 0755 adjtimex $(DESTDIR)$(prefix)/bin/adjtimex
 	@install -m 0644 ntpclient.8 $(DESTDIR)$(mandir)/man8/ntpclient.8
 	@install -m 0644 adjtimex.1 $(DESTDIR)$(mandir)/man1/adjtimex.1
@@ -83,7 +83,7 @@ install: $(EXECS)
 
 uninstall:
 	-@$(RM) $(DESTDIR)$(prefix)/sbin/ntpclient
-	-@$(RM) $(DESTDIR)$(prefix)/sbin/mini-ntpclient
+#	-@$(RM) $(DESTDIR)$(prefix)/sbin/mini-ntpclient
 	-@$(RM) $(DESTDIR)$(prefix)/bin/adjtimex
 	-@$(RM) $(DESTDIR)$(mandir)/man8/ntpclient.8
 	-@$(RM) $(DESTDIR)$(mandir)/man1/adjtimex.1

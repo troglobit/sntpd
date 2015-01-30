@@ -1,6 +1,6 @@
 /* NTP client
  *
- * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007  Larry Doolittle <larry@doolittle.boa.org>
+ * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>
  * Copyright (C) 2010  Joachim Nilsson <troglobit@vmlinux.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -32,10 +32,7 @@
  */
 
 #define _POSIX_C_SOURCE 199309
-
-#ifdef USE_OBSOLETE_GETTIMEOFDAY
 #define _BSD_SOURCE
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -597,7 +594,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	fd_set fds;
 	struct sockaddr sa_xmit;
 	int i, pack_len, probes_sent, error;
-	unsigned int sa_xmit_len;
+	socklen_t sa_xmit_len;
 	struct timeval to;
 	struct ntptime udp_arrival_ntp;
 	static u32 incoming_word[325];
