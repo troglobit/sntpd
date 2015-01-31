@@ -1,33 +1,40 @@
 ntpclient
 =========
 
-ntpclient is an NTP ([RFC 1305], [RFC 4330]) client for UNIX-alike
-computers.  Its functionality is a small subset of xntpd, but IMHO
-performs better (or at least has the potential to function better)
-within that limited scope.  Since it is much smaller than xntpd, it is
-also more relevant for embedded computers.
+Table of Contents
+-----------------
 
-ntpclient is written by Larry Doolittle and may be freely copied and
-modified under the terms of the GNU General Public License, version 2.
-If you want to distribute ntpclient under other terms, contact me.  I
-might agree to some other arrangement, if you talk to me _before_ you
-start violating GPL terms.
+* [Introduction](#introduction)
+* [Building](#building)
+* [Troubleshooting](#troubleshooting)
+* [Usage](#usage)
+* [Bugs](#bugs)
+* [Compliance](#compliance)
+* [Origin & References](#origin--references)
 
-ntpclient home page: http://doolittle.icarus.com/ntpclient/
 
-[Joachim Nilsson] created a [fork of ntpclient] that he maintains at
-GitHub.  We don't have the same maintainance and build system
-sensibilities; some people may prefer his.  In particular, he has
-converted his ntpclient to daemon and syslog.  The basic functionality
-of the two versions should be identical.
+Introduction
+------------
+
+ntpclient is an NTP client for UNIX-like systems, [RFC 1305] and
+[RFC 4330].  Its functionality is a small subset of [ntpd], [chrony],
+[OpenNTPd], and [xntpd].  Since it is much smaller, it is also more
+relevant for embedded systems in need for only a client.
+
+The goal of ntpclient is not only to set your computer's clock right
+once, but keep it there.
+
+
+Building
+--------
 
 To build on Linux, type <kbd>make</kbd>.  Solaris and other UNIX users
-will probably need to adjust the `Makefile?` slightly.  It's not
-complex.  For changing the system clock frequency, only the Linux
-`adjtimex(2)` interface is implemented at this time.  Non-Linux systems
-can only use ntpclient to measure time differences and set the system
-clock, by way of the POSIX 1003.1-2001 standard routines
-`clock_gettime()` and `clock_settime()`.  Also see "Bugs", below.
+will probably need to adjust the `Makefile` slightly.  It's not complex.
+For changing the system clock frequency, only the Linux `adjtimex(2)`
+interface is implemented at this time.  Non-Linux systems can only use
+ntpclient to measure time differences and set the system clock, by way
+of the POSIX 1003.1-2001 standard routines `clock_gettime()` and
+`clock_settime()`.  Also see "Bugs", below.
 
 There are a few compile-time configurations possible, which require
 editing the Makefile.  Either do or don't define:
@@ -42,11 +49,19 @@ featured ntpclient, that uses modern POSIX time functions, and works
 reasonably with any Linux kernel.  There are comments in `ntpclient.c`
 that you should read before experimenting with `PRECISION_SIOCGSTAMP`.
 
+
+Troubleshooting
+---------------
+
 Some really old Linux systems (e.g., Red Hat EL-3.0 and Ubuntu 4.10)
 have a totally broken POSIX `clock_settime()` implementation.  If you
 get "clock_settime: Invalid argument" with <kbd>ntpclient -s</kbd>,
 rebuild with `-DUSE_OBSOLETE_GETTIMEOFDAY`.  Linux systems that are even
 older won't even compile without that switch set.
+
+
+Usage
+-----
 
     Usage: ntpclient [options]
      -c count     Stop after count time measurements. Default: 0 (forever)
@@ -83,12 +98,12 @@ command line `-q` switch.  The historical default of 800 microseconds
 was good for local Ethernet hardware a few years ago.  If it is set too
 high, you will get a lot of "inconsistent" lines in the log file when
 time locking (`-l` switch).  The only true future-proof value is 0, but
-that will cause the local time to wander more than it should.  I use 200
-on my workstation.
+that will cause the local time to wander more than it should.  Setting
+it to 200 is recommended on an end client.
 
-The `test.dat` file has 200 lines of sample output.  Its first few lines,
-with the output column headers that are shown when the -d option is
-chosen, are:
+The `test.dat` file that is part of the source distribution has 200
+lines of sample output.  Its first few lines, with the output column
+headers that are shown when the `-d` option is chosen, are:
 
       day    second   elapsed    stall      skew  dispersion  freq
     36765 00180.386    1398.0     40.3  953773.9       793.5  -1240000
@@ -102,11 +117,10 @@ chosen, are:
 * dispersion:  reported by server, see [RFC 1305] (microseconds)
 * freq:        local clock frequency adjustment (Linux only, ppm*65536)
 
-A relatively new feature is a series of sanity checks on UDP packets
-received, generally as recommended by [RFC 4330].  If it fails one of
-these tests, the line described above is replaced by 36765 01380.381
-rejected packet or, if `ENABLE_DEBUG` was selected at compile time, one
-of:
+ntclient performs a series of sanity checks on UDP packets received, as
+recommended by [RFC 4330].  If it fails one of these tests, the line
+described above is replaced by `36765 01380.381 rejected packet` or, if
+`ENABLE_DEBUG` was selected at compile time, one of:
 
     36765 01380.381  rejected packet: LI==3
     36765 01380.381  rejected packet: VN<3
@@ -122,17 +136,17 @@ the `-d` option; this will give a human-readable printout of every
 packet received, including the rejected ones.  To skip these checks, use
 the `-t` switch.
 
-The fiel `test.dat` is suitable for piping into <kbd>ntpclient -r</kbd>.
-I have over 200000 samples (lines) archived for study, that I don't
-include here.  They are generally spaced 10 minutes apart, representing
-over three years of data logging (from a variety of machines, and not
-continuous, unfortunately).
+The file `test.dat` is suitable for piping into <kbd>ntpclient -r</kbd>.
+There are more than 200000 samples (lines) archived for study.  They are
+generally spaced 10 minutes apart, representing over three years of data
+logging (from a variety of machines, and not continuous, unfortunately).
+If you are interested, [contact Larry].
 
-As a special, added bonus, I also include my `adjtimex(1)` program.  See
-its man page and the [HOWTO] file for more information.
+Also included is a version of the `adjtimex(1)` tool.  See its man page
+and the [HOWTO] file for more information.
 
-envelope is a perl script that I have used for my lock studies.  It's
-kind of a hack and not worth documenting here.
+Another tool is `envelope`, which is a perl script that was used for the
+lock studies.  It's kind of a hack and not worth documenting here.
 
 
 Bugs
@@ -160,9 +174,27 @@ Adherence to [RFC 4330] chapter 10, Best practices:
 7. Not supported
 8. Not supported (scary opportunity to DOS the _client_)
 
-       - Larry Doolittle  <larry@doolittle.boa.org>
 
+Origin & References
+-------------------
+
+ntpclient was originally created by [Larry Doolittle] and is freely
+available under the terms of the [GNU General Public License][GPL],
+version 2.  For questions on the original, [contact Larry], he remains
+the official upstream for ntpclient.
+
+This is a fork maintained by [Joachim Nilsson], with the intent to
+streamline and integrate ntpclient in [TroglOS].
+
+[GPL]: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+[ntpd]: http://www.ntp.org
+[xntpd]: http://www.eecis.udel.edu/~mills/ntp/
+[chrony]: http://chrony.tuxfamily.org/
+[OpenNTPd]: http://www.openntpd.org
 [RFC 1305]: http://tools.ietf.org/html/rfc1305
 [RFC 4330]: http://tools.ietf.org/html/rfc4330
-[Joachim Nilsson]:   http://troglobit.com
-[fork of ntpclient]: https://github.com/troglobit/ntpclient/
+[Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
+[contact Larry]: larry@doolittle.boa.org
+[HOWTO]: https://github.com/troglobit/ntpclient/HOWTO.md
+[Joachim Nilsson]: http://troglobit.com
+[TroglOS]: https://github.com/troglobit/troglos/
