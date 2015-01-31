@@ -185,8 +185,7 @@ and it won't exit until it gets such a suitable response.
 
 As of 2006, ntpclient can in theory combine the three lines above into one:
 
-   ntpclient -f $NONVOLATILE_MEMORY_VALUE -s -l -i 600 -g 10000 -h \
-             $NTPHOST >some_log_file
+    ntpclient -f $NONVOLATILE_MEMORY_VALUE -s -l -i 600 -g 10000 -h $NTPHOST >some_log_file
 
 This can streamline the startup process, since you may be able to avoid
 a layer of shell scripting.  On the other hand, it is less tested, and

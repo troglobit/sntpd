@@ -89,7 +89,7 @@ robust in any network environment, but has seen the most extensive
 testing in a low latency (less than 2 ms) Ethernet environment.  Users
 in other environments should study ntpclient's behavior, and be prepared
 to adjust internal tuning parameters.  A long description of how and why
-to use ntpclient is in the HOWTO file.  ntpclient always sends packets
+to use ntpclient is in the [HOWTO] file.  ntpclient always sends packets
 to the server's UDP port 123.
 
 One commonly needed tuning parameter for lock mode is `min_delay`, the
