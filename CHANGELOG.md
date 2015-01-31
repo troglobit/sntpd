@@ -86,7 +86,7 @@ Released by [Larry Doolittle].
 * Source is now as 64-bit clean as practical; tested on Alpha
 * Optional patches provided by Andy Warner, see `andyw.patch`
 * Optional patches provided by Linksys, see linksys.patch
-* Removed unreasonable 15020 day offset in date column (xntpd[1] has this
+* Removed unreasonable 15020 day offset in date column ([xntpd] has this
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
@@ -96,7 +96,7 @@ Released by [Larry Doolittle].
 [2007_365]: https://github.com/troglobit/ntpclient/compare/2006_318...2007_365
 [2006_318]: https://github.com/troglobit/ntpclient/compare/2003_194...2006_318
 [2003_194]: https://github.com/troglobit/ntpclient/compare/2000_345...2003_194
-[1]: http://www.eecis.udel.edu/~mills/ntp/
+[xntpd]: http://www.eecis.udel.edu/~mills/ntp/
 [Mike Frysinger]: vapier@gentoo.org
 [Joachim Nilsson]: https://github.com/troglobit/ntpclient/
 [Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
