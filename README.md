@@ -34,7 +34,7 @@ For changing the system clock frequency, only the Linux `adjtimex(2)`
 interface is implemented at this time.  Non-Linux systems can only use
 ntpclient to measure time differences and set the system clock, by way
 of the POSIX 1003.1-2001 standard routines `clock_gettime()` and
-`clock_settime()`.  Also see "Bugs", below.
+`clock_settime()`.  Also, see section [Bugs](#bugs), below.
 
 There are a few compile-time configurations possible, which require
 editing the Makefile.  Either do or don't define:
@@ -183,8 +183,9 @@ available under the terms of the [GNU General Public License][GPL],
 version 2.  For questions on the original, [contact Larry], he remains
 the official upstream for ntpclient.
 
-This is a fork maintained by [Joachim Nilsson], with the intent to
-streamline and integrate ntpclient in [TroglOS].
+This is a fork maintained by [Joachim Nilsson], with the intent to add
+common features like syslog support, more accessible documentation, and
+other small things.
 
 [GPL]: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 [ntpd]: http://www.ntp.org
