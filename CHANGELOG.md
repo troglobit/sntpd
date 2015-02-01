@@ -51,8 +51,8 @@ Curated by [Larry Doolittle].  Changes since `ntpclient_2007_365.tar.gz`.
 Curated by [Joachim Nilsson].
 
 ### Changes
-- Support for resync with server on SIGHUP
-- Create .md5 file as well during <kbd>make dist</kbd>
+- Support for resync with server on `SIGHUP`
+- Create `.md5` file as well during <kbd>make dist</kbd>
 
 
 [2010_300] - 2010-10-27
@@ -66,8 +66,7 @@ Curated by [Joachim Nilsson].
 - Refactor logging to stdout/syslog using one `logit()` function
 - Support for daemonizing ntpclient by default if run as root, assumes
   syslog output.
-- Add mini-ntpclient, a *very* small ntpclient from DD-WRT.  For
-  reference, see http://svn.dd-wrt.com/browser/src/router/ntpclient/
+- Add mini-ntpclient, a *very* small [ntpclient from DD-WRT][dd-wrt].
 
 ### Fixes
 - Fix `adjtimex()` compile error on uClibc, from OpenEmbedded
@@ -129,12 +128,15 @@ Curated by [Larry Doolittle].
 
 
 [UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2010_365...HEAD
-[2010_365]:   https://github.com/troglobit/ntpclient/compare/2010_300...2010_365
+[2010_365]:   https://github.com/troglobit/ntpclient/compare/2010_326...2010_365
+[2010_326]:   https://github.com/troglobit/ntpclient/compare/2010_323...2010_326
+[2010_323]:   https://github.com/troglobit/ntpclient/compare/2010_300...2010_323
 [2010_300]:   https://github.com/troglobit/ntpclient/compare/2007_365...2010_300
 [2007_365]:   https://github.com/troglobit/ntpclient/compare/2006_318...2007_365
 [2006_318]:   https://github.com/troglobit/ntpclient/compare/2003_194...2006_318
 [2003_194]:   https://github.com/troglobit/ntpclient/compare/2000_345...2003_194
 [xntpd]: http://www.eecis.udel.edu/~mills/ntp/
+[dd-wrt]: http://svn.dd-wrt.com/browser/src/router/ntpclient/
 [RFC 4330]: http://tools.ietf.org/html/rfc4330
 [Mike Frysinger]: vapier@gentoo.org
 [Joachim Nilsson]: https://github.com/troglobit/ntpclient/
