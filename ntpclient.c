@@ -3,17 +3,17 @@
  * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>
  * Copyright (C) 2010  Joachim Nilsson <troglobit@vmlinux.org>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License (Version 2,
- * June 1991) as published by the Free Software Foundation.  At the
- * time of writing, that license was published by the FSF with the URL
- * http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
- * reference.
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License (Version 2,
+ *  June 1991) as published by the Free Software Foundation.  At the
+ *  time of writing, that license was published by the FSF with the URL
+ *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
+ *  reference.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
  *
  * Possible future improvements:
  *    - Write more documentation  :-(
@@ -30,9 +30,6 @@
  * If the compile gives you any flak, check below in the section
  * labelled "XXX fixme - non-automatic build configuration".
  */
-
-#define _POSIX_C_SOURCE 199309
-#define _BSD_SOURCE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -367,10 +364,14 @@ static double ntpdiff( struct ntptime *start, struct ntptime *stop)
  */
 static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
 {
-/* straight out of RFC-1305 Appendix A */
-	int li, vn, mode, stratum, poll, prec;
-	int delay, disp, refid;
-	struct ntptime reftime, orgtime, rectime, xmttime;
+	/* straight out of RFC-1305 Appendix A */
+	int li, vn, mode, stratum, prec;
+	int delay, disp;
+#ifdef ENABLE_DEBUG
+	int poll, refid;
+	struct ntptime reftime;
+#endif
+	struct ntptime orgtime, rectime, xmttime;
 	double el_time,st_time,skew1,skew2;
 	int freq;
 	const char *drop_reason=NULL;
@@ -380,14 +381,18 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	vn      = Data(0) >> 27 & 0x07;
 	mode    = Data(0) >> 24 & 0x07;
 	stratum = Data(0) >> 16 & 0xff;
+#ifdef ENABLE_DEBUG
 	poll    = Data(0) >>  8 & 0xff;
+#endif
 	prec    = Data(0)       & 0xff;
 	if (prec & 0x80) prec|=0xffffff00;
 	delay   = Data(1);
 	disp    = Data(2);
+#ifdef ENABLE_DEBUG
 	refid   = Data(3);
 	reftime.coarse = Data(4);
 	reftime.fine   = Data(5);
+#endif
 	orgtime.coarse = Data(6);
 	orgtime.fine   = Data(7);
 	rectime.coarse = Data(8);
@@ -956,9 +961,9 @@ int main(int argc, char *argv[])
 
 /**
  * Local Variables:
- *  c-file-style: "ellemtel"
- *  c-basic-offset: 8
+ *  compile-command: "make ntpclient"
  *  version-control: t
  *  indent-tabs-mode: t
+ *  c-file-style: "linux"
  * End:
  */

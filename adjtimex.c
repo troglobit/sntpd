@@ -33,7 +33,6 @@
  *  gcc -Wall -O adjtimex_1.c -o adjtimex
  */
 
-#define _POSIX_C_SOURCE 2
 #include <stdio.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -105,14 +104,16 @@ int main(int argc, char ** argv)
 				exit(1);
 		}
 	}
-	if (argc != optind) { /* no valid non-option parameters */
+
+        /* Check for valid non-option parameters */
+	if (argc != optind) {
 		usage(argv[0]);
 		exit(1);
 	}
 
 	ret = adjtimex(&txc);
-
-	if (ret < 0) perror("adjtimex");
+	if (ret < 0)
+                perror("adjtimex");
 
 	if (!quiet && ret>=0) {
 		printf(
@@ -149,5 +150,15 @@ int main(int argc, char ** argv)
 		txc.time.tv_sec, txc.time.tv_usec, ret,
 		(ret >= 0 && ret <= 5) ? ret_code_descript[ret] : "error" );
 	}
+
 	return (ret<0);
 }
+
+/**
+ * Local Variables:
+ *  compile-command: "make adjtimex"
+ *  version-control: t
+ *  indent-tabs-mode: nil
+ *  c-file-style: "ellemtel"
+ * End:
+ */
