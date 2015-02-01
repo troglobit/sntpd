@@ -6,6 +6,7 @@
 TAGS
 adjtimex
 ntpclient
+mini-ntpclient
 debian/files
 debian/uftpd.*
 /GPATH
