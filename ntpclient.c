@@ -755,7 +755,7 @@ static int usage(void)
 #ifdef ENABLE_REPLAY
 	fprintf(stderr, " -r           Replay analysis code based on stdin\n");
 #endif
-	fprintf(stderr, " -s           Simple clock set, implies -c 1 unliess -l is also set\n"
+	fprintf(stderr, " -s           Simple clock set, implies -c 1 unless -l is also set\n"
 		" -t           Trust network and server, no RFC-4330 recommended validation\n"
 		" -v           Be verbose.  This option will cause time sync events, hostname\n"
 		"              lookup errors and program version to be displayed\n"
