@@ -66,11 +66,11 @@
 int debug   = 0;
 int verbose = 0;                /* Verbose flag, produce useful output to log */
 int logging = 0;
+const char *prognm = SYSLOG_IDENT;
 static int sighup  = 0;
 static int sigterm = 0;
 
-extern char *optarg;  /* according to man 2 getopt */
-extern char *__progname;
+extern char *optarg;		/* according to man 2 getopt */
 
 #include <stdint.h>
 typedef uint32_t u32;  /* universal for C99 */
@@ -733,7 +733,7 @@ static int usage(void)
 #ifdef ENABLE_SYSLOG
 		" [-L]"
 #endif
-		" hostname\n", __progname);
+		" hostname\n", prognm);
 
 	fprintf(stderr,	"Options:\n"
 		" -c count     Stop after count time measurements. Default: 0 (forever)\n"
@@ -751,7 +751,7 @@ static int usage(void)
 		"              Only when running as root, does nothing for regular users\n"
 		" -p port      NTP client UDP port.  Default: 0 (\"any available\")\n"
 		" -q min_delay Minimum packet delay for transaction (default 800 microseconds)\n",
-		__progname);
+		prognm);
 #ifdef ENABLE_REPLAY
 	fprintf(stderr, " -r           Replay analysis code based on stdin\n");
 #endif
@@ -760,7 +760,7 @@ static int usage(void)
 		" -v           Be verbose.  This option will cause time sync events, hostname\n"
 		"              lookup errors and program version to be displayed\n"
 		" -V           Display version and copyright information\n");
-	fprintf(stderr, "\nReport %s bugs to troglobit@vmlinux.org\n", __progname);
+	fprintf(stderr, "\nReport %s bugs to troglobit@vmlinux.org\n", prognm);
 	fprintf(stderr, "Home page: http://troglobit.com/ntpclient.shtml\n");
 
 	return 1;
@@ -778,13 +778,26 @@ static int version(void)
 	return 1;
 }
 
+static const char *progname(const char *arg0)
+{
+	const char *nm;
+
+	nm = strrchr(arg0, '/');
+	if (nm)
+		nm++;
+	else
+		nm = arg0;
+
+	return nm;
+}
+
 int main(int argc, char *argv[])
 {
 	int c, usd;  /* socket */
 	/* These parameters are settable from the command line
 	   the initializations here provide default behavior */
 	int daemonize = 0;
-	int initial_freq;             /* initial freq value to use */
+	int initial_freq = 0;	/* initial freq value to use */
 	struct ntp_control ntpc;
 
 	/* Setup application defaults depending on root/user mode */
@@ -804,10 +817,7 @@ int main(int argc, char *argv[])
 		ntpc.cross_check = 1;
 	}
 
-#ifdef ENABLE_SYSLOG
-	openlog(SYSLOG_IDENT, SYSLOG_OPTIONS, SYSLOG_FACILITY);
-#endif
-
+	prognm = progname(argv[0]);
 	while (1) {
 		char opts[] = "c:df:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
 
@@ -822,10 +832,6 @@ int main(int argc, char *argv[])
 				break;
 			case 'f':
 				initial_freq = atoi(optarg);
-#ifdef ENABLE_DEBUG
-				logit(LOG_DEBUG, 0, "Initial frequency %d", initial_freq);
-#endif
-				set_freq(initial_freq);
 				break;
 			case 'g':
 				ntpc.goodness = atoi(optarg);
@@ -877,6 +883,17 @@ int main(int argc, char *argv[])
 			default:
 				return usage();
 		}
+	}
+
+#ifdef ENABLE_SYSLOG
+	openlog(prognm, SYSLOG_OPTIONS, SYSLOG_FACILITY);
+#endif
+
+	if (initial_freq) {
+#ifdef ENABLE_DEBUG
+		logit(LOG_DEBUG, 0, "Initial frequency %d", initial_freq);
+#endif
+		set_freq(initial_freq);
 	}
 
 	if (optind < argc && ntpc.server == NULL)
