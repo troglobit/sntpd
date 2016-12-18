@@ -683,7 +683,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 }
 
 #ifdef ENABLE_REPLAY
-static void do_replay(void)
+static int do_replay(void)
 {
 	char line[100];
 	int n, day, freq, absolute;
@@ -694,9 +694,9 @@ static void do_replay(void)
 	double fake_delta_time = 0.0;
 
 	while (fgets(line,sizeof line,stdin)) {
-		n=sscanf(line,"%d %f %f %f %lf %f %d",
-			&day, &sec, &el_time, &st_time, &skew, &disp, &freq);
-		if (n==7) {
+		n = sscanf(line,"%d %f %f %f %lf %f %d",
+			   &day, &sec, &el_time, &st_time, &skew, &disp, &freq);
+		if (n == 7) {
 			logit(LOG_DEBUG, 0, "%s", line);
 			absolute = day*86400 + (int)sec;
 			errorbar = el_time + disp;
@@ -716,9 +716,11 @@ static void do_replay(void)
 			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
 		} else {
 			logit(LOG_ERR, 0, "Replay input error");
-			exit(2);
+			return 2;
 		}
 	}
+
+	return 0;
 }
 #endif
 
@@ -822,64 +824,77 @@ int main(int argc, char *argv[])
 		char opts[] = "c:df:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
 
 		c = getopt(argc, argv, opts);
-		if (c == EOF) break;
-		switch (c) {
-			case 'c':
-				ntpc.probe_count = atoi(optarg);
-				break;
-			case 'd':
-				debug++;
-				break;
-			case 'f':
-				initial_freq = atoi(optarg);
-				break;
-			case 'g':
-				ntpc.goodness = atoi(optarg);
-				break;
-			case 'h':
-				ntpc.server = optarg;
-				break;
-			case 'i':
-				ntpc.cycle_time = atoi(optarg);
-				break;
-			case 'l':
-				ntpc.live++;
-				break;
-			case 'n':
-				daemonize = 0;
-				break;
-			case 'p':
-				ntpc.local_udp_port = atoi(optarg);
-				break;
-			case 'q':
-				min_delay = atof(optarg);
-				break;
-#ifdef ENABLE_REPLAY
-			case 'r':
-				do_replay();
-				exit(0);
-				break;
-#endif
-			case 's':
-				ntpc.set_clock++;
-				break;
+		if (c == EOF)
+			break;
 
-			case 't':
-				ntpc.cross_check = 0;
-				break;
+		switch (c) {
+		case 'c':
+			ntpc.probe_count = atoi(optarg);
+			break;
+
+		case 'd':
+			debug++;
+			break;
+
+		case 'f':
+			initial_freq = atoi(optarg);
+			break;
+
+		case 'g':
+			ntpc.goodness = atoi(optarg);
+			break;
+
+		case 'h':
+			ntpc.server = optarg;
+			break;
+
+		case 'i':
+			ntpc.cycle_time = atoi(optarg);
+			break;
+
+		case 'l':
+			ntpc.live++;
+			break;
+
+		case 'n':
+			daemonize = 0;
+			break;
+
+		case 'p':
+			ntpc.local_udp_port = atoi(optarg);
+			break;
+
+		case 'q':
+			min_delay = atof(optarg);
+			break;
+
+#ifdef ENABLE_REPLAY
+		case 'r':
+			return do_replay();
+#endif
+
+		case 's':
+			ntpc.set_clock++;
+			break;
+
+		case 't':
+			ntpc.cross_check = 0;
+			break;
 
 #ifdef ENABLE_SYSLOG
-			case 'L':
-				logging++;
-				break ;
+		case 'L':
+			logging++;
+			break ;
 #endif
-			case 'v':
-				++verbose;
-				break;
-			case 'V':
-				return version();
-				break;
-			case '?':
+
+		case 'v':
+			++verbose;
+			break;
+
+		case 'V':
+			return version();
+
+		case '?':
 			default:
 				return usage();
 		}
