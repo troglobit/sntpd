@@ -1,7 +1,7 @@
 /* NTP client
  *
  * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>
- * Copyright (C) 2010  Joachim Nilsson <troglobit@vmlinux.org>
+ * Copyright (C) 2010-2016  Joachim Nilsson <troglobit@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License (Version 2,
