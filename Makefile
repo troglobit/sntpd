@@ -32,7 +32,7 @@ CPPFLAGS     += -DENABLE_SYSLOG
 #CPPFLAGS     += -DUSE_OBSOLETE_GETTIMEOFDAY
 #CPPFLAGS     += -DENABLE_REPLAY
 LDLIBS       += -lrt
-DISTFILES     = README HOWTO
+DISTFILES     = README.md HOWTO.md
 
 # A long time ago, far, far away, under Solaris, you needed to
 #    CFLAGS += -xO2 -Xc
