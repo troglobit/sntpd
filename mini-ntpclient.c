@@ -205,7 +205,6 @@ int main(int argc, char *argv[])
 /**
  * Local Variables:
  *  compile-command: "make mini-ntpclient"
- *  version-control: t
  *  indent-tabs-mode: t
  *  c-file-style: "linux"
  * End:

@@ -157,8 +157,7 @@ int main(int argc, char ** argv)
 /**
  * Local Variables:
  *  compile-command: "make adjtimex"
- *  version-control: t
- *  indent-tabs-mode: nil
- *  c-file-style: "ellemtel"
+ *  indent-tabs-mode: t
+ *  c-file-style: "linux"
  * End:
  */

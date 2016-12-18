@@ -371,8 +371,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 
 /**
  * Local Variables:
- *  c-file-style: "linux"
- *  version-control: t
  *  indent-tabs-mode: t
+ *  c-file-style: "linux"
  * End:
  */
