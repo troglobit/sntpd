@@ -16,10 +16,10 @@ Table of Contents
 Introduction
 ------------
 
-ntpclient is an NTP client for UNIX-like systems, [RFC 1305] and
-[RFC 4330].  Its functionality is a small subset of [ntpd], [chrony],
-[OpenNTPd], and [xntpd].  Since it is much smaller, it is also more
-relevant for embedded systems in need for only a client.
+ntpclient is an NTP client for UNIX-like systems, [RFC 1305][] and
+[RFC 4330][].  Its functionality is a small subset of [ntpd][],
+[chrony][], [OpenNTPd][], and [xntpd][].  Since it is much smaller, it
+is also more relevant for embedded systems in need for only a client.
 
 The goal of ntpclient is not only to set your computer's clock right
 once, but keep it there.
@@ -89,7 +89,7 @@ robust in any network environment, but has seen the most extensive
 testing in a low latency (less than 2 ms) Ethernet environment.  Users
 in other environments should study ntpclient's behavior, and be prepared
 to adjust internal tuning parameters.  A long description of how and why
-to use ntpclient is in the [HOWTO] file.  ntpclient always sends packets
+to use ntpclient is in the [HowTo][] file.  ntpclient always sends packets
 to the server's UDP port 123.
 
 One commonly needed tuning parameter for lock mode is `min_delay`, the
@@ -114,11 +114,11 @@ headers that are shown when the `-d` option is chosen, are:
 * elapsed:     total time from query to response (microseconds)
 * stall:       time the server reports that it sat on the request (microseconds)
 * skew:        difference between local time and server time (microseconds)
-* dispersion:  reported by server, see [RFC 1305] (microseconds)
+* dispersion:  reported by server, see [RFC 1305][] (microseconds)
 * freq:        local clock frequency adjustment (Linux only, ppm*65536)
 
 ntclient performs a series of sanity checks on UDP packets received, as
-recommended by [RFC 4330].  If it fails one of these tests, the line
+recommended by [RFC 4330][].  If it fails one of these tests, the line
 described above is replaced by `36765 01380.381 rejected packet` or, if
 `ENABLE_DEBUG` was selected at compile time, one of:
 
@@ -140,10 +140,10 @@ The file `test.dat` is suitable for piping into <kbd>ntpclient -r</kbd>.
 There are more than 200000 samples (lines) archived for study.  They are
 generally spaced 10 minutes apart, representing over three years of data
 logging (from a variety of machines, and not continuous, unfortunately).
-If you are interested, [contact Larry].
+If you are interested, [contact Larry][].
 
 Also included is a version of the `adjtimex(1)` tool.  See its man page
-and the [HOWTO] file for more information.
+and the [HowTo][] file for more information.
 
 Another tool is `envelope`, which is a perl script that was used for the
 lock studies.  It's kind of a hack and not worth documenting here.
@@ -163,7 +163,7 @@ Bugs
 Compliance
 ----------
 
-Adherence to [RFC 4330] chapter 10, Best practices:
+Adherence to [RFC 4330][] chapter 10, Best practices:
 
 1. Enforced, unless someone tinkers with the source code
 2. No backoff, but no retry either; this isn't TCP
@@ -178,12 +178,12 @@ Adherence to [RFC 4330] chapter 10, Best practices:
 Origin & References
 -------------------
 
-ntpclient was originally created by [Larry Doolittle] and is freely
+ntpclient was originally created by [Larry Doolittle][] and is freely
 available under the terms of the [GNU General Public License][GPL],
-version 2.  For questions on the original, [contact Larry], he remains
+version 2.  For questions on the original, [contact Larry][], he remains
 the official upstream for ntpclient.
 
-This is a fork maintained by [Joachim Nilsson], with the intent to add
+This is a fork maintained by [Joachim Nilsson][], with the intent to add
 common features like syslog support, more accessible documentation, and
 other small things.
 
@@ -196,6 +196,6 @@ other small things.
 [RFC 4330]: http://tools.ietf.org/html/rfc4330
 [Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
 [contact Larry]: larry@doolittle.boa.org
-[HOWTO]: https://github.com/troglobit/ntpclient/HOWTO.md
+[HowTo]: https://github.com/troglobit/ntpclient/HowTo.md
 [Joachim Nilsson]: http://troglobit.com
 [TroglOS]: https://github.com/troglobit/troglos/

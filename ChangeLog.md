@@ -7,7 +7,7 @@ All notable changes to the project are documented in this file.
 [UNRELEASED]
 ------------
 
-Curated by [Joachim Nilsson].
+Curated by [Joachim Nilsson][].
 
 ### Changes
 - Cleanup README and HOWTO, move to Markdown format for comfortable
@@ -23,7 +23,7 @@ Curated by [Joachim Nilsson].
 [2010_365] - 2010-12-31
 -----------------------
 
-Curated by [Larry Doolittle].  Changes since `ntpclient_2007_365.tar.gz`.
+Curated by [Larry Doolittle][].  Changes since `ntpclient_2007_365.tar.gz`.
 
 ### Changes
 - Include `netdb.h` and always define `_BSD_SOURCE` to get `herror()`
@@ -31,7 +31,7 @@ Curated by [Larry Doolittle].  Changes since `ntpclient_2007_365.tar.gz`.
 - add `-fno-strict-aliasing` as needed by traditional network coding style
 
 ### Fixes
-- Fixed type of `sa_xmit_len`, thanks [Mike Frysinger]
+- Fixed type of `sa_xmit_len`, thanks [Mike Frysinger][]
 - Dropped underscores in spelling of `adjtimex(2)`, might make uClibc happier
 
 
@@ -48,7 +48,7 @@ Curated by [Larry Doolittle].  Changes since `ntpclient_2007_365.tar.gz`.
 [2010_323] - 2010-11-19
 -----------------------
 
-Curated by [Joachim Nilsson].
+Curated by [Joachim Nilsson][].
 
 ### Changes
 - Support for resync with server on `SIGHUP`
@@ -58,7 +58,7 @@ Curated by [Joachim Nilsson].
 [2010_300] - 2010-10-27
 -----------------------
 
-Curated by [Joachim Nilsson].
+Curated by [Joachim Nilsson][].
 
 ### Changes
 - Prefix all log messages with "ntpclient:"
@@ -75,7 +75,7 @@ Curated by [Joachim Nilsson].
 [2007_365] - 2007-12-31
 -----------------------
 
-Curated by [Larry Doolittle].
+Curated by [Larry Doolittle][].
 
 ### Changes
 - Adjustable `min_delay` parameter, used to be hard-coded 800 microseconds
@@ -92,7 +92,7 @@ Curated by [Larry Doolittle].
 [2006_318] - 2006-11-14 [YANKED]
 --------------------------------
 
-Curated by [Larry Doolittle].
+Curated by [Larry Doolittle][].
 
 ### Changes
 - Default build is now `-std=c99`, but `c89` sill works too
@@ -113,7 +113,7 @@ Curated by [Larry Doolittle].
 [2003_194] - 2003-07-13 [YANKED]
 --------------------------------
 
-Curated by [Larry Doolittle].
+Curated by [Larry Doolittle][].
 
 - New `-g` option (has had limited testing)
 - Changed max frequency adjustment from 91 ppm to 150 ppm

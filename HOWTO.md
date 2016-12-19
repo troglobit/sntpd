@@ -40,7 +40,7 @@ exposure of `adjtimex(2)`.
 
 Larry Doolittle wrote the other; it uses short options, and has no
 bloat^H^H^H^H^Hextra features.  This version is included with ntpclient
-as a standalone version; it is also incorporated into [BusyBox],
+as a standalone version; it is also incorporated into [BusyBox][],
 although you may have to select it at compile time, like any other
 component.
 
@@ -114,7 +114,7 @@ evenly spaced on the horizontal axis, packets were actually lost; this
 is less common, but still OK.
 
 If the error bar becomes suddenly large, and takes a few minutes to
-slowly recover, your NTP host (presumably [xntpd]) had problems
+slowly recover, your NTP host (presumably [xntpd][]) had problems
 communicating with _its_ server, and reported that problem to you by
 increasing its "dispersion" (this is a hack, required by xntpd's core
 incorrect assumption that errors in network delays have Gaussian
@@ -180,7 +180,7 @@ boil down to:
 The second line makes explicit the retries that may be required for this
 UDP-based time protocol.  If the first time request takes longer than 10000
 microseconds to resolve, or the packets get lost, it instructs ntpclient to
-try again 15 seconds later (the minimum retry period mandated by [RFC 4330]),
+try again 15 seconds later (the minimum retry period mandated by [RFC 4330][]),
 and it won't exit until it gets such a suitable response.
 
 As of 2006, ntpclient can in theory combine the three lines above into one:
@@ -209,7 +209,7 @@ mode when the time server is dead, add a `-c 5` switch to the end of
 that ntpclient command, giving at most 5 retries, if something goes
 wrong with the time set.  For that approach to be useful, consider
 patching the source to lower the minimum packet send interval from the
-[RFC 4330]-mandated 15 seconds.
+[RFC 4330][]-mandated 15 seconds.
 
 
 [xntpd]: http://www.eecis.udel.edu/~mills/ntp/
