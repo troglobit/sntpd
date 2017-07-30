@@ -38,7 +38,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>     /* gethostbyname */
+#include <netdb.h>     /* getaddrinfo -> gethostbyname */
 #include <arpa/inet.h>
 #include <time.h>
 #include <unistd.h>
@@ -51,6 +51,19 @@
 #endif
 
 #include "ntpclient.h"
+
+#define DEBUG_LEVEL 1
+#if (DEBUG_LEVEL > 0)
+#define MYLOG1(A,...)	printf(A,##__VA_ARGS__);
+#else
+#define MYLOG1(A,...)
+#endif
+int GetIPAddressByHostname(char *pszHostname,
+			   struct sockaddr_storage *SockAddr,
+			   unsigned int bUseDns,
+			   char *pszIpAddrString,
+			   uint8_t *pcAddr);
+
 
 /* Default to the RFC-4330 specified value */
 #ifndef MIN_INTERVAL
@@ -128,7 +141,7 @@ struct ntp_control {
 	int goodness;
 	int cross_check;
 
-	short local_udp_port;
+	uint16_t local_udp_port;
 	char *server;		/* must be set */
 	char serv_addr[4];
 };
@@ -304,40 +317,41 @@ static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 #endif
 }
 
-static int check_source(int data_len, struct sockaddr *sa, unsigned int sa_len, struct ntp_control *ntpc)
+static int check_source(int data_len, struct sockaddr_storage *sa_source, struct ntp_control *ntpc)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *)sa;
-
-	(void) data_len;	/* not used */
-	(void) sa_len;		/* not used */
-
-#ifdef ENABLE_DEBUG
-	if (debug) {
-		logit(LOG_DEBUG, 0, "Packet of length %d received", data_len);
-		if (sa->sa_family == AF_INET) {
-			logit(LOG_DEBUG, 0, "Source: INET Port %u host %s",
-			      ntohs(sin->sin_port), inet_ntoa(sin->sin_addr));
-		} else {
-			logit(LOG_DEBUG, 0, "Source: Address family %d", sa->sa_family);
-		}
+        struct sockaddr_in6 *ipv6;
+        struct sockaddr_in *ipv4;
+        uint16_t wSourcePort;
+        int nRet;  
+	
+	nRet = 0;
+	(void) data_len;
+	(void) ntpc; /* not used */
+	MYLOG1("packet of length %d received\n",data_len);
+	if (sa_source->ss_family == AF_INET)
+	{
+          ipv4 = (struct sockaddr_in *)(sa_source);
+          wSourcePort = ntohs(ipv4->sin_port);
+	}  
+	else if (sa_source->ss_family == AF_INET6)
+	{
+	  ipv6 = (struct sockaddr_in6 *)(sa_source);  
+	  wSourcePort = ntohs(ipv6->sin6_port);
 	}
-#endif
-
+	else
+	  nRet = -1;
 	/* we could check that the source is the server we expect, but
 	 * Denys Vlasenko recommends against it: multihomed hosts get it
 	 * wrong too often. */
-#if 0
-	if (memcmp(ntpc->serv_addr, &(sin->sin_addr), 4)!=0) {
-		return 1;  /* fault */
+        if (nRet == 0)
+	{
+	  if (NTP_PORT != wSourcePort)
+	  {
+	    MYLOG1("%s: invalid port: %u\r\n",__FUNCTION__,wSourcePort);
+	    nRet = -1;  /* fault */
+	  }
 	}
-#else
-	(void) ntpc; /* not used */
-#endif
-	if (NTP_PORT != ntohs(sin->sin_port)) {
-		return 1;  /* fault */
-	}
-
-	return 0;
+	return nRet;
 }
 
 static double ntpdiff( struct ntptime *start, struct ntptime *stop)
@@ -489,50 +503,84 @@ fail:
 	return 1;
 }
 
-static void stuff_net_addr(struct in_addr *p, char *hostname)
+static void stuff_net_addr(struct sockaddr_storage *SockAddr, char *hostname)
 {
-	struct hostent *ntpserver;
-
-	ntpserver = gethostbyname(hostname);
-	if (ntpserver == NULL) {
-                if (verbose) {
-                        logit(LOG_ERR, 0, "Unable lookup %s: %s", hostname, hstrerror(h_errno));
-		}
-		exit(1);
-	}
-
-	if (ntpserver->h_length != 4) {
-		/* IPv4 only, until I get a chance to test IPv6 */
-		logit(LOG_NOTICE, 0, "Oops h_length=%d, only IPv4 supported currently.", ntpserver->h_length);
-		exit(1);
-	}
-	memcpy(&(p->s_addr),ntpserver->h_addr_list[0],4);
+  char szIpAddr[INET6_ADDRSTRLEN];
+    
+  if (GetIPAddressByHostname(hostname,SockAddr,1,szIpAddr,NULL) == 0)
+  {
+    MYLOG1("%s: ---> %s\r\n",__FUNCTION__,szIpAddr) 
+  }    
+  else
+  {
+    if (verbose)
+    {
+      logit(LOG_ERR, 0, "Unable lookup %s", hostname);
+    }
+    exit(1);    
+  }
 }
 
-static void setup_receive(int usd, unsigned int interface, short port)
+static void setup_receive(int usd, uint16_t port)
 {
-	struct sockaddr_in sa_rcvr;
-	memset(&sa_rcvr,0,sizeof sa_rcvr);
-	sa_rcvr.sin_family=AF_INET;
-	sa_rcvr.sin_addr.s_addr=htonl(interface);
-	sa_rcvr.sin_port=htons(port);
-	if (bind(usd,(struct sockaddr *) &sa_rcvr,sizeof sa_rcvr) == -1) {
-		logit(LOG_ERR, errno, "Failed binding to UDP port %d", port);
-		exit(1);
-	}
-	/* listen(usd,3); this isn't TCP; thanks Alexander! */
+ struct sockaddr_in6 sin6;
+  const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+  int nOpt;	
+  
+  nOpt = 0;
+  /* setting this means the socket only accepts connections from v6 */
+  /* unset, it accepts v6 and v4 (mapped address) connections */
+  if (setsockopt(usd,IPPROTO_IPV6,IPV6_V6ONLY,&nOpt,sizeof(nOpt)) == 0) /* must done before bind */
+  {         
+    memset(&sin6,0,sizeof(struct sockaddr_in6));
+    sin6.sin6_family = AF_INET6;
+    sin6.sin6_port = htons(port);
+    sin6.sin6_addr = in6addr_any;	// any address
+    if (bind(usd,(struct sockaddr*)&sin6,sizeof(sin6)) == -1)
+    {
+      MYLOG1("%s: Failed binding to UDP port %u, Error: %s\r\n",__FUNCTION__,port,strerror(errno));
+      exit(1);
+    }
+    /* listen(usd,3); this isn't TCP; thanks Alexander! */
+  }
+  else
+  {
+    MYLOG1("%s: setsockopt, Error: %s\r\n",__FUNCTION__,strerror(errno));
+    exit(1);        
+  }
 }
 
-static void setup_transmit(int usd, char *host, short port, struct ntp_control *ntpc)
+static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_control *ntpc)
 {
-	struct sockaddr_in sa_dest;
-
-	memset(&sa_dest,0,sizeof sa_dest);
-	sa_dest.sin_family=AF_INET;
-	stuff_net_addr(&(sa_dest.sin_addr),host);
-	memcpy(ntpc->serv_addr,&(sa_dest.sin_addr),4); /* XXX asumes IPv4 */
-	sa_dest.sin_port=htons(port);
-	while (connect(usd,(struct sockaddr *)&sa_dest,sizeof sa_dest)==-1) {
+  struct sockaddr_storage SockAddr;
+  struct sockaddr_in6 *ipv6;
+  struct sockaddr_in *ipv4;
+  socklen_t nAddrlen;
+  
+  (void)ntpc;   /* not used */
+  nAddrlen = 0;
+  stuff_net_addr(&SockAddr,host);	// Get ip address of ntp server
+  if (SockAddr.ss_family == AF_INET) 
+  {
+    ipv4 = (struct sockaddr_in *)(&SockAddr);
+    ipv4->sin_port = htons(port); // Port
+    nAddrlen = sizeof(struct sockaddr_in);
+  }
+  else if (SockAddr.ss_family == AF_INET6) 
+  {
+    ipv6 = (struct sockaddr_in6 *)(&SockAddr);
+    nAddrlen = sizeof(struct sockaddr_in6);
+    ipv6->sin6_port = htons(port); // Port
+  }
+  else
+  {
+    /* should never happen */
+    MYLOG1("%s: bad sockaddr\r\n",__FUNCTION__);
+    exit(1);
+  }
+  if (nAddrlen != 0)
+  {
+    while (connect(usd,(struct sockaddr *)&SockAddr,nAddrlen) == -1) {
                 if (ntpc->live) {
                         /* Wait here a while, networking is probably not up yet. */
                         sleep(1);
@@ -541,17 +589,19 @@ static void setup_transmit(int usd, char *host, short port, struct ntp_control *
 
 		logit(LOG_ERR, errno, "Failed connecting to NTP server");
                 exit(1);
-        }
+    }
+  }
 }
 
 static int setup_socket(struct ntp_control *ntpc)
 {
 	int sd;
 
-	if ((sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+        /* using IPV6 socket for IPV4 and IPV6 */
+	if ((sd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return -1;
 
-	setup_receive(sd, INADDR_ANY, ntpc->local_udp_port);
+	setup_receive(sd, ntpc->local_udp_port);
 	setup_transmit(sd, ntpc->server, NTP_PORT, ntpc);
 
 	return sd;
@@ -597,7 +647,7 @@ static void setup_signals(void)
 static void primary_loop(int usd, struct ntp_control *ntpc)
 {
 	fd_set fds;
-	struct sockaddr sa_xmit;
+	struct sockaddr_storage sa_xmit;
 	int i, pack_len, probes_sent, error;
 	socklen_t sa_xmit_len;
 	struct timeval to;
@@ -654,12 +704,12 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 		}
 
 		error = ntpc->goodness;
-		pack_len = recvfrom(usd, incoming, sizeof_incoming, 0, &sa_xmit, &sa_xmit_len);
+                pack_len = recvfrom(usd, incoming, sizeof_incoming, 0, (struct sockaddr *)&sa_xmit, &sa_xmit_len);
 		if (pack_len < 0) {
 			logit(LOG_ERR, errno, "Failed recvfrom()");
 		} else if (pack_len > 0 && (unsigned)pack_len < sizeof_incoming) {
 			get_packet_timestamp(usd, &udp_arrival_ntp);
-			if (check_source(pack_len, &sa_xmit, sa_xmit_len, ntpc) != 0)
+			if (check_source(pack_len, &sa_xmit, ntpc) != 0)
 				continue;
 			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0)
 				continue;
@@ -998,3 +1048,105 @@ int main(int argc, char *argv[])
  *  c-file-style: "linux"
  * End:
  */
+
+
+
+
+
+
+/*------------------------------------------------------------------------------*/
+/*  Name:           GetIPAddressByHostname					*/
+/*------------------------------------------------------------------------------*/
+/*  Parameter            							*/
+/*    in:           pszHostname, uint8_t *, Name of host                        */
+/*			Valid hostnames (examples):                             */
+/*			www.heise.de			URL			*/
+/*			192.168.31.70			IPV4			*/
+/*			fe80::230:26ff:fef0:24b1	IPV6			*/
+/*			fe80::230:26ff:fef0:24b1%eth0	IPV6 with scope		*/
+/*    out:          SockAddr *, struct sockaddr_storage,                        */
+/*    in:           bUseDns, unsigned int, 0 = dont use DNS, 1 = use DNSeDns    */
+/*    out:          pszIpAddrString, uint8_t *, Pointer for IP-Addr-String	*/
+/*					Mem for at least INET6_ADDRSTRLEN Bytes	*/
+/*					Set to NULL if not used.                */
+/*   out:	    pcAddr, uint8_t *,  Pointer to Ip-Addr in Byte order        */
+/*				        Mem for at least 16 Bytes	        */
+/*				        Set to NULL if not used                 */
+/*  return:   int, 0 = OK, otherwise Error                                      */
+/*------------------------------------------------------------------------------*/
+int GetIPAddressByHostname(char *pszHostname,
+			   struct sockaddr_storage *SockAddr,
+			   unsigned int bUseDns,
+			   char *pszIpAddrString,
+			   uint8_t *pcAddr)
+{
+  int nError;
+  int nRet;
+  struct addrinfo hints;				// input parameter for getaddrinfo()
+  struct addrinfo *result;
+  struct addrinfo *rp;					// actual element
+  uint8_t *pcIpAddr;					// ip address in Byte-Order
+  char szIpString[INET6_ADDRSTRLEN];
+    
+  memset(&hints,0,sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;		// Allow IPv4 or IPv6
+  hints.ai_socktype = 0; 
+  if (bUseDns == 0)
+    hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
+  else
+    hints.ai_flags = AI_PASSIVE;
+  hints.ai_protocol = 0;		// Any protocol
+  hints.ai_canonname = NULL;
+  hints.ai_addr = NULL;
+  hints.ai_next = NULL;
+  nRet = -1;
+  if ((pszHostname != NULL) && (SockAddr != NULL))
+  {
+    memset(SockAddr,0,sizeof(struct sockaddr_storage));
+    nError = getaddrinfo(pszHostname,NULL,&hints,&result); // returns a list of address structures.
+    if (nError == 0)
+    {
+      // The first result will be used. IPV4 has higher priority
+      for (rp = result; ((rp != NULL) && (nRet != 0)); rp = rp->ai_next)
+      {
+        if (rp->ai_family == AF_INET)
+	{
+	  memcpy(SockAddr,(struct sockaddr_in *)(rp->ai_addr),sizeof(struct sockaddr_in));
+	  pcIpAddr = (uint8_t*)&((struct sockaddr_in *)(rp->ai_addr))->sin_addr.s_addr;
+	  if (inet_ntop(SockAddr->ss_family,pcIpAddr,szIpString,sizeof(szIpString)) != NULL)
+	  {
+	    if (pszIpAddrString != NULL)
+	      strcpy(pszIpAddrString,szIpString);
+	    if (pcAddr != NULL)
+	      memcpy(pcAddr,pcIpAddr,4);	// Byte-Order
+             nRet = 0;		
+	    MYLOG1("%s: ipv4 address: %s -> %s\r\n",__FUNCTION__,pszHostname,szIpString);
+           }
+        }
+	else if (rp->ai_family == AF_INET6)
+	{
+	  memcpy(SockAddr,(struct sockaddr_in6 *)(rp->ai_addr),sizeof(struct sockaddr_in6));
+	  pcIpAddr = (uint8_t*)&((struct sockaddr_in6 *)(rp->ai_addr))->sin6_addr.s6_addr;
+	  if (inet_ntop(SockAddr->ss_family,pcIpAddr,szIpString,sizeof(szIpString)) != NULL)
+	  {
+	    if (pszIpAddrString != NULL)
+	      strcpy(pszIpAddrString,szIpString);
+	    if (pcAddr != NULL)
+	      memcpy(pcAddr,pcIpAddr,16);	// Byte-Order
+	    nRet = 0;
+	    MYLOG1("%s: ipv6 address: %s -> %s\r\n",__FUNCTION__,pszHostname,szIpString);
+           }
+        }
+      }
+      freeaddrinfo(result);
+    }
+    else
+    {
+      MYLOG1("%s: hostname: %s, getaddrinfo failed, error: %s\r\n",__FUNCTION__,pszHostname,gai_strerror(nError));  
+    }
+  }
+  return nRet;
+}
+
+
+
