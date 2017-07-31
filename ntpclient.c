@@ -740,7 +740,7 @@ static int do_replay(void)
 static int usage(int code)
 {
 	fprintf(stderr,
-		"Usage: %s [-dlnstv] [-c count] [-f frequency] [-g goodness] [-h hostname]\n"
+		"Usage: %s [-dlnstv] [-c count] [-f frequency] [-g goodness]\n"
 		"                 [-i interval] [-p port] [-q min_delay]"
 #ifdef ENABLE_REPLAY
 		" [-r]"
@@ -755,7 +755,7 @@ static int usage(int code)
 		" -d           Debug, or diagnostics mode  Possible to enable more at compile\n"
 		" -g goodness  Stop after getting a result more accurate than goodness msec,\n"
 		"              microseconds. Default: 0 (forever)\n"
-		" -h hostname  NTP server, mandatory(!), against which to sync system time\n"
+		" -h           Show summary of command line options and exit\n"
 		" -i interval  Check time every interval seconds.  Default: 600\n"
 		" -l           Attempt to lock local clock to server using adjtimex(2)\n"
 #ifdef ENABLE_SYSLOG
@@ -774,10 +774,14 @@ static int usage(int code)
 		" -v           Be verbose.  This option will cause time sync events, hostname\n"
 		"              lookup errors and program version to be displayed\n"
 		" -V           Display version and copyright information\n"
-		"\nReport %s bugs to troglobit@gmail.com\n"
-		"Home page: http://troglobit.com/ntpclient.shtml\n", prognm, prognm);
+		"\n"
+		"Arguments:\n"
+		"    hostname  NTP server, mandatory, against which to sync system time\n"
+		"\n"
+		"Bugs report address https://github.com/troglobit/ntpclient/issues\n"
+		"Project homepage: https://github.com/troglobit/ntpclient\n", prognm);
 
-	return 1;
+	return code;
 }
 
 static int version(void)
@@ -833,7 +837,7 @@ int main(int argc, char *argv[])
 
 	prognm = progname(argv[0]);
 	while (1) {
-		char opts[] = "c:df:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
+		char opts[] = "c:df:g:h::i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
@@ -857,6 +861,9 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'h':
+			if (!optarg)
+				return usage(0);
+
 			ntpc.server = optarg;
 			break;
 
