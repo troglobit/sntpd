@@ -2,6 +2,7 @@ Change Log
 ==========
 
 All notable changes to the project are documented in this file.
+Changes to Larry's upstream version are interleaved.
 
 
 [UNRELEASED]
@@ -20,10 +21,31 @@ Curated by [Joachim Nilsson][].
 - Fix compiler warnings for unused variables when `ENABLE_DEBUG` is unset.
 
 
+[2015_365] - 2015-12-31
+-----------------------
+
+Curated by [Larry Doolittle][].  Changes since `ntpclient_2010_365.tar.gz`,
+<http://doolittle.icarus.com/ntpclient/ntpclient_2015_365.tar.gz>
+
+### Changes
+- Tweak coding style to work better with modern compilers (e.g.,
+  gcc-gcc-4.9.2 and clang-3.5.0)
+- Make c99 the default
+- List more warning flags in disabled part of Makefile
+- Minor whitespace, parenthesis, and spelling changes in source files
+- Move `_POSIX_C_SOURCE` and `_BSD_SOURCE` to Makefile
+
+### Fixes
+- Dixed and re-enabled `-DPRECISION_SIOCGSTAMP`, seems to work properly
+  with modern (e.g., 3.x or 4.x) Linux kernel
+- use `LDLIBES` instad of `LDFLAGS` for `-lrt` in Makefile (thanks, ChristophGr)
+
+
 [2010_365] - 2010-12-31
 -----------------------
 
 Curated by [Larry Doolittle][].  Changes since `ntpclient_2007_365.tar.gz`.
+<http://doolittle.icarus.com/ntpclient/ntpclient_2010_365.tar.gz>
 
 ### Changes
 - Include `netdb.h` and always define `_BSD_SOURCE` to get `herror()`
@@ -128,6 +150,7 @@ Curated by [Larry Doolittle][].
 
 
 [UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2010_365...HEAD
+[2015_365]:   https://github.com/troglobit/ntpclient/compare/2010_365...2015_365
 [2010_365]:   https://github.com/troglobit/ntpclient/compare/2010_326...2010_365
 [2010_326]:   https://github.com/troglobit/ntpclient/compare/2010_323...2010_326
 [2010_323]:   https://github.com/troglobit/ntpclient/compare/2010_300...2010_323
@@ -141,4 +164,3 @@ Curated by [Larry Doolittle][].
 [Mike Frysinger]: vapier@gentoo.org
 [Joachim Nilsson]: https://github.com/troglobit/ntpclient/
 [Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
-

@@ -23,9 +23,10 @@ DEPS          = $(OBJS:.o=.d)
 CFLAGS        = -O2 -std=c99
 CPPFLAGS      = -DVERSION_STRING=\"$(VERSION)\" $(EXTRA_CFLAGS)
 CPPFLAGS     += -D_POSIX_C_SOURCE=199309 -D_BSD_SOURCE
-CPPFLAGS     += -W -Wall -Wpointer-arith -Wcast-align -Wcast-qual -Wshadow
-CPPFLAGS     += -Waggregate-return -Wnested-externs -Winline -Wwrite-strings
-CPPFLAGS     += -Wstrict-prototypes -Wno-strict-aliasing
+CPPFLAGS     += -W -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual
+CPPFLAGS     += -Wshadow -Waggregate-return -Wnested-externs -Winline
+CPPFLAGS     += -Wwrite-strings -Waggregate-return -Wnested-externs -Winline
+CPPFLAGS     += -Wstrict-prototypes -Wmissing-prototypes -pedantic
 CPPFLAGS     += -DENABLE_SYSLOG
 CPPFLAGS     += -DPRECISION_SIOCGSTAMP
 #CPPFLAGS     += -DENABLE_DEBUG
