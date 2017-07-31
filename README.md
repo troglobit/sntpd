@@ -215,5 +215,5 @@ other small things.
 [Travis Status]:   https://travis-ci.org/troglobit/ntpclient.png?branch=master
 [CONTRIBUTING.md]: CONTRIBUTING.md
 [issue tracker]:   https://github.com/troglobit/ntpclient/issues
-[HowTo]:           https://github.com/troglobit/ntpclient/HowTo.md
+[HowTo]:           https://github.com/troglobit/ntpclient/doc/HowTo.md
 [Joachim Nilsson]: http://troglobit.com
