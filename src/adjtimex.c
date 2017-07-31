@@ -84,32 +84,32 @@ int main(int argc, char **argv)
 	int c, i, ret, sep;
 
 	txc.modes = 0;
-	for (;;) {
-		c = getopt(argc, argv, "hqo:f:p:t:");
+	while (1) {
+		c = getopt(argc, argv, "f:ho:p:qt:");
 		if (c == EOF)
 			break;
 
 		switch (c) {
+		case 'f':
+			txc.freq = atoi(optarg);
+			txc.modes |= ADJ_FREQUENCY;
+			break;
+
 		case 'h':
 			return usage(0);
-
-		case 'q':
-			quiet = 1;
-			break;
 
 		case 'o':
 			txc.offset = atoi(optarg);
 			txc.modes |= ADJ_OFFSET_SINGLESHOT;
 			break;
 
-		case 'f':
-			txc.freq = atoi(optarg);
-			txc.modes |= ADJ_FREQUENCY;
-			break;
-
 		case 'p':
 			txc.constant = atoi(optarg);
 			txc.modes |= ADJ_TIMECONST;
+			break;
+
+		case 'q':
+			quiet = 1;
 			break;
 
 		case 't':
@@ -163,7 +163,8 @@ int main(int argc, char **argv)
 		       "    return value: %d (%s)\n",
 		       txc.constant,
 		       txc.precision, txc.tolerance, txc.tick,
-		       txc.time.tv_sec, txc.time.tv_usec, ret, (ret >= 0 && ret <= 5) ? ret_code_descript[ret] : "error");
+		       txc.time.tv_sec, txc.time.tv_usec, ret,
+		       (ret >= 0 && ret <= 5) ? ret_code_descript[ret] : "error");
 	}
 
 	return ret < 0;
