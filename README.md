@@ -63,12 +63,13 @@ older won't even compile without that switch set.
 Usage
 -----
 
-    Usage: ntpclient [options]
+    Usage: ntpclient [options] SERVER
+    
      -c count     Stop after count time measurements. Default: 0 (forever)
      -d           Debug, or diagnostics mode  Possible to enable more at compile
      -g goodness  Stop after getting a result more accurate than goodness msec,
                   microseconds. Default: 0 (forever)
-     -h hostname  NTP server, mandatory(!), against which to sync system time
+     -h           Show summary of command line options and exit
      -i interval  Check time every interval seconds.  Default: 600
      -l           Attempt to lock local clock to server using adjtimex(2)
      -L           Use syslog instead of stdout for log messages, enabled
@@ -82,6 +83,8 @@ Usage
      -v           Be verbose.  This option will cause time sync events, hostname
                   lookup errors and program version to be displayed
      -V           Display version and copyright information
+     
+     SERVER       NTP server against which to sync system time
 
 Mortal users can use this program for monitoring, but not clock setting
 (with the `-s` or `-l` switches).  The `-l` switch is designed to be
@@ -183,9 +186,9 @@ available under the terms of the [GNU General Public License][GPL],
 version 2.  For questions on the original, [contact Larry][], he remains
 the official upstream for ntpclient.
 
-This is a fork maintained by [Joachim Nilsson][], with the intent to add
-common features like syslog support, more accessible documentation, and
-other small things.
+This is a fork maintained by [Joachim Nilsson][] which adds common
+features like syslog support, more accessible documentation, IPv6
+support, and other small things.
 
 [GPL]: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 [ntpd]: http://www.ntp.org
