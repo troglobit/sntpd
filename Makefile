@@ -1,9 +1,15 @@
 # Makefile for ntpclient, an RFC-1305 client for UNIX systems   -*-Makefile-*-
+#
+# A long time ago, far, far away, under Solaris, you needed to
+#    CFLAGS += -xO2 -Xc
+#    LDLIBS += -lnsl -lsocket
+# To cross-compile
+#    CC = arm-linux-gcc
 
 # Larry's versioning scheme: YYYY_DOY, i.e., "%Y_%j"
 #VERSION      ?= $(shell git tag -l | tail -1)
 #VERSION      ?= `date +"%Y_%j"`
-VERSION      ?= 2015_PRE
+VERSION      ?= 2017_PRE
 NAME          = ntpclient
 EXECS        ?= $(NAME) adjtimex mini-ntpclient
 PKG           = $(NAME)-$(VERSION)
@@ -34,14 +40,6 @@ CPPFLAGS     += -DPRECISION_SIOCGSTAMP
 #CPPFLAGS     += -DENABLE_REPLAY
 LDLIBS       += -lrt
 DISTFILES     = README.md HOWTO.md
-
-# A long time ago, far, far away, under Solaris, you needed to
-#    CFLAGS += -xO2 -Xc
-#    LDLIBS += -lnsl -lsocket
-# To cross-compile
-#    CC = arm-linux-gcc
-# To check for lint
-# -Wundef not recognized by gcc-2.7.2.3
 
 # Pretty printing and GCC -M for auto dep files
 .c.o:
