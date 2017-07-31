@@ -134,34 +134,30 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss);
 
 void logit(int severity, int syserr, const char *format, ...)
 {
-    va_list ap;
-    static char buf[200];
+	va_list ap;
+	char buf[200];
 
-    va_start(ap, format);
-    vsnprintf(buf, sizeof(buf), format, ap);
-    va_end(ap);
+	va_start(ap, format);
+	vsnprintf(buf, sizeof(buf), format, ap);
+	va_end(ap);
 
 #ifdef ENABLE_SYSLOG
-    if (logging) {
-	    if (syserr) {
-		    errno = syserr;
-		    syslog(severity, "%s: %s", buf, strerror(errno));
-	    } else {
-		    syslog(severity, "%s", buf);
-	    }
-
-	    return;
-    }
+	if (logging) {
+		if (syserr)
+			syslog(severity, "%s: %s", buf, strerror(syserr));
+		else
+			syslog(severity, "%s", buf);
+	}
 #else
-    if (severity == LOG_WARNING)
-	    fputs("Warning - ", stderr);
-    else if (severity == LOG_ERR)
-	    fputs("ERROR - ", stderr);
+	if (severity == LOG_WARNING)
+		fputs("Warning - ", stderr);
+	else if (severity == LOG_ERR)
+		fputs("ERROR - ", stderr);
 
-    if (syserr)
-	    fprintf(stderr, "%s: %s\n", buf, strerror(errno));
-    else
-	    fprintf(stderr, "%s\n", buf);
+	if (syserr)
+		fprintf(stderr, "%s: %s\n", buf, strerror(errno));
+	else
+		fprintf(stderr, "%s\n", buf);
 #endif
 }
 
