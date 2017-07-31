@@ -58,11 +58,7 @@
 #else
 #define MYLOG1(A,...)
 #endif
-int GetIPAddressByHostname(char *pszHostname,
-			   struct sockaddr_storage *SockAddr,
-			   unsigned int bUseDns,
-			   char *pszIpAddrString,
-			   uint8_t *pcAddr);
+int getaddrbyname(char *host, struct sockaddr_storage *ss);
 
 
 /* Default to the RFC-4330 specified value */
@@ -321,36 +317,34 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 {
 	struct sockaddr_in6 *ipv6;
 	struct sockaddr_in *ipv4;
-	uint16_t wSourcePort;
-	int nRet;
+	uint16_t port;
 
-	nRet = 0;
 	(void) data_len;
 	(void) ntpc; /* not used */
-	MYLOG1("packet of length %d received\n",data_len);
+	MYLOG1("packet of length %d received\n", data_len);
 
 	if (sa_source->ss_family == AF_INET) {
 		ipv4 = (struct sockaddr_in *)(sa_source);
-		wSourcePort = ntohs(ipv4->sin_port);
+		port = ntohs(ipv4->sin_port);
 	} else if (sa_source->ss_family == AF_INET6) {
 		ipv6 = (struct sockaddr_in6 *)(sa_source);
-		wSourcePort = ntohs(ipv6->sin6_port);
-	}
-	else {
-		nRet = -1;
+		port = ntohs(ipv6->sin6_port);
+	} else {
+		/* Unsupported address family */
+		return 1;
 	}
 
-	/* we could check that the source is the server we expect, but
+	/*
+	 * we could check that the source is the server we expect, but
 	 * Denys Vlasenko recommends against it: multihomed hosts get it
-	 * wrong too often. */
-	if (nRet == 0) {
-		if (NTP_PORT != wSourcePort) {
-			MYLOG1("%s: invalid port: %u\r\n", __FUNCTION__, wSourcePort);
-			nRet = -1;  /* fault */
-		}
+	 * wrong too often.
+	 */
+	if (NTP_PORT != port) {
+		MYLOG1("%s: invalid port: %u\n", __FUNCTION__, port);
+		return 1;
 	}
 
-	return nRet;
+	return 0;
 }
 
 static double ntpdiff( struct ntptime *start, struct ntptime *stop)
@@ -502,81 +496,71 @@ fail:
 	return 1;
 }
 
-static void stuff_net_addr(struct sockaddr_storage *SockAddr, char *hostname)
-{
-	char szIpAddr[INET6_ADDRSTRLEN];
-    
-	if (GetIPAddressByHostname(hostname,SockAddr,1,szIpAddr,NULL) == 0) {
-		MYLOG1("%s: ---> %s\r\n",__FUNCTION__,szIpAddr);
-	} else {
-		if (verbose) {
-			logit(LOG_ERR, 0, "Unable lookup %s", hostname);
-		}
-		exit(1);
-	}
-}
-
 static void setup_receive(int usd, uint16_t port)
 {
 	struct sockaddr_in6 sin6;
 	const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
-	int nOpt;
+	int opt;
 
-	nOpt = 0;
 	/* setting this means the socket only accepts connections from v6 */
 	/* unset, it accepts v6 and v4 (mapped address) connections */
-	if (setsockopt(usd,IPPROTO_IPV6,IPV6_V6ONLY,&nOpt,sizeof(nOpt)) == 0) { /* must done before bind */
-		memset(&sin6,0,sizeof(struct sockaddr_in6));
-		sin6.sin6_family = AF_INET6;
-		sin6.sin6_port = htons(port);
-		sin6.sin6_addr = in6addr_any;	// any address
-		if (bind(usd,(struct sockaddr*)&sin6,sizeof(sin6)) == -1)
-		{
-			MYLOG1("%s: Failed binding to UDP port %u, Error: %s\r\n",__FUNCTION__,port,strerror(errno));
-			exit(1);
-		}
-		/* listen(usd,3); this isn't TCP; thanks Alexander! */
-	} else {
-		MYLOG1("%s: setsockopt, Error: %s\r\n",__FUNCTION__,strerror(errno));
+	 /* must done before bind */
+	opt = 0;
+	if (setsockopt(usd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt))) {
+		MYLOG1("%s: setsockopt, Error: %s\n", __FUNCTION__, strerror(errno));
 		exit(1);
 	}
+
+	memset(&sin6,0,sizeof(struct sockaddr_in6));
+	sin6.sin6_family = AF_INET6;
+	sin6.sin6_port = htons(port);
+	sin6.sin6_addr = in6addr_any;	// any address
+	if (bind(usd, (struct sockaddr*)&sin6, sizeof(sin6)) == -1) {
+		MYLOG1("%s: Failed binding to UDP port %u, Error: %s\n",__FUNCTION__,port,strerror(errno));
+		exit(1);
+	}
+	/* listen(usd,3); this isn't TCP; thanks Alexander! */
 }
 
 static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_control *ntpc)
 {
-	struct sockaddr_storage SockAddr;
+	struct sockaddr_storage ss;
 	struct sockaddr_in6 *ipv6;
 	struct sockaddr_in *ipv4;
-	socklen_t nAddrlen;
+	socklen_t len = 0;
 
 	(void)ntpc;   /* not used */
-	nAddrlen = 0;
-	stuff_net_addr(&SockAddr,host);	// Get ip address of ntp server
-	if (SockAddr.ss_family == AF_INET) {
-		ipv4 = (struct sockaddr_in *)(&SockAddr);
-		ipv4->sin_port = htons(port); // Port
-		nAddrlen = sizeof(struct sockaddr_in);
-	} else if (SockAddr.ss_family == AF_INET6) {
-		ipv6 = (struct sockaddr_in6 *)(&SockAddr);
-		nAddrlen = sizeof(struct sockaddr_in6);
-		ipv6->sin6_port = htons(port); // Port
-	} else {
-		/* should never happen */
-		MYLOG1("%s: bad sockaddr\r\n",__FUNCTION__);
+
+	if (getaddrbyname(host, &ss)) {
+		if (verbose)
+			logit(LOG_ERR, 0, "Unable lookup %s", host);
+
 		exit(1);
 	}
 
-	if (nAddrlen != 0) {
-		while (connect(usd,(struct sockaddr *)&SockAddr,nAddrlen) == -1) {
-			if (ntpc->live) {
-				/* Wait here a while, networking is probably not up yet. */
-				sleep(1);
-				continue;
-			}
+	if (ss.ss_family == AF_INET) {
+		ipv4 = (struct sockaddr_in *)(&ss);
+		ipv4->sin_port = htons(port);
+		len = sizeof(struct sockaddr_in);
+	} else if (ss.ss_family == AF_INET6) {
+		ipv6 = (struct sockaddr_in6 *)(&ss);
+		ipv6->sin6_port = htons(port);
+		len = sizeof(struct sockaddr_in6);
+	} else {
+		/* Unsupported address family */
+		MYLOG1("%s: bad sockaddr\n", __FUNCTION__);
+		exit(1);
+	}
 
-			logit(LOG_ERR, errno, "Failed connecting to NTP server");
-			exit(1);
+	while (connect(usd, (struct sockaddr *)&ss, len) == -1) {
+		if (ntpc->live) {
+			/* Wait here a while, networking is probably not up yet. */
+			sleep(1);
+			continue;
 		}
+
+		logit(LOG_ERR, errno, "Failed connecting to NTP server");
+		exit(1);
 	}
 }
 
@@ -1028,89 +1012,43 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-/*------------------------------------------------------------------------------*/
-/*  Name:           GetIPAddressByHostname					*/
-/*------------------------------------------------------------------------------*/
-/*  Parameter            							*/
-/*    in:           pszHostname, uint8_t *, Name of host                        */
-/*			Valid hostnames (examples):                             */
-/*			www.heise.de			URL			*/
-/*			192.168.31.70			IPV4			*/
-/*			fe80::230:26ff:fef0:24b1	IPV6			*/
-/*			fe80::230:26ff:fef0:24b1%eth0	IPV6 with scope		*/
-/*    out:          SockAddr *, struct sockaddr_storage,                        */
-/*    in:           bUseDns, unsigned int, 0 = dont use DNS, 1 = use DNSeDns    */
-/*    out:          pszIpAddrString, uint8_t *, Pointer for IP-Addr-String	*/
-/*					Mem for at least INET6_ADDRSTRLEN Bytes	*/
-/*					Set to NULL if not used.                */
-/*   out:	    pcAddr, uint8_t *,  Pointer to Ip-Addr in Byte order        */
-/*				        Mem for at least 16 Bytes	        */
-/*				        Set to NULL if not used                 */
-/*  return:   int, 0 = OK, otherwise Error                                      */
-/*------------------------------------------------------------------------------*/
-int GetIPAddressByHostname(char *pszHostname,
-			   struct sockaddr_storage *SockAddr,
-			   unsigned int bUseDns,
-			   char *pszIpAddrString,
-			   uint8_t *pcAddr)
+int getaddrbyname(char *host, struct sockaddr_storage *ss)
 {
-	int nError;
-	int nRet;
+	int err;
 	struct addrinfo hints;				// input parameter for getaddrinfo()
 	struct addrinfo *result;
 	struct addrinfo *rp;				// actual element
-	uint8_t *pcIpAddr;				// ip address in Byte-Order
-	char szIpString[INET6_ADDRSTRLEN];
     
-	memset(&hints,0,sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;		// Allow IPv4 or IPv6
-	hints.ai_socktype = 0; 
-	if (bUseDns == 0)
-		hints.ai_flags = AI_PASSIVE | AI_NUMERICHOST;
-	else
-		hints.ai_flags = AI_PASSIVE;
-	hints.ai_protocol = 0;		// Any protocol
-	hints.ai_canonname = NULL;
-	hints.ai_addr = NULL;
-	hints.ai_next = NULL;
-	nRet = -1;
-	if ((pszHostname != NULL) && (SockAddr != NULL)) {
-		memset(SockAddr,0,sizeof(struct sockaddr_storage));
-		nError = getaddrinfo(pszHostname,NULL,&hints,&result); // returns a list of address structures.
-		if (nError == 0) {
-			// The first result will be used. IPV4 has higher priority
-			for (rp = result; ((rp != NULL) && (nRet != 0)); rp = rp->ai_next) {
-				if (rp->ai_family == AF_INET) {
-					memcpy(SockAddr,(struct sockaddr_in *)(rp->ai_addr),sizeof(struct sockaddr_in));
-					pcIpAddr = (uint8_t*)&((struct sockaddr_in *)(rp->ai_addr))->sin_addr.s_addr;
-					if (inet_ntop(SockAddr->ss_family,pcIpAddr,szIpString,sizeof(szIpString)) != NULL) {
-						if (pszIpAddrString != NULL)
-							strcpy(pszIpAddrString,szIpString);
-						if (pcAddr != NULL)
-							memcpy(pcAddr,pcIpAddr,4);	// Byte-Order
-						nRet = 0;		
-						MYLOG1("%s: ipv4 address: %s -> %s\r\n",__FUNCTION__,pszHostname,szIpString);
-					}
-				} else if (rp->ai_family == AF_INET6) {
-					memcpy(SockAddr,(struct sockaddr_in6 *)(rp->ai_addr),sizeof(struct sockaddr_in6));
-					pcIpAddr = (uint8_t*)&((struct sockaddr_in6 *)(rp->ai_addr))->sin6_addr.s6_addr;
-					if (inet_ntop(SockAddr->ss_family,pcIpAddr,szIpString,sizeof(szIpString)) != NULL) {
-						if (pszIpAddrString != NULL)
-							strcpy(pszIpAddrString,szIpString);
-						if (pcAddr != NULL)
-							memcpy(pcAddr,pcIpAddr,16);	// Byte-Order
-						nRet = 0;
-						MYLOG1("%s: ipv6 address: %s -> %s\r\n",__FUNCTION__,pszHostname,szIpString);
-					}
-				}
-			}
-			freeaddrinfo(result);
-		} else {
-			MYLOG1("%s: hostname: %s, getaddrinfo failed, error: %s\r\n",__FUNCTION__,pszHostname,gai_strerror(nError));  
-		}
+	if (!host || !ss) {
+		errno = EINVAL;
+		return 1;
 	}
 
-	return nRet;
+	memset(&hints,0,sizeof(struct addrinfo));
+	hints.ai_family    = AF_UNSPEC;
+	hints.ai_socktype  = 0; 
+	hints.ai_flags     = AI_PASSIVE;
+	hints.ai_protocol  = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr      = NULL;
+	hints.ai_next      = NULL;
+
+	memset(ss, 0, sizeof(struct sockaddr_storage));
+	if (getaddrinfo(host, NULL, &hints, &result)) {
+		MYLOG1("%s: hostname: %s, getaddrinfo failed, error: %s\n", __FUNCTION__, host, gai_strerror(nError));
+		return 1;
+	}
+
+	// The first result will be used. IPV4 has higher priority
+	for (rp = result; rp; rp = rp->ai_next) {
+		if (rp->ai_family == AF_INET)
+			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
+		else if (rp->ai_family == AF_INET6)
+			memcpy(ss, (struct sockaddr_in6 *)(rp->ai_addr), sizeof(struct sockaddr_in6));
+	}
+	freeaddrinfo(result);
+
+	return 0;
 }
 
 /**
