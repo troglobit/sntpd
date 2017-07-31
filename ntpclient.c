@@ -58,8 +58,6 @@
 #else
 #define MYLOG1(A,...)
 #endif
-int getaddrbyname(char *host, struct sockaddr_storage *ss);
-
 
 /* Default to the RFC-4330 specified value */
 #ifndef MIN_INTERVAL
@@ -145,6 +143,7 @@ struct ntp_control {
 /* prototypes for some local routines */
 static void send_packet(int usd, u32 time_sent[2]);
 static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
+static int getaddrbyname(char *host, struct sockaddr_storage *ss);
 /* static void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len); */
 
 void logit(int severity, int syserr, const char *format, ...)
@@ -1013,7 +1012,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int getaddrbyname(char *host, struct sockaddr_storage *ss)
+static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 {
 	int err;
 	struct addrinfo hints;				// input parameter for getaddrinfo()
