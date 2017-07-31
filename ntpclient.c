@@ -16,9 +16,7 @@
  *  GNU General Public License for more details.
  *
  * Possible future improvements:
- *    - Write more documentation  :-(
  *    - Support leap second processing
- *    - Support IPv6
  *    - Support multiple (interleaved) servers
  *
  * Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
