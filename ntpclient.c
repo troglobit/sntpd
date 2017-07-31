@@ -51,26 +51,6 @@
 
 #include "ntpclient.h"
 
-/* Default to the RFC-4330 specified value */
-#ifndef MIN_INTERVAL
-#define MIN_INTERVAL 15
-#endif
-
-#ifdef ENABLE_REPLAY
-#define REPLAY_OPTION   "r"
-#else
-#define REPLAY_OPTION
-#endif
-
-int debug   = 0;
-int verbose = 0;                /* Verbose flag, produce useful output to log */
-int logging = 0;
-const char *prognm = SYSLOG_IDENT;
-static int sighup  = 0;
-static int sigterm = 0;
-
-extern char *optarg;		/* according to man 2 getopt */
-
 /* XXX fixme - non-automatic build configuration */
 #ifdef __linux__
 #include <sys/utsname.h>
@@ -83,7 +63,17 @@ char __hstrerror_buf[10];
 #define hstrerror(errnum) \
 	snprintf(__hstrerror_buf, sizeof(__hstrerror_buf), "Error %d", errnum)
 #endif
-/* end configuration for host systems */
+
+/* Default to the RFC-4330 specified value */
+#ifndef MIN_INTERVAL
+#define MIN_INTERVAL 15
+#endif
+
+#ifdef ENABLE_REPLAY
+#define REPLAY_OPTION   "r"
+#else
+#define REPLAY_OPTION
+#endif
 
 #define JAN_1970        0x83aa7e80      /* 2208988800 1970 - 1900 in seconds */
 #define NTP_PORT (123)
@@ -127,6 +117,15 @@ struct ntp_control {
 	char     *server;		/* must be set */
 	char      serv_addr[4];
 };
+
+int debug   = 0;
+int verbose = 0;                /* Verbose flag, produce useful output to log */
+int logging = 0;
+const char *prognm = SYSLOG_IDENT;
+static int sighup  = 0;
+static int sigterm = 0;
+
+extern char *optarg;		/* according to man 2 getopt */
 
 /* prototypes for some local routines */
 static void send_packet(int usd, uint32_t time_sent[2]);
