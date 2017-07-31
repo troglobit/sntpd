@@ -170,10 +170,9 @@ void logit(int severity, int syserr, const char *format, ...)
 #endif
 }
 
+/* OS dependent routine to get the current value of clock frequency */
 static int get_current_freq(void)
 {
-	/* OS dependent routine to get the current value of clock frequency.
-	 */
 #ifdef __linux__
 	struct timex txc;
 	txc.modes=0;
@@ -187,10 +186,9 @@ static int get_current_freq(void)
 #endif
 }
 
+/* OS dependent routine to set a new value of clock frequency */
 static int set_freq(int new_freq)
 {
-	/* OS dependent routine to set a new value of clock frequency.
-	 */
 #ifdef __linux__
 	struct timex txc;
 	txc.modes = ADJ_FREQUENCY;
@@ -208,9 +206,9 @@ static int set_freq(int new_freq)
 static void set_time(struct ntptime *new)
 {
 #ifndef USE_OBSOLETE_GETTIMEOFDAY
-	/* POSIX 1003.1-2001 way to set the system clock
-	 */
+	/* POSIX 1003.1-2001 way to set the system clock */
 	struct timespec tv_set;
+
 	/* it would be even better to subtract half the slop */
 	tv_set.tv_sec  = new->coarse - JAN_1970;
 	/* divide xmttime.fine by 4294.967296 */
@@ -222,9 +220,9 @@ static void set_time(struct ntptime *new)
 	if (debug)
 		logit(LOG_DEBUG, 0, "Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
 #else
-	/* Traditional Linux way to set the system clock
-	 */
+	/* Traditional Linux way to set the system clock */
 	struct timeval tv_set;
+
 	/* it would be even better to subtract half the slop */
 	tv_set.tv_sec  = new->coarse - JAN_1970;
 	/* divide xmttime.fine by 4294.967296 */
@@ -241,16 +239,16 @@ static void set_time(struct ntptime *new)
 static void ntpc_gettime(u32 *time_coarse, u32 *time_fine)
 {
 #ifndef USE_OBSOLETE_GETTIMEOFDAY
-	/* POSIX 1003.1-2001 way to get the system time
-	 */
+	/* POSIX 1003.1-2001 way to get the system time */
 	struct timespec now;
+
 	clock_gettime(CLOCK_REALTIME, &now);
 	*time_coarse = now.tv_sec + JAN_1970;
 	*time_fine   = NTPFRAC(now.tv_nsec/1000);
 #else
-	/* Traditional Linux way to get the system time
-	 */
+	/* Traditional Linux way to get the system time */
 	struct timeval now;
+
 	gettimeofday(&now, NULL);
 	*time_coarse = now.tv_sec + JAN_1970;
 	*time_fine   = NTPFRAC(now.tv_usec);
@@ -268,19 +266,22 @@ static void send_packet(int usd, u32 time_sent[2])
 #define PREC -6
 
 #ifdef ENABLE_DEBUG
-	if (debug) logit(LOG_DEBUG, 0, "Sending packet...");
+	if (debug)
+		logit(LOG_DEBUG, 0, "Sending packet ...");
 #endif
 	if (sizeof(data) != 48) {
 		logit(LOG_ERR, 0, "Packet size error");
 		return;
 	}
+
 	memset(data, 0, sizeof data);
 	data[0] = htonl (
 		( LI << 30 ) | ( VN << 27 ) | ( MODE << 24 ) |
 		( STRATUM << 16) | ( POLL << 8 ) | ( PREC & 0xff ) );
 	data[1] = htonl(1<<16);  /* Root Delay (seconds) */
 	data[2] = htonl(1<<16);  /* Root Dispersion (seconds) */
-	ntpc_gettime(time_sent, time_sent+1);
+	ntpc_gettime(time_sent, time_sent + 1);
+
 	data[10] = htonl(time_sent[0]); /* Transmit Timestamp coarse */
 	data[11] = htonl(time_sent[1]); /* Transmit Timestamp fine   */
 	send(usd,data,48,0);
@@ -292,7 +293,7 @@ static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 	/* XXX broken */
 	struct timeval udp_arrival;
 
-	if ( ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0 ) {
+	if (ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0) {
 		logit(LOG_ERR, errno, "Failed ioctl(SIOCGSTAMP)");
 		gettimeofday(&udp_arrival, NULL);
 	}
@@ -934,7 +935,7 @@ int main(int argc, char *argv[])
 		ntpc.probe_count = 1;
 	}
 
-	/* If suer gives a probe count, then assume non-live run and verbose reporting. */
+	/* If user gives a probe count, then assume non-live run and verbose reporting. */
 	if (ntpc.probe_count > 0) {
 		ntpc.live = 0;
 		verbose = 1;
