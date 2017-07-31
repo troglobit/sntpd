@@ -50,13 +50,6 @@
 
 #include "ntpclient.h"
 
-#define DEBUG_LEVEL 1
-#if (DEBUG_LEVEL > 0)
-#define MYLOG1(A,...)	printf(A,##__VA_ARGS__);
-#else
-#define MYLOG1(A,...)
-#endif
-
 /* Default to the RFC-4330 specified value */
 #ifndef MIN_INTERVAL
 #define MIN_INTERVAL 15
@@ -319,7 +312,7 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 
 	(void) data_len;
 	(void) ntpc; /* not used */
-	MYLOG1("packet of length %d received\n", data_len);
+	logit(LOG_DEBUG, 0, "packet of length %d received", data_len);
 
 	if (sa_source->ss_family == AF_INET) {
 		ipv4 = (struct sockaddr_in *)(sa_source);
@@ -328,7 +321,7 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 		ipv6 = (struct sockaddr_in6 *)(sa_source);
 		port = ntohs(ipv6->sin6_port);
 	} else {
-		/* Unsupported address family */
+		logit(LOG_DEBUG, 0, "%s: Unsupported address family", __func__);
 		return 1;
 	}
 
@@ -338,7 +331,7 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 	 * wrong too often.
 	 */
 	if (NTP_PORT != port) {
-		MYLOG1("%s: invalid port: %u\n", __FUNCTION__, port);
+		logit(LOG_INFO, 0, "%s: invalid port: %u", __func__, port);
 		return 1;
 	}
 
@@ -506,16 +499,16 @@ static void setup_receive(int usd, uint16_t port)
 	 /* must done before bind */
 	opt = 0;
 	if (setsockopt(usd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt))) {
-		MYLOG1("%s: setsockopt, Error: %s\n", __FUNCTION__, strerror(errno));
+		logit(LOG_ERR, errno, "%s: failed setsockopt", __func__);
 		exit(1);
 	}
 
 	memset(&sin6,0,sizeof(struct sockaddr_in6));
 	sin6.sin6_family = AF_INET6;
 	sin6.sin6_port = htons(port);
-	sin6.sin6_addr = in6addr_any;	// any address
+	sin6.sin6_addr = in6addr_any;
 	if (bind(usd, (struct sockaddr*)&sin6, sizeof(sin6)) == -1) {
-		MYLOG1("%s: Failed binding to UDP port %u, Error: %s\n",__FUNCTION__,port,strerror(errno));
+		logit(LOG_ERR, errno, "%s: Failed binding to UDP port %u", __func__, port);
 		exit(1);
 	}
 	/* listen(usd,3); this isn't TCP; thanks Alexander! */
@@ -546,8 +539,7 @@ static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_contro
 		ipv6->sin6_port = htons(port);
 		len = sizeof(struct sockaddr_in6);
 	} else {
-		/* Unsupported address family */
-		MYLOG1("%s: bad sockaddr\n", __FUNCTION__);
+		logit(LOG_ERR, 0, "%s: Unsupported address family", __func__);
 		exit(1);
 	}
 
@@ -1034,11 +1026,11 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 	memset(ss, 0, sizeof(struct sockaddr_storage));
 	err = getaddrinfo(host, NULL, &hints, &result);
 	if (err) {
-		MYLOG1("%s: hostname: %s, getaddrinfo failed, error: %s\n", __FUNCTION__, host, gai_strerror(err));
+		logit(LOG_ERR, 0, "Failed getaddrinfo() for hostname: %s: %s", host, gai_strerror(err));
 		return 1;
 	}
 
-	// The first result will be used. IPV4 has higher priority
+	/* The first result will be used. IPV4 has higher priority */
 	for (rp = result; rp; rp = rp->ai_next) {
 		if (rp->ai_family == AF_INET) {
 			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
