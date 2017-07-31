@@ -43,11 +43,19 @@ AC_ARG_ENABLE(obsolete,
         [ac_enable_obsolete="$enableval"],
         [ac_enable_obsolete="no"])
 
+AC_ARG_ENABLE(debug,
+        [AS_HELP_STRING([--enable-debug], [Enable debug of NTP protocol])],
+        [ac_enable_debug="$enableval"],
+        [ac_enable_debug="no"])
+
 AS_IF([test "x$ac_enable_siocgstamp" = "xyes"],
 	AC_DEFINE([PRECISION_SIOCGSTAMP], [], [Enable precision SIOCGSTAMP, for all modern kernels]))
 
 AS_IF([test "x$ac_enable_obsolete" = "xyes"],
 	AC_DEFINE([USE_OBSOLETE_GETTIMEOFDAY], [], [For RHEL 3.0, Ubuntu 4.10 and earlier]))
+
+AS_IF([test "x$ac_enable_debug" = "xyes"],
+	AC_DEFINE([ENABLE_DEBUG], [], [Debug NTP protocol data]))
 
 # Generate all files
 AC_OUTPUT

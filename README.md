@@ -135,7 +135,7 @@ headers that are shown when the `-d` option is chosen, are:
 ntclient performs a series of sanity checks on UDP packets received, as
 recommended by [RFC 4330][].  If it fails one of these tests, the line
 described above is replaced by `36765 01380.381 rejected packet` or, if
-`ENABLE_DEBUG` was selected at compile time, one of:
+`--enable-debug` was selected at `configure`, one of:
 
     36765 01380.381  rejected packet: LI==3
     36765 01380.381  rejected packet: VN<3
