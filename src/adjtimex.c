@@ -70,9 +70,11 @@ static const char *ret_code_descript[] = {
 	"clock not synchronized"
 };
 
-static void usage(char *prog)
+static int usage(int code)
 {
-	fprintf(stderr, "Usage: %s [ -q ] [ -o offset ] [ -f frequency ] [ -p timeconstant ] [ -t tick ]\n", prog);
+	fprintf(stderr, "Usage: adjtimex [-q] [-o offset] [-f frequency] [-p timeconstant] [-t tick]\n");
+
+	return code;
 }
 
 int main(int argc, char **argv)
@@ -83,11 +85,14 @@ int main(int argc, char **argv)
 
 	txc.modes = 0;
 	for (;;) {
-		c = getopt(argc, argv, "qo:f:p:t:");
+		c = getopt(argc, argv, "hqo:f:p:t:");
 		if (c == EOF)
 			break;
 
 		switch (c) {
+		case 'h':
+			return usage(0);
+
 		case 'q':
 			quiet = 1;
 			break;
@@ -113,16 +118,13 @@ int main(int argc, char **argv)
 			break;
 
 		default:
-			usage(argv[0]);
-			exit(1);
+			return usage(1);
 		}
 	}
 
 	/* Check for valid non-option parameters */
-	if (argc != optind) {
-		usage(argv[0]);
-		exit(1);
-	}
+	if (argc != optind)
+		return usage(1);
 
 	ret = adjtimex(&txc);
 	if (ret < 0)
