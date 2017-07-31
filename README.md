@@ -32,24 +32,31 @@ contribute fixes or new features, see the file [CONTRIBUTING.md][].
 Building
 --------
 
-To build on Linux, type <kbd>make</kbd>.  Solaris and other UNIX users
-will probably need to adjust the `Makefile` slightly.  It's not complex.
+ntpclient uses the well known GNU configure & build system.  To build,
+simply:
+
+```sh
+    ./configure
+    make
+```
+
 For changing the system clock frequency, only the Linux `adjtimex(2)`
 interface is implemented at this time.  Non-Linux systems can only use
 ntpclient to measure time differences and set the system clock, by way
-of the POSIX 1003.1-2001 standard routines `clock_gettime()` and
+of the POSIX 1003.1-2001 standard, the routines `clock_gettime()` and
 `clock_settime()`.  Also, see section [Bugs](#bugs), below.
 
-There are a few compile-time configurations possible, which require
-editing the Makefile.  Either do or don't define:
+There are a few compile-time configurations possible.  E.g., for older
+kernels, before the tickless erea, pre 3.0=, you want to:
 
-    ENABLE_DEBUG
-    ENABLE_REPLAY
-    USE_OBSOLETE_GETTIMEOFDAY
+    ./configure --disable-siocgstamp
 
-Try it first without changing the default: that will give you a full-
-featured ntpclient that uses modern POSIX time functions and works
-reasonably with any Linux kernel.
+However, first try without changing the default.  That gives you a full-
+featured `ntpclient` that uses modern POSIX time functions and works
+reasonably well with any Linux kernel.
+
+Solaris and other UNIX users may need to adjust the `CFLAGS` slightly.
+For other options, see <kbd>./configure --help</kbd>
 
 
 Troubleshooting
