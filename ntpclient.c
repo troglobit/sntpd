@@ -157,23 +157,24 @@ void logit(int severity, int syserr, const char *format, ...)
     if (logging) {
 	    if (syserr) {
 		    errno = syserr;
-		    syslog(severity, "%s: %m", buf);
+		    syslog(severity, "%s: %s", buf, strerror(errno));
 	    } else {
 		    syslog(severity, "%s", buf);
 	    }
 
 	    return;
     }
-#endif
+#else
     if (severity == LOG_WARNING)
 	    fputs("Warning - ", stderr);
     else if (severity == LOG_ERR)
 	    fputs("ERROR - ", stderr);
 
     if (syserr)
-	    fprintf(stderr, "%s: %m\n", buf);
+	    fprintf(stderr, "%s: %s\n", buf, strerror(errno));
     else
 	    fprintf(stderr, "%s\n", buf);
+#endif
 }
 
 static int get_current_freq(void)
