@@ -5,12 +5,13 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
-[UNRELEASED]
-------------
+[UNRELEASED][]
+--------------
 
 Curated by [Joachim Nilsson][].
 
 ### Changes
+- Add support for IPv6, thanks to Dieter Ries
 - Cleanup README and HOWTO, move to Markdown format for comfortable
   presentation on GitHub.
 - Move change log from README to separate CHANGELOG file in a format
@@ -21,8 +22,8 @@ Curated by [Joachim Nilsson][].
 - Fix compiler warnings for unused variables when `ENABLE_DEBUG` is unset.
 
 
-[2015_365] - 2015-12-31
------------------------
+[2015_365][] - 2015-12-31
+-------------------------
 
 Curated by [Larry Doolittle][].  Changes since `ntpclient_2010_365.tar.gz`,
 <http://doolittle.icarus.com/ntpclient/ntpclient_2015_365.tar.gz>
@@ -41,8 +42,8 @@ Curated by [Larry Doolittle][].  Changes since `ntpclient_2010_365.tar.gz`,
 - use `LDLIBES` instad of `LDFLAGS` for `-lrt` in Makefile (thanks, ChristophGr)
 
 
-[2010_365] - 2010-12-31
------------------------
+[2010_365][] - 2010-12-31
+-------------------------
 
 Curated by [Larry Doolittle][].  Changes since `ntpclient_2007_365.tar.gz`.
 <http://doolittle.icarus.com/ntpclient/ntpclient_2010_365.tar.gz>
@@ -57,8 +58,8 @@ Curated by [Larry Doolittle][].  Changes since `ntpclient_2007_365.tar.gz`.
 - Dropped underscores in spelling of `adjtimex(2)`, might make uClibc happier
 
 
-[2010_326] - 2010-11-22
------------------------
+[2010_326][] - 2010-11-22
+-------------------------
 
 ### Changes
 - Allow hostname, instead of IP, to be supplied without `-h`
@@ -67,8 +68,8 @@ Curated by [Larry Doolittle][].  Changes since `ntpclient_2007_365.tar.gz`.
 - Fix one-shot sync using `-s`, broke in previous release.
 
 
-[2010_323] - 2010-11-19
------------------------
+[2010_323][] - 2010-11-19
+-------------------------
 
 Curated by [Joachim Nilsson][].
 
@@ -77,8 +78,8 @@ Curated by [Joachim Nilsson][].
 - Create `.md5` file as well during <kbd>make dist</kbd>
 
 
-[2010_300] - 2010-10-27
------------------------
+[2010_300][] - 2010-10-27
+-------------------------
 
 Curated by [Joachim Nilsson][].
 
@@ -94,8 +95,8 @@ Curated by [Joachim Nilsson][].
 - Fix `adjtimex()` compile error on uClibc, from OpenEmbedded
 
 
-[2007_365] - 2007-12-31
------------------------
+[2007_365][] - 2007-12-31
+-------------------------
 
 Curated by [Larry Doolittle][].
 
@@ -111,8 +112,8 @@ Curated by [Larry Doolittle][].
 - Fix length passed to `recvfrom()`, thanks to Alexander Indenbaum
 
 
-[2006_318] - 2006-11-14 [YANKED]
---------------------------------
+[2006_318][] - 2006-11-14 [YANKED]
+----------------------------------
 
 Curated by [Larry Doolittle][].
 
@@ -132,8 +133,8 @@ Curated by [Larry Doolittle][].
 - Bug fix for `select()` error handling, thanks to Walter Harms
 
 
-[2003_194] - 2003-07-13 [YANKED]
---------------------------------
+[2003_194][] - 2003-07-13 [YANKED]
+----------------------------------
 
 Curated by [Larry Doolittle][].
 
