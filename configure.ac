@@ -38,8 +38,16 @@ AC_ARG_ENABLE(siocgstamp,
         [ac_enable_siocgstamp="$enableval"],
         [ac_enable_siocgstamp="yes"])
 
+AC_ARG_ENABLE(obsolete,
+        [AS_HELP_STRING([--enable-obsolete], [Use obsolete gettimeofday(), really old systems])],
+        [ac_enable_obsolete="$enableval"],
+        [ac_enable_obsolete="no"])
+
 AS_IF([test "x$ac_enable_siocgstamp" = "xyes"],
 	AC_DEFINE([PRECISION_SIOCGSTAMP], [], [Enable precision SIOCGSTAMP, for all modern kernels]))
+
+AS_IF([test "x$ac_enable_obsolete" = "xyes"],
+	AC_DEFINE([USE_OBSOLETE_GETTIMEOFDAY], [], [For RHEL 3.0, Ubuntu 4.10 and earlier]))
 
 # Generate all files
 AC_OUTPUT

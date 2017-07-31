@@ -64,9 +64,12 @@ Troubleshooting
 
 Some really old Linux systems (e.g., Red Hat EL-3.0 and Ubuntu 4.10)
 have a totally broken POSIX `clock_settime()` implementation.  If you
-get "clock_settime: Invalid argument" with <kbd>ntpclient -s</kbd>,
-rebuild with `-DUSE_OBSOLETE_GETTIMEOFDAY`.  Linux systems that are even
-older won't even compile without that switch set.
+get the following with <kbd>ntpclient -s</kbd>:
+
+    clock_settime: Invalid argument
+
+then `configure --enable-obsolete`.  Linux systems that are even older
+won't even compile without that switch set.
 
 
 Usage
