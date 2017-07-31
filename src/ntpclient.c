@@ -29,6 +29,7 @@
  * labelled "XXX fixme - non-automatic build configuration".
  */
 
+#include <config.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -793,7 +794,7 @@ static int usage(int code)
 
 static int version(void)
 {
-	fprintf(stderr, "Larry Doolittle's ntpclient v" VERSION_STRING "\n\n");
+	fprintf(stderr, "Larry Doolittle's ntpclient v" PACKAGE_VERSION "\n\n");
 	fprintf(stderr, "Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>\n"
 		"Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>\n\n");
 	fprintf(stderr, "License GPLv2: GNU GPL version 2 <http://gnu.org/licenses/gpl2.html>\n"
@@ -989,7 +990,7 @@ int main(int argc, char *argv[])
 		 * of communicating with the user after being daemonized. */
 		logging = 1;
 		if (verbose) {
-			logit(LOG_NOTICE, 0, "Starting ntpclient v" VERSION_STRING);
+			logit(LOG_NOTICE, 0, "Starting ntpclient v" PACKAGE_VERSION);
 		}
 	}
 
@@ -1007,7 +1008,7 @@ int main(int argc, char *argv[])
 	primary_loop(usd, &ntpc);
 
 	if (daemonize && verbose) {
-		logit(LOG_NOTICE, 0, "Stopping ntpclient v" VERSION_STRING);
+		logit(LOG_NOTICE, 0, "Stopping ntpclient v" PACKAGE_VERSION);
 	}
 	close(usd);
 #ifdef ENABLE_SYSLOG
