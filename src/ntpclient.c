@@ -966,7 +966,7 @@ int main(int argc, char *argv[])
 		logit(LOG_DEBUG, 0, "  -c probe_count %d", ntpc.probe_count);
 		logit(LOG_DEBUG, 0, "  -d (debug)     %d", debug);
 		logit(LOG_DEBUG, 0, "  -g goodness    %d", ntpc.goodness);
-		logit(LOG_DEBUG, 0, "  -h hostname    %s", server);
+		logit(LOG_DEBUG, 0, "  -h hostname    %s", ntpc.server);
 		logit(LOG_DEBUG, 0, "  -i interval    %d", ntpc.cycle_time);
 		logit(LOG_DEBUG, 0, "  -l live        %d", ntpc.live);
 		logit(LOG_DEBUG, 0, "  -p local_port  %d", ntpc.local_udp_port);
