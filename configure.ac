@@ -53,6 +53,11 @@ AC_ARG_ENABLE(debug,
         [ac_enable_debug="$enableval"],
         [ac_enable_debug="no"])
 
+AC_ARG_ENABLE(replay,
+        [AS_HELP_STRING([--enable-replay], [Enable analysis code path, developer mode])],
+        [ac_enable_replay="$enableval"],
+        [ac_enable_replay="no"])
+
 AS_IF([test "x$ac_enable_siocgstamp" = "xyes"],
 	AC_DEFINE([PRECISION_SIOCGSTAMP], [], [Enable precision SIOCGSTAMP, for all modern kernels]))
 
@@ -64,6 +69,9 @@ AS_IF([test "x$ac_enable_debug" = "xyes"],
 
 AS_IF([test "x$ac_enable_syslog" = "xyes"],
 	AC_DEFINE([ENABLE_SYSLOG], [], [Debug NTP protocol data]))
+
+AS_IF([test "x$ac_enable_replay" = "xyes"],
+	AC_DEFINE([ENABLE_REPLAY], [], [Support for replay analysis from stdin]))
 
 # Generate all files
 AC_OUTPUT
