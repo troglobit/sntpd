@@ -11,7 +11,7 @@ sbin_PROGRAMS       = ntpclient
 adjtimex_SOURCES    = adjtimex.c
 
 ntpclient_SOURCES   = ntpclient.c phaselock.c
-ntpclient_CPPFLAGS  = -DENABLE_SYSLOG -DPRECISION_SIOCGSTAMP
+ntpclient_CPPFLAGS  = -DENABLE_SYSLOG
 #ntpclient_CPPFLAGS += -DENABLE_DEBUG
 #ntpclient_CPPFLAGS += -DUSE_OBSOLETE_GETTIMEOFDAY
 #ntpclient_CPPFLAGS += -DENABLE_REPLAY

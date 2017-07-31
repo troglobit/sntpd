@@ -33,5 +33,13 @@ AC_C_CONST
 AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 
+AC_ARG_ENABLE(siocgstamp,
+        [AS_HELP_STRING([--disable-siocgstamp], [Disable precision SIOCGSTAMP, for Linux pre 3.0])],
+        [ac_enable_siocgstamp="$enableval"],
+        [ac_enable_siocgstamp="yes"])
+
+AS_IF([test "x$ac_enable_siocgstamp" = "xyes"],
+	AC_DEFINE([PRECISION_SIOCGSTAMP], [], [Enable precision SIOCGSTAMP, for all modern kernels]))
+
 # Generate all files
 AC_OUTPUT
