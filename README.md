@@ -1,5 +1,6 @@
 ntpclient
 =========
+[![License Badge][]][License]
 
 Table of Contents
 -----------------
@@ -182,16 +183,14 @@ Adherence to [RFC 4330][] chapter 10, Best practices:
 Origin & References
 -------------------
 
-ntpclient was originally created by [Larry Doolittle][] and is freely
-available under the terms of the [GNU General Public License][GPL],
-version 2.  For questions on the original, [contact Larry][], he remains
-the official upstream for ntpclient.
+[Larry Doolittle][] created ntpclient and made it freely available under
+the terms of the GNU General Public [License][], version 2.  He remains
+remains the official upstream for ntpclient.
 
-This is a fork maintained by [Joachim Nilsson][] which adds common
-features like syslog support, more accessible documentation, IPv6
-support, and other small things.
+This fork is at GitHub is maintained by [Joachim Nilsson][] and adds a
+few features like syslog, background daemon, IPv6 support, and a few
+other small things.
 
-[GPL]:             http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 [ntpd]:            http://www.ntp.org
 [xntpd]:           http://www.eecis.udel.edu/~mills/ntp/
 [chrony]:          http://chrony.tuxfamily.org/
@@ -200,6 +199,8 @@ support, and other small things.
 [RFC 4330]:        http://tools.ietf.org/html/rfc4330
 [Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
 [contact Larry]:   larry@doolittle.boa.org
+[License]:         http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+[License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
 [CONTRIBUTING.md]: CONTRIBUTING.md
 [issue tracker]:   https://github.com/troglobit/ntpclient/issues
 [HowTo]:           https://github.com/troglobit/ntpclient/HowTo.md
