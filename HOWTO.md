@@ -99,7 +99,7 @@ that last column should start zero and stay zero.
 
 Use gnuplot to plot the resulting file as follows:
 
-    plot "HOSTNAME.ntp.log" using (($1-36765)*86400+$2):5:($3+$6) with yerrorbars
+    plot "HOSTNAME.ntp.log" using (($1-36765)*86400+$2):5:($3+$6-$4) with yerrorbars
 
 This shows time error (microseconds) as a function of elapsed time
 (seconds).  The error bars show the uncertainty in the measurement.
@@ -155,10 +155,9 @@ version:
 If the frequency offset (absolute value) is greater than about 230 ppm
 (15073280), you have a problem: you may be able to fix it with the -t
 option to adjtimex, or you need to hack phaselock.c, that has a maximum
-adjustment extent of +/- 250 ppm built into phaselock.c (change the
-`#define MAX_CORRECT` and rebuild ntpclient).  I'd like to suggest that
-you replace the defective crystal instead, but I understand that is
-rarely practical.
+adjustment extent of +/- 250 ppm built in (change the `#define MAX_CORRECT`
+and rebuild ntpclient).  I'd like to suggest that you replace the defective
+crystal instead, but I understand that is rarely practical.
 
 On to `ntpclient -l`.  This is actually easy, if you performed and understood
 the previous steps.  Run

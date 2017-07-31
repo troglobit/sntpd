@@ -27,7 +27,7 @@ BEGIN {
 
 # This script is to determine what your /etc/ntp.adj should be
 # It is invoked thusly:
-# 	awk -f rate2.awk < /var/lib/ntp.log
+#     awk -f rate2.awk < /var/lib/ntp.log
 # Unlike the original rate.awk script supplied with ntpclient,
 # this one can be run against the log of a running ntpclient which
 # is adjusting the adjtimex frequency.  The alternative is a drag
@@ -48,7 +48,7 @@ BEGIN {
 
 # No tweaking necessary below here, I hope.
 
-function pretty_time(ss,	dd, hh, mm, ret, f) {
+function pretty_time(ss, dd, hh, mm, ret, f) {
 	ss += 0;
 	if(ss < 0) {
 		ret = "-";
@@ -145,7 +145,7 @@ BEGIN {
 					print "Ignoring: target frequency adjustment (" (f2 - prev_f2) / 65536 " ppm) out of spec in line " FNR ".";
 					ignored++;
 				} else {
-					# weigted average
+					# weighted average
 					sum_f2 += f2 * td;
 					delta_o += od;
 					delta_t += td;
@@ -185,8 +185,8 @@ END {
 		print "delta-o", delta_o, "useconds"
 		print "slope:", slope, "ppm";
 		print "old frequency:", fs, "(" fs / 65536,"ppm)";
-#		print "min frequency:", int(min_f2 + .5), "(" min_f2 / 65536,"ppm)";
-#		print "max frequency:", int(max_f2 + .5), "(" max_f2 / 65536,"ppm)";
+		#print "min frequency:", int(min_f2 + .5), "(" min_f2 / 65536,"ppm)";
+		#print "max frequency:", int(max_f2 + .5), "(" max_f2 / 65536,"ppm)";
 		print "new frequency:", int(f2 + .5), "(" f2 / 65536,"ppm)";
 	}
 }
