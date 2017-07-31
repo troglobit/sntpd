@@ -1,0 +1,24 @@
+# Travis CI integration
+# Defaults to GNU GCC and autotools: ./configure && make && make test
+language: c
+
+# Use docker for quicker builds, it now allows https://docs.travis-ci.com/user/apt/
+sudo: false
+
+# Test build with both GCC and Clang (LLVM)
+compiler:
+  - gcc
+  - clang
+
+addons:
+  apt:
+    packages:
+      - tree
+
+script:
+  - make -j5
+  - DESTDIR=/tmp prefix=/usr make install
+  - tree /tmp
+  - ldd /tmp/sbin/ntpclient
+  - size /tmp/sbin/ntpclient
+  - /tmp/sbin/ntpclient -h
