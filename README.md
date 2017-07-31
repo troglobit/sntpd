@@ -42,12 +42,10 @@ editing the Makefile.  Either do or don't define:
     ENABLE_DEBUG
     ENABLE_REPLAY
     USE_OBSOLETE_GETTIMEOFDAY
-    PRECISION_SIOCGSTAMP
 
 Try it first without changing the default: that will give you a full-
-featured ntpclient, that uses modern POSIX time functions, and works
-reasonably with any Linux kernel.  There are comments in `ntpclient.c`
-that you should read before experimenting with `PRECISION_SIOCGSTAMP`.
+featured ntpclient that uses modern POSIX time functions and works
+reasonably with any Linux kernel.
 
 
 Troubleshooting

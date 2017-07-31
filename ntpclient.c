@@ -20,10 +20,8 @@
  *    - Support multiple (interleaved) servers
  *
  * Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
- * There are patches floating around to add this to Linux, but
- * usually you only get an answer to the nearest jiffy.
- * Hint for Linux hacker wannabes: look at the usage of get_fast_time()
- * in net/core/dev.c, and its definition in kernel/time.c .
+ * Older kernels (before the tickless era, pre 3.0?) only give an answer
+ * to the nearest jiffy (1/100 second), not so interesting for us.
  *
  * If the compile gives you any flak, check below in the section
  * labelled "XXX fixme - non-automatic build configuration".
@@ -290,15 +288,15 @@ static void send_packet(int usd, u32 time_sent[2])
 static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 {
 #ifdef PRECISION_SIOCGSTAMP
-	/* XXX broken */
 	struct timeval udp_arrival;
 
 	if (ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0) {
 		logit(LOG_ERR, errno, "Failed ioctl(SIOCGSTAMP)");
-		gettimeofday(&udp_arrival, NULL);
+		ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
+	} else {
+		udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
+		udp_arrival_ntp->fine   = NTPFRAC(udp_arrival.tv_usec);
 	}
-	udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
-	udp_arrival_ntp->fine   = NTPFRAC(udp_arrival.tv_usec);
 #else
 	(void) usd;  /* not used */
 	ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
