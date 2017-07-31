@@ -1,6 +1,6 @@
 /* NTP client
  *
- * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>
+ * Copyright (C) 1997-2015  Larry Doolittle <larry@doolittle.boa.org>
  * Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
