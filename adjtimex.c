@@ -2,18 +2,20 @@
  *
  * Copyright (C) 1997, 2000, 2003  Larry Doolittle <larry@doolittle.boa.org>
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License (Version 2,
- *  June 1991) as published by the Free Software Foundation.  At the
- *  time of writing, that license was published by the FSF with the URL
- *  http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
- *  reference.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License (Version 2,
+ * June 1991) as published by the Free Software Foundation.  At the
+ * time of writing, that license was published by the FSF with the URL
+ * http://www.gnu.org/copyleft/gpl.html, and is incorporated herein by
+ * reference.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+/*
  * This adjtimex(1) is very similar in intent to adjtimex(8) by Steven
  * Dick <ssd@nevets.oau.org> and Jim Van Zandt <jrv@vanzandt.mv.com>
  * (see http://metalab.unc.edu/pub/Linux/system/admin/time/adjtimex*).
