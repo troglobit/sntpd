@@ -37,7 +37,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>     /* getaddrinfo -> gethostbyname */
+#include <netdb.h>		/* getaddrinfo -> gethostbyname */
 #include <arpa/inet.h>
 #include <time.h>
 #include <unistd.h>
@@ -60,6 +60,7 @@
 extern struct hostent *gethostbyname(const char *name);
 extern int h_errno;
 char __hstrerror_buf[10];
+
 #define hstrerror(errnum) \
 	snprintf(__hstrerror_buf, sizeof(__hstrerror_buf), "Error %d", errnum)
 #endif
@@ -75,7 +76,7 @@ char __hstrerror_buf[10];
 #define REPLAY_OPTION
 #endif
 
-#define JAN_1970        0x83aa7e80      /* 2208988800 1970 - 1900 in seconds */
+#define JAN_1970        0x83aa7e80	/* 2208988800 1970 - 1900 in seconds */
 #define NTP_PORT (123)
 
 /* How to multiply by 4294.967296 quickly (and not quite exactly)
@@ -104,25 +105,25 @@ struct ntptime {
 };
 
 struct ntp_control {
-	uint32_t  time_of_send[2];
-	int       usermode;
-	int       live;
-	int       set_clock;		/* non-zero presumably needs root privs */
-	int       probe_count;
-	int       cycle_time;
-	int       goodness;
-	int       cross_check;
+	uint32_t time_of_send[2];
+	int usermode;
+	int live;
+	int set_clock;		/* non-zero presumably needs root privs */
+	int probe_count;
+	int cycle_time;
+	int goodness;
+	int cross_check;
 
-	uint16_t  local_udp_port;
-	char     *server;		/* must be set */
-	char      serv_addr[4];
+	uint16_t local_udp_port;
+	char *server;		/* must be set */
+	char serv_addr[4];
 };
 
-int debug   = 0;
-int verbose = 0;                /* Verbose flag, produce useful output to log */
+int debug = 0;
+int verbose = 0;		/* Verbose flag, produce useful output to log */
 int logging = 0;
 const char *prognm = SYSLOG_IDENT;
-static int sighup  = 0;
+static int sighup = 0;
 static int sigterm = 0;
 
 extern char *optarg;		/* according to man 2 getopt */
@@ -166,7 +167,8 @@ static int get_current_freq(void)
 {
 #ifdef __linux__
 	struct timex txc;
-	txc.modes=0;
+
+	txc.modes = 0;
 	if (adjtimex(&txc) < 0) {
 		logit(LOG_ERR, errno, "Failed adjtimex(GET)");
 		exit(1);
@@ -182,6 +184,7 @@ static int set_freq(int new_freq)
 {
 #ifdef __linux__
 	struct timex txc;
+
 	txc.modes = ADJ_FREQUENCY;
 	txc.freq = new_freq;
 	if (adjtimex(&txc) < 0) {
@@ -201,10 +204,10 @@ static void set_time(struct ntptime *new)
 	struct timespec tv_set;
 
 	/* it would be even better to subtract half the slop */
-	tv_set.tv_sec  = new->coarse - JAN_1970;
+	tv_set.tv_sec = new->coarse - JAN_1970;
 	/* divide xmttime.fine by 4294.967296 */
-	tv_set.tv_nsec = USEC(new->fine)*1000;
-	if (clock_settime(CLOCK_REALTIME, &tv_set)<0) {
+	tv_set.tv_nsec = USEC(new->fine) * 1000;
+	if (clock_settime(CLOCK_REALTIME, &tv_set) < 0) {
 		logit(LOG_ERR, errno, "Failed clock_settime()");
 		exit(1);
 	}
@@ -215,10 +218,10 @@ static void set_time(struct ntptime *new)
 	struct timeval tv_set;
 
 	/* it would be even better to subtract half the slop */
-	tv_set.tv_sec  = new->coarse - JAN_1970;
+	tv_set.tv_sec = new->coarse - JAN_1970;
 	/* divide xmttime.fine by 4294.967296 */
 	tv_set.tv_usec = USEC(new->fine);
-	if (settimeofday(&tv_set,NULL)<0) {
+	if (settimeofday(&tv_set, NULL) < 0) {
 		logit(LOG_ERR, errno, "Failed settimeofday()");
 		exit(1);
 	}
@@ -235,20 +238,21 @@ static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
 
 	clock_gettime(CLOCK_REALTIME, &now);
 	*time_coarse = now.tv_sec + JAN_1970;
-	*time_fine   = NTPFRAC(now.tv_nsec/1000);
+	*time_fine = NTPFRAC(now.tv_nsec / 1000);
 #else
 	/* Traditional Linux way to get the system time */
 	struct timeval now;
 
 	gettimeofday(&now, NULL);
 	*time_coarse = now.tv_sec + JAN_1970;
-	*time_fine   = NTPFRAC(now.tv_usec);
+	*time_fine = NTPFRAC(now.tv_usec);
 #endif
 }
 
 static void send_packet(int usd, uint32_t time_sent[2])
 {
 	uint32_t data[12];
+
 #define LI 0
 #define VN 3
 #define MODE 3
@@ -266,16 +270,14 @@ static void send_packet(int usd, uint32_t time_sent[2])
 	}
 
 	memset(data, 0, sizeof data);
-	data[0] = htonl (
-		( LI << 30 ) | ( VN << 27 ) | ( MODE << 24 ) |
-		( STRATUM << 16) | ( POLL << 8 ) | ( PREC & 0xff ) );
-	data[1] = htonl(1<<16);  /* Root Delay (seconds) */
-	data[2] = htonl(1<<16);  /* Root Dispersion (seconds) */
+	data[0] = htonl((LI << 30) | (VN << 27) | (MODE << 24) | (STRATUM << 16) | (POLL << 8) | (PREC & 0xff));
+	data[1] = htonl(1 << 16);	/* Root Delay (seconds) */
+	data[2] = htonl(1 << 16);	/* Root Dispersion (seconds) */
 	ntpc_gettime(time_sent, time_sent + 1);
 
-	data[10] = htonl(time_sent[0]); /* Transmit Timestamp coarse */
-	data[11] = htonl(time_sent[1]); /* Transmit Timestamp fine   */
-	send(usd,data,48,0);
+	data[10] = htonl(time_sent[0]);	/* Transmit Timestamp coarse */
+	data[11] = htonl(time_sent[1]);	/* Transmit Timestamp fine   */
+	send(usd, data, 48, 0);
 }
 
 static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
@@ -288,10 +290,10 @@ static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 		ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
 	} else {
 		udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
-		udp_arrival_ntp->fine   = NTPFRAC(udp_arrival.tv_usec);
+		udp_arrival_ntp->fine = NTPFRAC(udp_arrival.tv_usec);
 	}
 #else
-	(void) usd;  /* not used */
+	(void)usd;		/* not used */
 	ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
 #endif
 }
@@ -302,8 +304,8 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 	struct sockaddr_in *ipv4;
 	uint16_t port;
 
-	(void) data_len;
-	(void) ntpc; /* not used */
+	(void)data_len;
+	(void)ntpc;		/* not used */
 	logit(LOG_DEBUG, 0, "packet of length %d received", data_len);
 
 	if (sa_source->ss_family == AF_INET) {
@@ -330,7 +332,7 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 	return 0;
 }
 
-static double ntpdiff( struct ntptime *start, struct ntptime *stop)
+static double ntpdiff(struct ntptime *start, struct ntptime *stop)
 {
 	int a;
 	unsigned int b;
@@ -344,7 +346,7 @@ static double ntpdiff( struct ntptime *start, struct ntptime *stop)
 		a -= 1;
 	}
 
-	return a*1.e6 + b * (1.e6/4294967296.0);
+	return a * 1.e6 + b * (1.e6 / 4294967296.0);
 }
 
 /* Does more than print, so this name is bogus.
@@ -358,6 +360,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	/* straight out of RFC-1305 Appendix A */
 	int li, vn, mode, stratum, prec;
 	int delay, disp;
+
 #ifdef ENABLE_DEBUG
 	int poll, refid;
 	struct ntptime reftime;
@@ -375,15 +378,18 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 #ifdef ENABLE_DEBUG
 	poll    = Data(0) >>  8 & 0xff;
 #endif
-	prec    = Data(0)       & 0xff;
-	if (prec & 0x80) prec|=0xffffff00;
+	prec    = Data(0) & 0xff;
+	if (prec & 0x80)
+		prec |= 0xffffff00;
 	delay   = Data(1);
 	disp    = Data(2);
+
 #ifdef ENABLE_DEBUG
-	refid   = Data(3);
+	refid          = Data(3);
 	reftime.coarse = Data(4);
 	reftime.fine   = Data(5);
 #endif
+
 	orgtime.coarse = Data(6);
 	orgtime.fine   = Data(7);
 	rectime.coarse = Data(8);
@@ -394,10 +400,9 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 
 #ifdef ENABLE_DEBUG
 	if (debug) {
-                logit(LOG_DEBUG, 0, "LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d",
-		      li, vn, mode, stratum, poll, prec);
-		logit(LOG_DEBUG, 0, "Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay),sec2u(disp),
-		      refid>>24&0xff, refid>>16&0xff, refid>>8&0xff, refid&0xff);
+		logit(LOG_DEBUG, 0, "LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d", li, vn, mode, stratum, poll, prec);
+		logit(LOG_DEBUG, 0, "Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp),
+		      refid >> 24 & 0xff, refid >> 16 & 0xff, refid >> 8 & 0xff, refid & 0xff);
 		logit(LOG_DEBUG, 0, "Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
 		logit(LOG_DEBUG, 0, "(sent)    %u.%.6u", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
 		logit(LOG_DEBUG, 0, "Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));
@@ -407,11 +412,11 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	}
 #endif
 
-	el_time = ntpdiff(&orgtime,arrival);   /* elapsed */
-	st_time = ntpdiff(&rectime,&xmttime);  /* stall */
-	skew1   = ntpdiff(&orgtime,&rectime);
-	skew2   = ntpdiff(&xmttime,arrival);
-	freq    = get_current_freq();
+	el_time = ntpdiff(&orgtime, arrival);	/* elapsed */
+	st_time = ntpdiff(&rectime, &xmttime);	/* stall */
+	skew1 = ntpdiff(&orgtime, &rectime);
+	skew2 = ntpdiff(&xmttime, arrival);
+	freq = get_current_freq();
 
 #ifdef ENABLE_DEBUG
 	if (debug) {
@@ -427,20 +432,27 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	/* error checking, see RFC-4330 section 5 */
 #define FAIL(x) do { drop_reason=(x); goto fail;} while (0)
 	if (ntpc->cross_check) {
-		if (li == 3)   FAIL("LI==3");  /* unsynchronized */
-		if (vn < 3)    FAIL("VN<3");   /* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
-		if (mode != 4) FAIL("MODE!=3");
-		if (orgtime.coarse != ntpc->time_of_send[0] ||
-		    orgtime.fine   != ntpc->time_of_send[1] ) FAIL("ORG!=sent");
-		if (xmttime.coarse == 0 && xmttime.fine == 0) FAIL("XMT==0");
-		if (delay > 65536 || delay < -65536) FAIL("abs(DELAY)>65536");
-		if (disp  > 65536 || disp  < -65536) FAIL("abs(DISP)>65536");
-		if (stratum == 0) FAIL("STRATUM==0");  /* kiss o' death */
+		if (li == 3)
+			FAIL("LI==3");	/* unsynchronized */
+		if (vn < 3)
+			FAIL("VN<3");	/* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
+		if (mode != 4)
+			FAIL("MODE!=3");
+		if (orgtime.coarse != ntpc->time_of_send[0] || orgtime.fine != ntpc->time_of_send[1])
+			FAIL("ORG!=sent");
+		if (xmttime.coarse == 0 && xmttime.fine == 0)
+			FAIL("XMT==0");
+		if (delay > 65536 || delay < -65536)
+			FAIL("abs(DELAY)>65536");
+		if (disp > 65536 || disp < -65536)
+			FAIL("abs(DISP)>65536");
+		if (stratum == 0)
+			FAIL("STRATUM==0");	/* kiss o' death */
 #undef FAIL
 	}
 
 	/* XXX should I do this if debug flag is set? */
-	if (ntpc->set_clock) { /* you'd better be root, or ntpclient will exit here! */
+	if (ntpc->set_clock) {	/* you'd better be root, or ntpclient will exit here! */
 		set_time(&xmttime);
 		if (verbose) {
 			logit(LOG_NOTICE, 0, "Time synchronized to server %s, stratum %d", ntpc->server, stratum);
@@ -462,20 +474,20 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 
 	/* Display by default for regular users, root users need to supply -d. */
 	if (debug || ntpc->usermode) {
-                logit(LOG_NOTICE, 0, "%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
-		      arrival->coarse/86400, arrival->coarse%86400,
-		      arrival->fine/4294967, el_time, st_time,
-		      (skew1-skew2)/2, sec2u(disp), freq);
-        }
-	*error = el_time-st_time;
+		logit(LOG_NOTICE, 0, "%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
+		      arrival->coarse / 86400, arrival->coarse % 86400,
+		      arrival->fine / 4294967, el_time, st_time,
+		      (skew1 - skew2) / 2, sec2u(disp), freq);
+	}
+	*error = el_time - st_time;
 
 	return 0;
-fail:
+ fail:
 	if (debug || verbose) {
 		logit(LOG_ERR, 0, "%d %.5d.%.3d rejected packet: %s",
-		      arrival->coarse/86400, arrival->coarse%86400,
-		      arrival->fine/4294967, drop_reason);
-        }
+		      arrival->coarse / 86400, arrival->coarse % 86400,
+		      arrival->fine / 4294967, drop_reason);
+	}
 
 	return 1;
 }
@@ -484,22 +496,23 @@ static void setup_receive(int usd, uint16_t port)
 {
 	struct sockaddr_in6 sin6;
 	const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
-	int opt;
+	int opt = 0;
 
-	/* setting this means the socket only accepts connections from v6 */
-	/* unset, it accepts v6 and v4 (mapped address) connections */
-	 /* must done before bind */
-	opt = 0;
+	/*
+	 * Setting this means the socket only accepts IPv6 connections
+	 * unset it accepts both IPv6 and IPv4 (mapped address)
+	 * connections.  Must disable it before calling bind()
+	 */
 	if (setsockopt(usd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt))) {
 		logit(LOG_ERR, errno, "%s: failed setsockopt", __func__);
 		exit(1);
 	}
 
-	memset(&sin6,0,sizeof(struct sockaddr_in6));
+	memset(&sin6, 0, sizeof(struct sockaddr_in6));
 	sin6.sin6_family = AF_INET6;
 	sin6.sin6_port = htons(port);
 	sin6.sin6_addr = in6addr_any;
-	if (bind(usd, (struct sockaddr*)&sin6, sizeof(sin6)) == -1) {
+	if (bind(usd, (struct sockaddr *)&sin6, sizeof(sin6)) == -1) {
 		logit(LOG_ERR, errno, "%s: Failed binding to UDP port %u", __func__, port);
 		exit(1);
 	}
@@ -513,7 +526,7 @@ static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_contro
 	struct sockaddr_in *ipv4;
 	socklen_t len = 0;
 
-	(void)ntpc;   /* not used */
+	(void)ntpc;		/* not used */
 
 	if (getaddrbyname(host, &ss)) {
 		if (verbose)
@@ -551,7 +564,7 @@ static int setup_socket(struct ntp_control *ntpc)
 {
 	int sd;
 
-        /* using IPV6 socket for IPV4 and IPV6 */
+	/* using IPV6 socket for IPV4 and IPV6 */
 	if ((sd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return -1;
 
@@ -568,18 +581,18 @@ static int setup_socket(struct ntp_control *ntpc)
 static void handler(int sig)
 {
 	switch (sig) {
-		case SIGHUP:
-			/* Trigger NTP sync */
-			sighup = 1;
-			break;
+	case SIGHUP:
+		/* Trigger NTP sync */
+		sighup = 1;
+		break;
 
-		case SIGINT:
-		case SIGQUIT:
-		case SIGTERM:
-		case SIGUSR1:
-		case SIGUSR2:
-			sigterm = 1;
-			break;
+	case SIGINT:
+	case SIGQUIT:
+	case SIGTERM:
+	case SIGUSR1:
+	case SIGUSR2:
+		sigterm = 1;
+		break;
 	}
 }
 
@@ -607,16 +620,18 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	struct timeval to;
 	struct ntptime udp_arrival_ntp;
 	static uint32_t incoming_word[325];
+
 #define incoming ((char *) incoming_word)
 #define sizeof_incoming (sizeof incoming_word)
 
 #ifdef ENABLE_DEBUG
-	if (debug) logit(LOG_DEBUG, 0, "Listening...");
+	if (debug)
+		logit(LOG_DEBUG, 0, "Listening...");
 #endif
 	probes_sent = 0;
 	sa_xmit_len = sizeof(sa_xmit);
-	to.tv_sec   = 0;
-	to.tv_usec  = 0;
+	to.tv_sec = 0;
+	to.tv_usec = 0;
 
 	while (1) {
 		if (sigterm) {
@@ -624,10 +639,10 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 			break;
 		}
 		if (sighup) {
-			sighup     = 0;
-			to.tv_sec  = 0;
+			sighup = 0;
+			to.tv_sec = 0;
 			to.tv_usec = 0;
-			close (usd);
+			close(usd);
 			usd = setup_socket(ntpc);
 			if (-1 == usd) {
 				logit(LOG_ERR, errno, "Failed reopening NTP socket");
@@ -638,7 +653,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 
 		FD_ZERO(&fds);
 		FD_SET(usd, &fds);
-		i = select(usd + 1, &fds, NULL, NULL, &to);  /* Wait on read or error */
+		i = select(usd + 1, &fds, NULL, NULL, &to);	/* Wait on read or error */
 		if ((i != 1) || (!FD_ISSET(usd, &fds))) {
 			if (i < 0) {
 				if (errno != EINTR)
@@ -658,7 +673,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 		}
 
 		error = ntpc->goodness;
-                pack_len = recvfrom(usd, incoming, sizeof_incoming, 0, (struct sockaddr *)&sa_xmit, &sa_xmit_len);
+		pack_len = recvfrom(usd, incoming, sizeof_incoming, 0, (struct sockaddr *)&sa_xmit, &sa_xmit_len);
 		if (pack_len < 0) {
 			logit(LOG_ERR, errno, "Failed recvfrom()");
 		} else if (pack_len > 0 && (unsigned)pack_len < sizeof_incoming) {
@@ -671,9 +686,11 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 			logit(LOG_ERR, 0, "Ooops.  pack_len=%d", pack_len);
 		}
 
-		/* best rollover option: specify -g, -s, and -l.
+		/*
+		 * best rollover option: specify -g, -s, and -l.
 		 * simpler rollover option: specify -s and -l, which
-		 * triggers a magic -c 1 */
+		 * triggers a magic -c 1
+		 */
 		if ((error < ntpc->goodness && ntpc->goodness != 0) ||
 		    (probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)) {
 			ntpc->set_clock = 0;
@@ -696,25 +713,25 @@ static int do_replay(void)
 	unsigned int last_fake_time = 0;
 	double fake_delta_time = 0.0;
 
-	while (fgets(line,sizeof line,stdin)) {
-		n = sscanf(line,"%d %f %f %f %lf %f %d",
-			   &day, &sec, &el_time, &st_time, &skew, &disp, &freq);
+	while (fgets(line, sizeof line, stdin)) {
+		n = sscanf(line, "%d %f %f %f %lf %f %d", &day, &sec, &el_time, &st_time, &skew, &disp, &freq);
 		if (n == 7) {
 			logit(LOG_DEBUG, 0, "%s", line);
-			absolute = day*86400 + (int)sec;
+			absolute = day * 86400 + (int)sec;
 			errorbar = el_time + disp;
 #ifdef ENABLE_DEBUG
 			if (debug)
 				logit(LOG_DEBUG, 0, "Contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
 #endif
-			if (last_fake_time == 0) simulated_freq = freq;
+			if (last_fake_time == 0)
+				simulated_freq = freq;
 			fake_delta_time += (absolute - last_fake_time) * ((double)(freq - simulated_freq)) / 65536;
 #ifdef ENABLE_DEBUG
 			if (debug)
 				logit(LOG_DEBUG, 0, "Fake %f %d", fake_delta_time, simulated_freq);
 #endif
 			skew += fake_delta_time;
-			freq  = simulated_freq;
+			freq = simulated_freq;
 			last_fake_time = absolute;
 			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
 		} else {
@@ -740,7 +757,7 @@ static int usage(int code)
 #endif
 		" hostname\n", prognm);
 
-	fprintf(stderr,	"Options:\n"
+	fprintf(stderr, "Options:\n"
 		" -c count     Stop after count time measurements. Default: 0 (forever)\n"
 		" -d           Debug, or diagnostics mode  Possible to enable more at compile\n"
 		" -g goodness  Stop after getting a result more accurate than goodness msec,\n"
@@ -801,7 +818,8 @@ static const char *progname(const char *arg0)
 
 int main(int argc, char *argv[])
 {
-	int c, usd;  /* socket */
+	int c, usd;		/* socket */
+
 	/* These parameters are settable from the command line
 	   the initializations here provide default behavior */
 	int daemonize = 0;
@@ -893,7 +911,7 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_SYSLOG
 		case 'L':
 			logging++;
-			break ;
+			break;
 #endif
 
 		case 'v':
@@ -904,8 +922,8 @@ int main(int argc, char *argv[])
 			return version();
 
 		case '?':
-			default:
-				return usage(0);
+		default:
+			return usage(0);
 		}
 	}
 
@@ -928,9 +946,8 @@ int main(int argc, char *argv[])
 		return usage(1);
 	}
 
-	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count) {
+	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count)
 		ntpc.probe_count = 1;
-	}
 
 	/* If user gives a probe count, then assume non-live run and verbose reporting. */
 	if (ntpc.probe_count > 0) {
@@ -939,9 +956,8 @@ int main(int argc, char *argv[])
 	}
 
 	/* respect only applicable MUST of RFC-4330 */
-	if (ntpc.probe_count != 1 && ntpc.cycle_time < MIN_INTERVAL) {
+	if (ntpc.probe_count != 1 && ntpc.cycle_time < MIN_INTERVAL)
 		ntpc.cycle_time = MIN_INTERVAL;
-	}
 
 #ifdef ENABLE_DEBUG
 	if (debug) {
@@ -1003,23 +1019,23 @@ int main(int argc, char *argv[])
 static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 {
 	int err;
-	struct addrinfo hints;				// input parameter for getaddrinfo()
+	struct addrinfo hints;
 	struct addrinfo *result;
-	struct addrinfo *rp;				// actual element
-    
+	struct addrinfo *rp;
+
 	if (!host || !ss) {
 		errno = EINVAL;
 		return 1;
 	}
 
-	memset(&hints,0,sizeof(struct addrinfo));
-	hints.ai_family    = AF_UNSPEC;
-	hints.ai_socktype  = 0; 
-	hints.ai_flags     = AI_PASSIVE;
-	hints.ai_protocol  = 0;
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = 0;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_protocol = 0;
 	hints.ai_canonname = NULL;
-	hints.ai_addr      = NULL;
-	hints.ai_next      = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
 
 	memset(ss, 0, sizeof(struct sockaddr_storage));
 	err = getaddrinfo(host, NULL, &hints, &result);
