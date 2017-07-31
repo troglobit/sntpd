@@ -19,6 +19,6 @@ script:
   - make -j5
   - DESTDIR=/tmp prefix=/usr make install
   - tree /tmp
-  - ldd /tmp/sbin/ntpclient
-  - size /tmp/sbin/ntpclient
-  - /tmp/sbin/ntpclient -h
+  - ldd /tmp/usr/sbin/ntpclient
+  - size /tmp/usr/sbin/ntpclient
+  - /tmp/usr/sbin/ntpclient -h
