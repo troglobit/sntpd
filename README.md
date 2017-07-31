@@ -24,6 +24,9 @@ is also more relevant for embedded systems in need for only a client.
 The goal of ntpclient is not only to set your computer's clock right
 once, but keep it there.
 
+Please report bugs to the GitHub [issue tracker][].  If you want to
+contribute fixes or new features, see the file [CONTRIBUTING.md][].
+
 
 Building
 --------
@@ -188,15 +191,16 @@ This is a fork maintained by [Joachim Nilsson][] which adds common
 features like syslog support, more accessible documentation, IPv6
 support, and other small things.
 
-[GPL]: http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-[ntpd]: http://www.ntp.org
-[xntpd]: http://www.eecis.udel.edu/~mills/ntp/
-[chrony]: http://chrony.tuxfamily.org/
-[OpenNTPd]: http://www.openntpd.org
-[RFC 1305]: http://tools.ietf.org/html/rfc1305
-[RFC 4330]: http://tools.ietf.org/html/rfc4330
+[GPL]:             http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+[ntpd]:            http://www.ntp.org
+[xntpd]:           http://www.eecis.udel.edu/~mills/ntp/
+[chrony]:          http://chrony.tuxfamily.org/
+[OpenNTPd]:        http://www.openntpd.org
+[RFC 1305]:        http://tools.ietf.org/html/rfc1305
+[RFC 4330]:        http://tools.ietf.org/html/rfc4330
 [Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
-[contact Larry]: larry@doolittle.boa.org
-[HowTo]: https://github.com/troglobit/ntpclient/HowTo.md
+[contact Larry]:   larry@doolittle.boa.org
+[CONTRIBUTING.md]: CONTRIBUTING.md
+[issue tracker]:   https://github.com/troglobit/ntpclient/issues
+[HowTo]:           https://github.com/troglobit/ntpclient/HowTo.md
 [Joachim Nilsson]: http://troglobit.com
-[TroglOS]: https://github.com/troglobit/troglos/
