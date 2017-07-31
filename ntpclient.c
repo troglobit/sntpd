@@ -67,9 +67,9 @@ int getaddrbyname(char *host, struct sockaddr_storage *ss);
 #endif
 
 #ifdef ENABLE_REPLAY
-#define  REPLAY_OPTION   "r"
+#define REPLAY_OPTION   "r"
 #else
-#define  REPLAY_OPTION
+#define REPLAY_OPTION
 #endif
 
 int debug   = 0;
@@ -351,6 +351,7 @@ static double ntpdiff( struct ntptime *start, struct ntptime *stop)
 {
 	int a;
 	unsigned int b;
+
 	a = stop->coarse - start->coarse;
 	if (stop->fine >= start->fine) {
 		b = stop->fine - start->fine;
@@ -379,9 +380,9 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	struct ntptime reftime;
 #endif
 	struct ntptime orgtime, rectime, xmttime;
-	double el_time,st_time,skew1,skew2;
+	double el_time, st_time, skew1, skew2;
 	int freq;
-	const char *drop_reason=NULL;
+	const char *drop_reason = NULL;
 
 #define Data(i) ntohl(((u32 *)data)[i])
 	li      = Data(0) >> 30 & 0x03;
@@ -680,7 +681,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 			logit(LOG_ERR, errno, "Failed recvfrom()");
 		} else if (pack_len > 0 && (unsigned)pack_len < sizeof_incoming) {
 			get_packet_timestamp(usd, &udp_arrival_ntp);
-			if (check_source(pack_len, &sa_xmit, ntpc) != 0)
+			if (check_source(pack_len, &sa_xmit, ntpc))
 				continue;
 			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0)
 				continue;
