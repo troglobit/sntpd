@@ -11,6 +11,5 @@ sbin_PROGRAMS       = ntpclient
 adjtimex_SOURCES    = adjtimex.c
 
 ntpclient_SOURCES   = ntpclient.c phaselock.c
-ntpclient_CPPFLAGS  = -DENABLE_SYSLOG
 #ntpclient_CPPFLAGS += -DENABLE_REPLAY
 ntpclient_LIBS      = -lrt
