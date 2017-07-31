@@ -1,7 +1,7 @@
 /* NTP client
  *
  * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>
- * Copyright (C) 2010-2016  Joachim Nilsson <troglobit@gmail.com>
+ * Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License (Version 2,
@@ -16,9 +16,7 @@
  *  GNU General Public License for more details.
  *
  * Possible future improvements:
- *    - Write more documentation  :-(
  *    - Support leap second processing
- *    - Support IPv6
  *    - Support multiple (interleaved) servers
  *
  * Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
@@ -38,7 +36,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <netdb.h>     /* gethostbyname */
+#include <netdb.h>     /* getaddrinfo -> gethostbyname */
 #include <arpa/inet.h>
 #include <time.h>
 #include <unistd.h>
@@ -52,15 +50,22 @@
 
 #include "ntpclient.h"
 
+#define DEBUG_LEVEL 1
+#if (DEBUG_LEVEL > 0)
+#define MYLOG1(A,...)	printf(A,##__VA_ARGS__);
+#else
+#define MYLOG1(A,...)
+#endif
+
 /* Default to the RFC-4330 specified value */
 #ifndef MIN_INTERVAL
 #define MIN_INTERVAL 15
 #endif
 
 #ifdef ENABLE_REPLAY
-#define  REPLAY_OPTION   "r"
+#define REPLAY_OPTION   "r"
 #else
-#define  REPLAY_OPTION
+#define REPLAY_OPTION
 #endif
 
 int debug   = 0;
@@ -128,7 +133,7 @@ struct ntp_control {
 	int goodness;
 	int cross_check;
 
-	short local_udp_port;
+	uint16_t local_udp_port;
 	char *server;		/* must be set */
 	char serv_addr[4];
 };
@@ -136,6 +141,7 @@ struct ntp_control {
 /* prototypes for some local routines */
 static void send_packet(int usd, u32 time_sent[2]);
 static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
+static int getaddrbyname(char *host, struct sockaddr_storage *ss);
 /* static void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len); */
 
 void logit(int severity, int syserr, const char *format, ...)
@@ -304,37 +310,35 @@ static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 #endif
 }
 
-static int check_source(int data_len, struct sockaddr *sa, unsigned int sa_len, struct ntp_control *ntpc)
+static int check_source(int data_len, struct sockaddr_storage *sa_source, struct ntp_control *ntpc)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+	struct sockaddr_in6 *ipv6;
+	struct sockaddr_in *ipv4;
+	uint16_t port;
 
-	(void) data_len;	/* not used */
-	(void) sa_len;		/* not used */
-
-#ifdef ENABLE_DEBUG
-	if (debug) {
-		logit(LOG_DEBUG, 0, "Packet of length %d received", data_len);
-		if (sa->sa_family == AF_INET) {
-			logit(LOG_DEBUG, 0, "Source: INET Port %u host %s",
-			      ntohs(sin->sin_port), inet_ntoa(sin->sin_addr));
-		} else {
-			logit(LOG_DEBUG, 0, "Source: Address family %d", sa->sa_family);
-		}
-	}
-#endif
-
-	/* we could check that the source is the server we expect, but
-	 * Denys Vlasenko recommends against it: multihomed hosts get it
-	 * wrong too often. */
-#if 0
-	if (memcmp(ntpc->serv_addr, &(sin->sin_addr), 4)!=0) {
-		return 1;  /* fault */
-	}
-#else
+	(void) data_len;
 	(void) ntpc; /* not used */
-#endif
-	if (NTP_PORT != ntohs(sin->sin_port)) {
-		return 1;  /* fault */
+	MYLOG1("packet of length %d received\n", data_len);
+
+	if (sa_source->ss_family == AF_INET) {
+		ipv4 = (struct sockaddr_in *)(sa_source);
+		port = ntohs(ipv4->sin_port);
+	} else if (sa_source->ss_family == AF_INET6) {
+		ipv6 = (struct sockaddr_in6 *)(sa_source);
+		port = ntohs(ipv6->sin6_port);
+	} else {
+		/* Unsupported address family */
+		return 1;
+	}
+
+	/*
+	 * we could check that the source is the server we expect, but
+	 * Denys Vlasenko recommends against it: multihomed hosts get it
+	 * wrong too often.
+	 */
+	if (NTP_PORT != port) {
+		MYLOG1("%s: invalid port: %u\n", __FUNCTION__, port);
+		return 1;
 	}
 
 	return 0;
@@ -344,6 +348,7 @@ static double ntpdiff( struct ntptime *start, struct ntptime *stop)
 {
 	int a;
 	unsigned int b;
+
 	a = stop->coarse - start->coarse;
 	if (stop->fine >= start->fine) {
 		b = stop->fine - start->fine;
@@ -372,9 +377,9 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	struct ntptime reftime;
 #endif
 	struct ntptime orgtime, rectime, xmttime;
-	double el_time,st_time,skew1,skew2;
+	double el_time, st_time, skew1, skew2;
 	int freq;
-	const char *drop_reason=NULL;
+	const char *drop_reason = NULL;
 
 #define Data(i) ntohl(((u32 *)data)[i])
 	li      = Data(0) >> 30 & 0x03;
@@ -489,69 +494,83 @@ fail:
 	return 1;
 }
 
-static void stuff_net_addr(struct in_addr *p, char *hostname)
+static void setup_receive(int usd, uint16_t port)
 {
-	struct hostent *ntpserver;
+	struct sockaddr_in6 sin6;
+	const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
+	int opt;
 
-	ntpserver = gethostbyname(hostname);
-	if (ntpserver == NULL) {
-                if (verbose) {
-                        logit(LOG_ERR, 0, "Unable lookup %s: %s", hostname, hstrerror(h_errno));
-		}
+	/* setting this means the socket only accepts connections from v6 */
+	/* unset, it accepts v6 and v4 (mapped address) connections */
+	 /* must done before bind */
+	opt = 0;
+	if (setsockopt(usd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt))) {
+		MYLOG1("%s: setsockopt, Error: %s\n", __FUNCTION__, strerror(errno));
 		exit(1);
 	}
 
-	if (ntpserver->h_length != 4) {
-		/* IPv4 only, until I get a chance to test IPv6 */
-		logit(LOG_NOTICE, 0, "Oops h_length=%d, only IPv4 supported currently.", ntpserver->h_length);
-		exit(1);
-	}
-	memcpy(&(p->s_addr),ntpserver->h_addr_list[0],4);
-}
-
-static void setup_receive(int usd, unsigned int interface, short port)
-{
-	struct sockaddr_in sa_rcvr;
-	memset(&sa_rcvr,0,sizeof sa_rcvr);
-	sa_rcvr.sin_family=AF_INET;
-	sa_rcvr.sin_addr.s_addr=htonl(interface);
-	sa_rcvr.sin_port=htons(port);
-	if (bind(usd,(struct sockaddr *) &sa_rcvr,sizeof sa_rcvr) == -1) {
-		logit(LOG_ERR, errno, "Failed binding to UDP port %d", port);
+	memset(&sin6,0,sizeof(struct sockaddr_in6));
+	sin6.sin6_family = AF_INET6;
+	sin6.sin6_port = htons(port);
+	sin6.sin6_addr = in6addr_any;	// any address
+	if (bind(usd, (struct sockaddr*)&sin6, sizeof(sin6)) == -1) {
+		MYLOG1("%s: Failed binding to UDP port %u, Error: %s\n",__FUNCTION__,port,strerror(errno));
 		exit(1);
 	}
 	/* listen(usd,3); this isn't TCP; thanks Alexander! */
 }
 
-static void setup_transmit(int usd, char *host, short port, struct ntp_control *ntpc)
+static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_control *ntpc)
 {
-	struct sockaddr_in sa_dest;
+	struct sockaddr_storage ss;
+	struct sockaddr_in6 *ipv6;
+	struct sockaddr_in *ipv4;
+	socklen_t len = 0;
 
-	memset(&sa_dest,0,sizeof sa_dest);
-	sa_dest.sin_family=AF_INET;
-	stuff_net_addr(&(sa_dest.sin_addr),host);
-	memcpy(ntpc->serv_addr,&(sa_dest.sin_addr),4); /* XXX asumes IPv4 */
-	sa_dest.sin_port=htons(port);
-	while (connect(usd,(struct sockaddr *)&sa_dest,sizeof sa_dest)==-1) {
-                if (ntpc->live) {
-                        /* Wait here a while, networking is probably not up yet. */
-                        sleep(1);
-                        continue;
-                }
+	(void)ntpc;   /* not used */
+
+	if (getaddrbyname(host, &ss)) {
+		if (verbose)
+			logit(LOG_ERR, 0, "Unable lookup %s", host);
+
+		exit(1);
+	}
+
+	if (ss.ss_family == AF_INET) {
+		ipv4 = (struct sockaddr_in *)(&ss);
+		ipv4->sin_port = htons(port);
+		len = sizeof(struct sockaddr_in);
+	} else if (ss.ss_family == AF_INET6) {
+		ipv6 = (struct sockaddr_in6 *)(&ss);
+		ipv6->sin6_port = htons(port);
+		len = sizeof(struct sockaddr_in6);
+	} else {
+		/* Unsupported address family */
+		MYLOG1("%s: bad sockaddr\n", __FUNCTION__);
+		exit(1);
+	}
+
+	while (connect(usd, (struct sockaddr *)&ss, len) == -1) {
+		if (ntpc->live) {
+			/* Wait here a while, networking is probably not up yet. */
+			sleep(1);
+			continue;
+		}
 
 		logit(LOG_ERR, errno, "Failed connecting to NTP server");
-                exit(1);
-        }
+		exit(1);
+	}
 }
 
 static int setup_socket(struct ntp_control *ntpc)
 {
 	int sd;
 
-	if ((sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+        /* using IPV6 socket for IPV4 and IPV6 */
+	if ((sd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return -1;
 
-	setup_receive(sd, INADDR_ANY, ntpc->local_udp_port);
+	setup_receive(sd, ntpc->local_udp_port);
 	setup_transmit(sd, ntpc->server, NTP_PORT, ntpc);
 
 	return sd;
@@ -597,7 +616,7 @@ static void setup_signals(void)
 static void primary_loop(int usd, struct ntp_control *ntpc)
 {
 	fd_set fds;
-	struct sockaddr sa_xmit;
+	struct sockaddr_storage sa_xmit;
 	int i, pack_len, probes_sent, error;
 	socklen_t sa_xmit_len;
 	struct timeval to;
@@ -654,12 +673,12 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 		}
 
 		error = ntpc->goodness;
-		pack_len = recvfrom(usd, incoming, sizeof_incoming, 0, &sa_xmit, &sa_xmit_len);
+                pack_len = recvfrom(usd, incoming, sizeof_incoming, 0, (struct sockaddr *)&sa_xmit, &sa_xmit_len);
 		if (pack_len < 0) {
 			logit(LOG_ERR, errno, "Failed recvfrom()");
 		} else if (pack_len > 0 && (unsigned)pack_len < sizeof_incoming) {
 			get_packet_timestamp(usd, &udp_arrival_ntp);
-			if (check_source(pack_len, &sa_xmit, sa_xmit_len, ntpc) != 0)
+			if (check_source(pack_len, &sa_xmit, ntpc))
 				continue;
 			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0)
 				continue;
@@ -744,26 +763,25 @@ static int usage(void)
 		"              microseconds. Default: 0 (forever)\n"
 		" -h hostname  NTP server, mandatory(!), against which to sync system time\n"
 		" -i interval  Check time every interval seconds.  Default: 600\n"
-		" -l           Attempt to lock local clock to server using adjtimex(2)\n");
+		" -l           Attempt to lock local clock to server using adjtimex(2)\n"
 #ifdef ENABLE_SYSLOG
-	fprintf(stderr, " -L           Use syslog instead of stdout for log messages, enabled\n"
-		"              by default when started as root\n");
+		" -L           Use syslog instead of stdout for log messages, enabled\n"
+		"              by default when started as root\n"
 #endif
-	fprintf(stderr, " -n           Don't fork.  Prevents %s from daemonizing by default\n"
+		" -n           Don't fork.  Prevents %s from daemonizing by default\n"
 		"              Only when running as root, does nothing for regular users\n"
 		" -p port      NTP client UDP port.  Default: 0 (\"any available\")\n"
-		" -q min_delay Minimum packet delay for transaction (default 800 microseconds)\n",
-		prognm);
+		" -q min_delay Minimum packet delay for transaction (default 800 microseconds)\n"
 #ifdef ENABLE_REPLAY
-	fprintf(stderr, " -r           Replay analysis code based on stdin\n");
+		" -r           Replay analysis code based on stdin\n"
 #endif
-	fprintf(stderr, " -s           Simple clock set, implies -c 1 unless -l is also set\n"
+		" -s           Simple clock set, implies -c 1 unless -l is also set\n"
 		" -t           Trust network and server, no RFC-4330 recommended validation\n"
 		" -v           Be verbose.  This option will cause time sync events, hostname\n"
 		"              lookup errors and program version to be displayed\n"
-		" -V           Display version and copyright information\n");
-	fprintf(stderr, "\nReport %s bugs to troglobit@vmlinux.org\n", prognm);
-	fprintf(stderr, "Home page: http://troglobit.com/ntpclient.shtml\n");
+		" -V           Display version and copyright information\n"
+		"\nReport %s bugs to troglobit@gmail.com\n"
+		"Home page: http://troglobit.com/ntpclient.shtml\n", prognm, prognm);
 
 	return 1;
 }
@@ -771,8 +789,8 @@ static int usage(void)
 static int version(void)
 {
 	fprintf(stderr, "Larry Doolittle's ntpclient v" VERSION_STRING "\n\n");
-	fprintf(stderr, "Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007  Larry Doolittle <larry@doolittle.boa.org>\n"
-		"Copyright (C) 2010  Joachim Nilsson <troglobit@vmlinux.org>\n\n");
+	fprintf(stderr, "Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>\n"
+		"Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>\n\n");
 	fprintf(stderr, "License GPLv2: GNU GPL version 2 <http://gnu.org/licenses/gpl2.html>\n"
 		"This is free software: you are free to change and redistribute it.\n"
 		"There is NO WARRANTY, to the extent permitted by law.\n");
@@ -988,6 +1006,50 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_SYSLOG
 	closelog();
 #endif
+	return 0;
+}
+
+static int getaddrbyname(char *host, struct sockaddr_storage *ss)
+{
+	int err;
+	struct addrinfo hints;				// input parameter for getaddrinfo()
+	struct addrinfo *result;
+	struct addrinfo *rp;				// actual element
+    
+	if (!host || !ss) {
+		errno = EINVAL;
+		return 1;
+	}
+
+	memset(&hints,0,sizeof(struct addrinfo));
+	hints.ai_family    = AF_UNSPEC;
+	hints.ai_socktype  = 0; 
+	hints.ai_flags     = AI_PASSIVE;
+	hints.ai_protocol  = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr      = NULL;
+	hints.ai_next      = NULL;
+
+	memset(ss, 0, sizeof(struct sockaddr_storage));
+	err = getaddrinfo(host, NULL, &hints, &result);
+	if (err) {
+		MYLOG1("%s: hostname: %s, getaddrinfo failed, error: %s\n", __FUNCTION__, host, gai_strerror(err));
+		return 1;
+	}
+
+	// The first result will be used. IPV4 has higher priority
+	for (rp = result; rp; rp = rp->ai_next) {
+		if (rp->ai_family == AF_INET) {
+			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
+			break;
+		}
+		if (rp->ai_family == AF_INET6) {
+			memcpy(ss, (struct sockaddr_in6 *)(rp->ai_addr), sizeof(struct sockaddr_in6));
+			break;
+		}
+	}
+	freeaddrinfo(result);
+
 	return 0;
 }
 
