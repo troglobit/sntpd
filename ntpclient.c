@@ -30,6 +30,7 @@
  */
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <string.h>
@@ -69,10 +70,6 @@ static int sighup  = 0;
 static int sigterm = 0;
 
 extern char *optarg;		/* according to man 2 getopt */
-
-#include <stdint.h>
-typedef uint32_t u32;  /* universal for C99 */
-/* typedef u_int32_t u32;   older Linux installs? */
 
 /* XXX fixme - non-automatic build configuration */
 #ifdef __linux__
@@ -117,25 +114,24 @@ struct ntptime {
 };
 
 struct ntp_control {
-	u32 time_of_send[2];
-	int usermode;
-	int live;
-	int set_clock;		/* non-zero presumably needs root privs */
-	int probe_count;
-	int cycle_time;
-	int goodness;
-	int cross_check;
+	uint32_t  time_of_send[2];
+	int       usermode;
+	int       live;
+	int       set_clock;		/* non-zero presumably needs root privs */
+	int       probe_count;
+	int       cycle_time;
+	int       goodness;
+	int       cross_check;
 
-	uint16_t local_udp_port;
-	char *server;		/* must be set */
-	char serv_addr[4];
+	uint16_t  local_udp_port;
+	char     *server;		/* must be set */
+	char      serv_addr[4];
 };
 
 /* prototypes for some local routines */
-static void send_packet(int usd, u32 time_sent[2]);
-static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
+static void send_packet(int usd, uint32_t time_sent[2]);
+static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
 static int getaddrbyname(char *host, struct sockaddr_storage *ss);
-/* static void udp_handle(int usd, char *data, int data_len, struct sockaddr *sa_source, int sa_len); */
 
 void logit(int severity, int syserr, const char *format, ...)
 {
@@ -236,7 +232,7 @@ static void set_time(struct ntptime *new)
 #endif
 }
 
-static void ntpc_gettime(u32 *time_coarse, u32 *time_fine)
+static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
 {
 #ifndef USE_OBSOLETE_GETTIMEOFDAY
 	/* POSIX 1003.1-2001 way to get the system time */
@@ -255,9 +251,9 @@ static void ntpc_gettime(u32 *time_coarse, u32 *time_fine)
 #endif
 }
 
-static void send_packet(int usd, u32 time_sent[2])
+static void send_packet(int usd, uint32_t time_sent[2])
 {
-	u32 data[12];
+	uint32_t data[12];
 #define LI 0
 #define VN 3
 #define MODE 3
@@ -362,7 +358,7 @@ static double ntpdiff( struct ntptime *start, struct ntptime *stop)
  * sets *error to the number of microseconds uncertainty in answer
  * returns 0 normally, 1 if the message fails sanity checks
  */
-static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
+static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
 {
 	/* straight out of RFC-1305 Appendix A */
 	int li, vn, mode, stratum, prec;
@@ -376,7 +372,7 @@ static int rfc1305print(u32 *data, struct ntptime *arrival, struct ntp_control *
 	int freq;
 	const char *drop_reason = NULL;
 
-#define Data(i) ntohl(((u32 *)data)[i])
+#define Data(i) ntohl(((uint32_t *)data)[i])
 	li      = Data(0) >> 30 & 0x03;
 	vn      = Data(0) >> 27 & 0x07;
 	mode    = Data(0) >> 24 & 0x07;
@@ -615,7 +611,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	socklen_t sa_xmit_len;
 	struct timeval to;
 	struct ntptime udp_arrival_ntp;
-	static u32 incoming_word[325];
+	static uint32_t incoming_word[325];
 #define incoming ((char *) incoming_word)
 #define sizeof_incoming (sizeof incoming_word)
 
@@ -676,7 +672,6 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 				continue;
 			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0)
 				continue;
-			/* udp_handle(usd,incoming,pack_len,&sa_xmit,sa_xmit_len); */
 		} else {
 			logit(LOG_ERR, 0, "Ooops.  pack_len=%d", pack_len);
 		}
