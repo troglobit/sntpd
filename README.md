@@ -1,6 +1,6 @@
 ntpclient
 =========
-[![License Badge][]][License]
+[![License Badge][]][License] [![Travis Status][]][Travis]
 
 Table of Contents
 -----------------
@@ -201,6 +201,8 @@ other small things.
 [contact Larry]:   larry@doolittle.boa.org
 [License]:         http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
+[Travis]:          https://travis-ci.org/troglobit/ntpclient
+[Travis Status]:   https://travis-ci.org/troglobit/ntpclient.png?branch=master
 [CONTRIBUTING.md]: CONTRIBUTING.md
 [issue tracker]:   https://github.com/troglobit/ntpclient/issues
 [HowTo]:           https://github.com/troglobit/ntpclient/HowTo.md
