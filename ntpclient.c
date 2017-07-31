@@ -737,7 +737,7 @@ static int do_replay(void)
 }
 #endif
 
-static int usage(void)
+static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage: %s [-dlnstv] [-c count] [-f frequency] [-g goodness] [-h hostname]\n"
@@ -908,7 +908,7 @@ int main(int argc, char *argv[])
 
 		case '?':
 			default:
-				return usage();
+				return usage(0);
 		}
 	}
 
@@ -928,7 +928,7 @@ int main(int argc, char *argv[])
 
 	if (ntpc.server == NULL) {
 		fprintf(stderr, "Missing NTP server argument.\n");
-		return usage();
+		return usage(1);
 	}
 
 	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count) {
