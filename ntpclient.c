@@ -1,7 +1,7 @@
 /* NTP client
  *
  * Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>
- * Copyright (C) 2010-2016  Joachim Nilsson <troglobit@gmail.com>
+ * Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License (Version 2,
@@ -763,26 +763,25 @@ static int usage(void)
 		"              microseconds. Default: 0 (forever)\n"
 		" -h hostname  NTP server, mandatory(!), against which to sync system time\n"
 		" -i interval  Check time every interval seconds.  Default: 600\n"
-		" -l           Attempt to lock local clock to server using adjtimex(2)\n");
+		" -l           Attempt to lock local clock to server using adjtimex(2)\n"
 #ifdef ENABLE_SYSLOG
-	fprintf(stderr, " -L           Use syslog instead of stdout for log messages, enabled\n"
-		"              by default when started as root\n");
+		" -L           Use syslog instead of stdout for log messages, enabled\n"
+		"              by default when started as root\n"
 #endif
-	fprintf(stderr, " -n           Don't fork.  Prevents %s from daemonizing by default\n"
+		" -n           Don't fork.  Prevents %s from daemonizing by default\n"
 		"              Only when running as root, does nothing for regular users\n"
 		" -p port      NTP client UDP port.  Default: 0 (\"any available\")\n"
-		" -q min_delay Minimum packet delay for transaction (default 800 microseconds)\n",
-		prognm);
+		" -q min_delay Minimum packet delay for transaction (default 800 microseconds)\n"
 #ifdef ENABLE_REPLAY
-	fprintf(stderr, " -r           Replay analysis code based on stdin\n");
+		" -r           Replay analysis code based on stdin\n"
 #endif
-	fprintf(stderr, " -s           Simple clock set, implies -c 1 unless -l is also set\n"
+		" -s           Simple clock set, implies -c 1 unless -l is also set\n"
 		" -t           Trust network and server, no RFC-4330 recommended validation\n"
 		" -v           Be verbose.  This option will cause time sync events, hostname\n"
 		"              lookup errors and program version to be displayed\n"
-		" -V           Display version and copyright information\n");
-	fprintf(stderr, "\nReport %s bugs to troglobit@vmlinux.org\n", prognm);
-	fprintf(stderr, "Home page: http://troglobit.com/ntpclient.shtml\n");
+		" -V           Display version and copyright information\n"
+		"\nReport %s bugs to troglobit@gmail.com\n"
+		"Home page: http://troglobit.com/ntpclient.shtml\n", prognm, prognm);
 
 	return 1;
 }
@@ -790,8 +789,8 @@ static int usage(void)
 static int version(void)
 {
 	fprintf(stderr, "Larry Doolittle's ntpclient v" VERSION_STRING "\n\n");
-	fprintf(stderr, "Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007  Larry Doolittle <larry@doolittle.boa.org>\n"
-		"Copyright (C) 2010  Joachim Nilsson <troglobit@vmlinux.org>\n\n");
+	fprintf(stderr, "Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>\n"
+		"Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>\n\n");
 	fprintf(stderr, "License GPLv2: GNU GPL version 2 <http://gnu.org/licenses/gpl2.html>\n"
 		"This is free software: you are free to change and redistribute it.\n"
 		"There is NO WARRANTY, to the extent permitted by law.\n");
@@ -1032,17 +1031,22 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 	hints.ai_next      = NULL;
 
 	memset(ss, 0, sizeof(struct sockaddr_storage));
-	if (getaddrinfo(host, NULL, &hints, &result)) {
-		MYLOG1("%s: hostname: %s, getaddrinfo failed, error: %s\n", __FUNCTION__, host, gai_strerror(nError));
+	err = getaddrinfo(host, NULL, &hints, &result);
+	if (err) {
+		MYLOG1("%s: hostname: %s, getaddrinfo failed, error: %s\n", __FUNCTION__, host, gai_strerror(err));
 		return 1;
 	}
 
 	// The first result will be used. IPV4 has higher priority
 	for (rp = result; rp; rp = rp->ai_next) {
-		if (rp->ai_family == AF_INET)
+		if (rp->ai_family == AF_INET) {
 			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
-		else if (rp->ai_family == AF_INET6)
+			break;
+		}
+		if (rp->ai_family == AF_INET6) {
 			memcpy(ss, (struct sockaddr_in6 *)(rp->ai_addr), sizeof(struct sockaddr_in6));
+			break;
+		}
 	}
 	freeaddrinfo(result);
 
