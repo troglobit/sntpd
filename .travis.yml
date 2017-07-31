@@ -16,9 +16,12 @@ addons:
       - tree
 
 script:
+  - ./autogen.sh
+  - ./configure --prefix=
   - make -j5
-  - DESTDIR=/tmp prefix=/usr make install
+  - DESTDIR=/tmp make install-strip
   - tree /tmp
-  - ldd /tmp/usr/sbin/ntpclient
-  - size /tmp/usr/sbin/ntpclient
-  - /tmp/usr/sbin/ntpclient -h
+  - ldd  /tmp/bin/adjtimex /tmp/sbin/ntpclient
+  - size /tmp/bin/adjtimex /tmp/sbin/ntpclient
+  - /tmp/bin/adjtimex -h
+  - /tmp/sbin/ntpclient -h
