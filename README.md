@@ -77,27 +77,28 @@ Usage
 
     Usage: ntpclient [options] SERVER
     
-     -c count     Stop after count time measurements. Default: 0 (forever)
-     -d           Debug, or diagnostics mode  Possible to enable more at compile
-     -g goodness  Stop after getting a result more accurate than goodness msec,
-                  microseconds. Default: 0 (forever)
-     -h           Show summary of command line options and exit
-     -i interval  Check time every interval seconds.  Default: 600
-     -l           Attempt to lock local clock to server using adjtimex(2)
-     -L           Use syslog instead of stdout for log messages, enabled
-                  by default when started as root
-     -n           Don't fork.  Prevents ntpclient from daemonizing by default
-                  Only when running as root, does nothing for regular users
-				  Use -L with this to use syslog as well, for Finit + systemd
-     -p port      NTP client UDP port.  Default: 0 ("any available")
-     -q min_delay Minimum packet delay for transaction (default 800 microseconds)
-     -s           Simple clock set, implies -c 1 unliess -l is also set
-     -t           Trust network and server, no RFC-4330 recommended validation
-     -v           Be verbose.  This option will cause time sync events, hostname
-                  lookup errors and program version to be displayed
-     -V           Display version and copyright information
+     -c count      Stop after count time measurements. Default: 0 (forever)
+     -d            Debug, or diagnostics mode  Possible to enable more at compile
+     -f frequency  Initialize the frequency offset.  Linux only, requires root
+     -g goodness   Stop after getting a result more accurate than goodness msec,
+                   microseconds. Default: 0 (forever)
+     -h            Show summary of command line options and exit
+     -i interval   Check time every interval seconds.  Default: 600
+     -l            Attempt to lock local clock to server using adjtimex(2)
+     -L            Use syslog instead of stdout for log messages, enabled
+                   by default when started as root
+     -n            Don't fork.  Prevents ntpclient from daemonizing by default
+                   Only when running as root, does nothing for regular users
+				   Use -L with this to use syslog as well, for Finit + systemd
+     -p port       NTP client UDP port.  Default: 0 ("any available")
+     -q min_delay  Minimum packet delay for transaction (default 800 microseconds)
+     -s            Simple clock set, implies -c 1 unliess -l is also set
+     -t            Trust network and server, no RFC-4330 recommended validation
+     -v            Be verbose.  This option will cause time sync events, hostname
+                   lookup errors and program version to be displayed
+     -V            Display version and copyright information
      
-     SERVER       NTP server against which to sync system time
+     SERVER        NTP server against which to sync system time
 
 Mortal users can use this program for monitoring, but not clock setting
 (with the `-s` or `-l` switches).  The `-l` switch is designed to be
