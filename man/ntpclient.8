@@ -1,113 +1,124 @@
 .\" man page for Larry Doolittle's ntpclient
 .\" distributed under GPL
 .\" originally written by Walter Harms
-.TH ntpclient 8 "2005-28-07-05" "" "ntpclient"
-.SH NAME
-ntpclient \- client to get time from NTP server
-.SH SYNOPSIS
-.B ntpclient [-h hostname] [-c count] [-d] [-f frequency] [-g goodness]
-.in 17
-.B           [-i interval] [-l] [-n] [-p port] [-r] [-s] [-v] hostname
-.SH DESCRIPTION
-.B ntpclient
+.Dd Aug 1, 2017
+.\" Please adjust this date whenever revising the manpage.
+.Dt NTPCLIENT 8
+.Sh NAME
+.Nm ntpclient
+.Nd Simple NTP client
+.Sh SYNOPSIS
+.Nm
+.Op Fl dhlLnrstvV
+.Op Fl c Ar count
+.Op Fl f Ar frequency
+.Op Fl g Ar goodness
+.Op Fl i Ar interval
+.Op Fl p Ar port
+.Op Fl q Ar min_delay
+.Ar SERVER
+.Sh DESCRIPTION
+.Nm
 is an NTP (RFC-1305) client for UNIX-alike computers.  Its functionality is a
 small subset of xntpd, but has the potential to function better within that
 limited scope.  Since it is much smaller than xntpd, it is also more relevant
 for embedded computers.
-.PP
+.Pp
 If run as root the program daemonizes itself by default and starts synchronizing
-with the given NTP server using default settins.  When run as a regular user the
+with the given NTP server using default settings.  When run as a regular user the
 program produces output similar to this:
-.sp
-.nf
- Day   Second     Elapsed    Stall     Skew  Dispersion  Freq
-36765 00180.386    1398.0     40.3  953773.9    793.5  -1240000
-36765 00780.382    1358.0     41.3  954329.0    915.5  -1240000
-36765 01380.381    1439.0     56.0  954871.3    915.5  -1240000
-.fi
-.sp
+.Bd -unfilled -offset indent
+Day    Second     Elapsed   Stall  Skew      Dispersion  Freq
+36765  00180.386  1398.0    40.3   953773.9  793.5       -1240000
+36765  00780.382  1358.0    41.3   954329.0  915.5       -1240000
+36765  01380.381  1439.0    56.0   954871.3  915.5       -1240000
+.Ed
+.Pp
 The columns have the following meaning:
-.nf
-Day, Second: time of measurement, UTC, relative to NTP epoch (Jan 1, 1900)
-Elapsed:     total time from query to response (microseconds)
-Stall:       time the server reports that it sat on the request (microseconds)
-Skew:        difference between local time and server time (microseconds)
-Dispersion:  reported by server, see RFC-1305 (microseconds)
-Freq:        local clock frequency adjustment (Linux only, ppm*65536)
-.fi
-.SS "Options"
-.TP
-.BI  -h " hostname"
-NTP server, against which to measure system time.  Can also be supplied
-without the -h switch.  This is a
-.B mandatory
-argument.
-.TP
-.BI -c " count"
-top after count time measurements (default 0 means go forever)
-.TP
-.B  -d
-.br
-print diagnostics (feature can be disabled at compile time)
-.TP
-.BI  -g " goodness"
-causes ntpclient to stop after getting a result more accurate
-than goodness (microseconds, default 0 means go forever)
-.TP
-.BI  -i " interval"
-check time every interval seconds (default 600)
-.TP
-.BI -p " port"
-local NTP client UDP port (default 0 means "any available")
-.TP
-.BI  -q " min_delay"
-minimum packet delay for transaction (default 800 microseconds)
-.TP
-.B  -r
-.br
-replay analysis code based on stdin (feature can be disabled at compile time)
-.TP
-.BI -f " frequency"
-.br
-initialize the frequency offset (Linux only, requires root access)
-.TP
-.B -s
-.br
-simple clock set (implies -c 1)
-(requires root access)
-.TP
-.B  -l
-.br
-attempt to lock local clock to server using
-.BR adjtimex (1)
-(requires root access)
-.TP
-.B -n
-.br
-Don't fork.  Prevents ntpclient from daemonizing.
-.TP
-.B -t
-.br
-trust network and server, no RFC-4330 recommended cross-checks
-.TP
-.B -v
-.br
-Be verbose.  This option will cause time sync events, and version
+.Pp
+.Bl -tag -width DaysSeconds -compact -offset indent
+.It Cm Day, Second
+Time of measurement, UTC, relative to NTP epoch (Jan 1, 1900)
+.It Cm Elapsed
+Total time from query to response (microseconds)
+.It Cm Stall
+Time the server reports that it sat on the request (microseconds)
+.It Cm Skew
+Difference between local time and server time (microseconds)
+.It Cm Dispersion
+Reported by server, see RFC-1305 (microseconds)
+.It Cm Freq
+Local clock frequency adjustment (Linux only, ppm*65536)
+.El
+.Sh OPTIONS
+Note, only the
+.Ar SERVER
+argument is mandatory, all other are optional.
+.Bl -tag -width Ds
+.It Fl c Ar count
+Stop after count time measurements (default 0 means go forever)
+.It Fl d
+NTP debug/diagnostics, very noisy.
+.It Fl f Ar frequency
+Initialize the frequency offset.  Linux only, requires root access.
+.It Fl g Ar goodness
+Stop
+.Nm
+after getting a result more accurate than goodness microseconds,
+default 0 means go forever.
+.It Fl h
+Show summary of command line options and exit.
+.It Fl i Ar interval
+Check time every interval seconds, default 600.
+.It Fl l
+Attempt to lock local clock to server using
+.Xr adjtimex 1 ,
+requires root access.
+.It Fl L
+Use syslog instead of stdout for log messages, default when started as
+root.
+.It Fl n
+Don't fork.  Prevents ntpclient from daemonizing and also implies
+logging to stdout, use
+.Fl L
+to enable syslog in this mode.
+.It Fl p Ar port
+Local NTP client UDP port, default 0 means "any available".  Very rarely
+necessary to change.
+.It Fl q Ar min_delay
+Minimum packet delay for transaction, default 800 microseconds.
+.It Fl r
+Replay analysis code based on stdin, feature is disabled by default
+compile time.
+.It Fl s
+Simple clock set, implies
+.Fl c Ar 1 ,
+requires root access.
+.It Fl t
+Trust network and server, no RFC-4330 recommended cross-checks.
+.It Fl v
+Verbose operation.  This option will cause time sync events, and version
 information at start/stop to be logged.
-.SH AUTHORS
- Larry Doolittle and Joachim Nilsson
- ntpclient home page: http://doolittle.icarus.com/ntpclient/
-.SH COPYRIGHT
+.It Fl V
+Display version and copyright information.
+.El
+.Sh AUTHORS
+Larry Doolittle maintains the original,
+.Lk http://doolittle.icarus.com/ntpclient/ upstream
+.Pp
+Joachim Nilsson synchronizes this fork periodically with upstream and
+maintains several small additions: syslog, IPv6 support etc. at
+.Lk https://github.com/troglobit/ntpclient GitHub
+.Sh COPYRIGHT
 The
-.B ntpclient
+.Nm
 package is Copyright 1997-2015 Larry Doolittle, and Copyright 2010-2017
 Joachim Nilsson.  It may be freely copied and modified according to the
 terms of the GNU General Public License, version 2.  If you want to
-distribute ntpclient under other terms, contact us.  We might agree to
-other arrangements, if you talk to us
-.I before
+distribute ntpclient under other terms, contact Larry.  He might agree
+to other arrangements if you talk to him
+.Em before
 you start violating the terms of the license.
-
-.SH "SEE ALSO"
-.BR adjtimex (1),
-.BR http://www.ntp.org
+.Sh "SEE ALSO"
+.Xr adjtimex 1 ,
+.Lk http://www.ntp.org
