@@ -32,6 +32,10 @@ release-hook:
 		echo;									\
 	fi
 
+# lintian --profile debian -i -I --show-overrides ../$PKG.changes
+package build-deb:
+	dpkg-buildpackage -uc -us -B
+
 ## Target to run when building a release
 release: dist release-hook md5-dist
 	@echo
