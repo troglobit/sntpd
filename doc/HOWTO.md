@@ -34,7 +34,7 @@ tools that provide shell-level access to this interface, both called
 `adjtimex(1)`.
 
 One is written by Steven Dick and Jim Van Zandt, see the adjtimex* files
-in http://metalab.unc.edu/pub/Linux/system/admin/time/ It uses long
+at http://www.ibiblio.org/pub/Linux/system/admin/time/. It uses long
 options, and includes some interesting functionality beyond the basic
 exposure of `adjtimex(2)`.
 
