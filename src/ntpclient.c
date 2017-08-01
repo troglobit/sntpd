@@ -119,6 +119,7 @@ struct ntp_control {
 int debug = 0;
 int verbose = 0;		/* Verbose flag, produce useful output to log */
 int log_enable = 0;
+int log_level = LOG_NOTICE;
 const char *prognm = PACKAGE_NAME;
 static int sighup = 0;
 static int sigterm = 0;
@@ -134,6 +135,9 @@ void logit(int severity, int syserr, const char *format, ...)
 {
 	va_list ap;
 	char buf[200];
+
+	if (log_level < severity)
+		return;
 
 	va_start(ap, format);
 	vsnprintf(buf, sizeof(buf), format, ap);
@@ -859,6 +863,7 @@ int main(int argc, char *argv[])
 
 		case 'd':
 			debug++;
+			log_level = LOG_DEBUG;
 			break;
 
 		case 'f':
@@ -931,6 +936,7 @@ int main(int argc, char *argv[])
 
 #ifdef ENABLE_SYSLOG
 	openlog(prognm, LOG_OPTS, LOG_FACILITY);
+	setlogmask(LOG_UPTO(log_level));
 #endif
 
 	if (initial_freq) {
