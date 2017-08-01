@@ -19,21 +19,22 @@
 #ifndef NTPCLIENT_H_
 #define NTPCLIENT_H_
 
-# include <stdarg.h>		/* vsyslog(), vfprintf(), use -D_BSD_SOURCE */
+#include <config.h>
+#include <stdarg.h>		/* vsyslog(), vfprintf(), use -D_BSD_SOURCE */
 #ifdef ENABLE_SYSLOG
 # include <syslog.h>
 # include <sys/utsname.h>
 # include <sys/time.h>
-# define SYSLOG_IDENT    "ntpclient"
-# define SYSLOG_OPTIONS  (LOG_NOWAIT | LOG_PID)
-# define SYSLOG_FACILITY LOG_CRON
+# define LOG_OPTS        (LOG_NOWAIT | LOG_PID)
+# define LOG_FACILITY    LOG_CRON
 # define LOG_OPTION      "L"
 #else
-#define LOG_ERR     0
-#define LOG_WARNING 1
-#define LOG_NOTICE  2
-#define LOG_DEBUG   3
-#define LOG_OPTION
+# define LOG_ERR         3
+# define LOG_WARNING     4
+# define LOG_NOTICE      5
+# define LOG_INFO        6
+# define LOG_DEBUG       7
+# define LOG_OPTION
 #endif
 
 extern int debug;

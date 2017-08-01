@@ -123,7 +123,7 @@ struct ntp_control {
 int debug = 0;
 int verbose = 0;		/* Verbose flag, produce useful output to log */
 int logging = 0;
-const char *prognm = SYSLOG_IDENT;
+const char *prognm = PACKAGE_NAME;
 static int sighup = 0;
 static int sigterm = 0;
 
@@ -929,7 +929,7 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef ENABLE_SYSLOG
-	openlog(prognm, SYSLOG_OPTIONS, SYSLOG_FACILITY);
+	openlog(prognm, LOG_OPTS, LOG_FACILITY);
 #endif
 
 	if (initial_freq) {
