@@ -66,6 +66,13 @@ struct ntptime {
 	unsigned int fine;
 };
 
+static char *prognm = NULL;
+
+static int usage(int code)
+{
+	printf("Usage: %s <server> [server [...]]\n", prognm);
+	return code;
+}
 
 static void send_packet(int sd)
 {
@@ -110,16 +117,16 @@ static int query_server(char *srv)
 
 	sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (sd == -1) {
-		perror("socket error");
+		perror("Failed opening UDP socket");
 		return -1;	/* Fatal error, cannot even create a socket? */
 	}
 
 	he = gethostbyname(srv);
 	if (!he) {
-		perror("gethostbyname");
+		fprintf(stderr, "Failed resolving server %s: %s", srv, strerror(errno));
 		close(sd);
 
-		return 1;	/* Failure in name resolution. */
+		return usage(1);	/* Failure in name resolution. */
 	}
 
 	memset(&sa, 0, sizeof(sa));
@@ -129,7 +136,7 @@ static int query_server(char *srv)
 
 	syslog(LOG_DAEMON | LOG_DEBUG, "Connecting to %s [%s] ...", srv, inet_ntoa(sa.sin_addr));
 	if (connect(sd, (struct sockaddr*)&sa, sizeof(sa)) == -1) {
-		perror("connect");
+		fprintf(stderr, "Failed connecting to %s [%s]: %s", srv, inet_ntoa(sa.sin_addr), strerror(errno));
 		close(sd);
 
 		return 1;      /* Cannot connect to server, try next. */
@@ -172,10 +179,9 @@ int main(int argc, char *argv[])
 {
 	int i;
 
-	if (argc <= 1) {
-		printf("Usage: %s <server> [server [...]]\n", argv[0]);
-		return 1;
-	}
+	prognm = argv[0];
+	if (argc <= 1)
+		return usage(1);
 
 	for (i = 1; i < argc; ++i) {
 		char *srv;
