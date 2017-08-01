@@ -789,8 +789,8 @@ static int usage(int code)
 		"Arguments:\n"
 		"    SERVER     NTP server, mandatory, against which to sync system time\n"
 		"\n"
-		"Bugs report address https://github.com/troglobit/ntpclient/issues\n"
-		"Project homepage: https://github.com/troglobit/ntpclient\n", prognm);
+		"Bugs report address: " PACKAGE_BUGREPORT "\n"
+		"Project homepage: " PACKAGE_URL "\n", prognm);
 
 	return code;
 }
