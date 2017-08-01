@@ -197,7 +197,7 @@ Origin & References
 
 [Larry Doolittle][] created ntpclient and made it freely available under
 the terms of the GNU General Public [License][], version 2.  He remains
-remains the official upstream for ntpclient.
+the official upstream for `ntpclient`.
 
 This fork is at GitHub is maintained by [Joachim Nilsson][] and adds a
 few features like syslog, background daemon, IPv6 support, and a few
