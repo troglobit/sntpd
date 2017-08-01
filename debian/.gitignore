@@ -1,3 +1,5 @@
 *.substvars
+*.debhelper*
 debhelper-build-stamp
 files
+ntpclient/
