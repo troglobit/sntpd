@@ -145,8 +145,10 @@ void logit(int severity, int syserr, const char *format, ...)
 			syslog(severity, "%s: %s", buf, strerror(syserr));
 		else
 			syslog(severity, "%s", buf);
+
+		return;
 	}
-#else
+#endif
 	if (severity == LOG_WARNING)
 		fputs("Warning - ", stderr);
 	else if (severity == LOG_ERR)
@@ -156,7 +158,6 @@ void logit(int severity, int syserr, const char *format, ...)
 		fprintf(stderr, "%s: %s\n", buf, strerror(errno));
 	else
 		fprintf(stderr, "%s\n", buf);
-#endif
 }
 
 /* OS dependent routine to get the current value of clock frequency */
