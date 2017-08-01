@@ -798,7 +798,7 @@ static int usage(int code)
 static int version(void)
 {
 	fprintf(stderr, "Larry Doolittle's ntpclient v" PACKAGE_VERSION "\n\n");
-	fprintf(stderr, "Copyright (C) 1997, 1999, 2000, 2003, 2006, 2007, 2010  Larry Doolittle <larry@doolittle.boa.org>\n"
+	fprintf(stderr, "Copyright (C) 1997-2015  Larry Doolittle <larry@doolittle.boa.org>\n"
 		"Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>\n\n");
 	fprintf(stderr, "License GPLv2: GNU GPL version 2 <http://gnu.org/licenses/gpl2.html>\n"
 		"This is free software: you are free to change and redistribute it.\n"
