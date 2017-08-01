@@ -199,9 +199,9 @@ Origin & References
 the terms of the GNU General Public [License][], version 2.  He remains
 the official upstream for `ntpclient`.
 
-This fork is at GitHub is maintained by [Joachim Nilsson][] and adds a
-few features like syslog, background daemon, IPv6 support, and a few
-other small things.
+This fork at GitHub is maintained by [Joachim Nilsson][] and adds a few
+features like syslog, background daemon, IPv6, and systemd support.  As
+well as a few other small things.
 
 [ntpd]:            http://www.ntp.org
 [xntpd]:           http://www.eecis.udel.edu/~mills/ntp/
