@@ -9,6 +9,7 @@ configure
 depcomp
 install-sh
 missing
+ntpclient.service
 stamp-h1
 TAGS
 ID
