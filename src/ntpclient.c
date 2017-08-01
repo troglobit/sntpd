@@ -789,7 +789,9 @@ static int usage(int code)
 		"Arguments:\n"
 		"    SERVER     NTP server, mandatory, against which to sync system time\n"
 		"\n"
-		"Bugs report address: " PACKAGE_BUGREPORT "\n"
+#ifdef PACKAGE_BUGREPORT
+		"Bug report address: " PACKAGE_BUGREPORT "\n"
+#endif
 		"Project homepage: " PACKAGE_URL "\n", prognm);
 
 	return code;
