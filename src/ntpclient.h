@@ -38,7 +38,7 @@
 #endif
 
 extern int debug;
-extern int logging;
+extern int log_enable;
 extern int verbose;
 
 extern double min_delay;        /* global tuning parameter */

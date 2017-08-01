@@ -118,7 +118,7 @@ struct ntp_control {
 
 int debug = 0;
 int verbose = 0;		/* Verbose flag, produce useful output to log */
-int logging = 0;
+int log_enable = 0;
 const char *prognm = PACKAGE_NAME;
 static int sighup = 0;
 static int sigterm = 0;
@@ -140,7 +140,7 @@ void logit(int severity, int syserr, const char *format, ...)
 	va_end(ap);
 
 #ifdef ENABLE_SYSLOG
-	if (logging) {
+	if (log_enable > 0) {
 		if (syserr)
 			syslog(severity, "%s: %s", buf, strerror(syserr));
 		else
@@ -834,7 +834,7 @@ int main(int argc, char *argv[])
 	ntpc.set_clock   = 0;
 	if (geteuid() == 0) {
 		daemonize        = 1;
-		logging++;
+		log_enable++;
 		ntpc.usermode    = 0;
 		ntpc.live        = 1;
 		ntpc.cross_check = 0;
@@ -886,7 +886,7 @@ int main(int argc, char *argv[])
 
 		case 'n':
 			daemonize = 0;
-			logging--;
+			log_enable--;
 			break;
 
 		case 'p':
@@ -912,7 +912,7 @@ int main(int argc, char *argv[])
 
 #ifdef ENABLE_SYSLOG
 		case 'L':
-			logging++;
+			log_enable++;
 			break;
 #endif
 
@@ -975,7 +975,7 @@ int main(int argc, char *argv[])
 		logit(LOG_DEBUG, 0, "  -s set_clock   %d", ntpc.set_clock);
 		logit(LOG_DEBUG, 0, "  -t cross_check %d", ntpc.cross_check);
 #ifdef ENABLE_SYSLOG
-		logit(LOG_DEBUG, 0, "  -L logging     %d", logging);
+		logit(LOG_DEBUG, 0, "  -L log_enable  %d", log_enable);
 #endif
 	}
 #endif /* ENABLE_DEBUG */
@@ -991,7 +991,7 @@ int main(int argc, char *argv[])
 		 * Force output to syslog, we have no other way of
 		 * communicating with the user after being daemonized
 		 */
-		logging = 1;
+		log_enable = 1;
 		if (verbose)
 			logit(LOG_NOTICE, 0, "Starting ntpclient v" PACKAGE_VERSION);
 	}
@@ -1004,14 +1004,13 @@ int main(int argc, char *argv[])
 
 	setup_signals();
 
-	if (daemonize && verbose) {
+	if (daemonize && verbose)
 		logit(LOG_NOTICE, 0, "Using time sync server: %s", ntpc.server);
-	}
+
 	primary_loop(usd, &ntpc);
 
-	if (daemonize && verbose) {
+	if (daemonize && verbose)
 		logit(LOG_NOTICE, 0, "Stopping ntpclient v" PACKAGE_VERSION);
-	}
 	close(usd);
 #ifdef ENABLE_SYSLOG
 	closelog();
