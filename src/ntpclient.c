@@ -21,10 +21,6 @@
  *    - Support leap second processing
  *    - Support multiple (interleaved) servers
  *
- * Compile with -DPRECISION_SIOCGSTAMP if your machine really has it.
- * Older kernels (before the tickless era, pre 3.0?) only give an answer
- * to the nearest jiffy (1/100 second), not so interesting for us.
- *
  * If the compile gives you any flak, check below in the section
  * labelled "XXX fixme - non-automatic build configuration".
  */
@@ -772,6 +768,7 @@ static int usage(int code)
 #endif
 		" -n           Don't fork.  Prevents %s from daemonizing by default\n"
 		"              Only when running as root, does nothing for regular users\n"
+		"              Use -L with this to use syslog as well, for Finit + systemd\n"
 		" -p port      NTP client UDP port.  Default: 0 (\"any available\")\n"
 		" -q min_delay Minimum packet delay for transaction (default 800 microseconds)\n"
 #ifdef ENABLE_REPLAY
@@ -835,6 +832,7 @@ int main(int argc, char *argv[])
 	ntpc.set_clock   = 0;
 	if (geteuid() == 0) {
 		daemonize        = 1;
+		logging++;
 		ntpc.usermode    = 0;
 		ntpc.live        = 1;
 		ntpc.cross_check = 0;
@@ -886,6 +884,7 @@ int main(int argc, char *argv[])
 
 		case 'n':
 			daemonize = 0;
+			logging--;
 			break;
 
 		case 'p':
@@ -986,12 +985,13 @@ int main(int argc, char *argv[])
 			exit(1);
 		}
 
-		/* Force output to syslog, since we no longer have any way
-		 * of communicating with the user after being daemonized. */
+		/*
+		 * Force output to syslog, we have no other way of
+		 * communicating with the user after being daemonized
+		 */
 		logging = 1;
-		if (verbose) {
+		if (verbose)
 			logit(LOG_NOTICE, 0, "Starting ntpclient v" PACKAGE_VERSION);
-		}
 	}
 
 	usd = setup_socket(&ntpc);
