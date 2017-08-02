@@ -577,6 +577,11 @@ static int setup_socket(struct ntp_control *ntpc)
 	setup_receive(sd, ntpc->local_udp_port);
 	setup_transmit(sd, ntpc->server, NTP_PORT, ntpc);
 
+	/*
+	 * Every day: reopen socket and perform a new DNS lookup.
+	 */
+	alarm(60 * 60 * 24);
+
 	return sd;
 }
 
@@ -588,6 +593,7 @@ static void handler(int sig)
 {
 	switch (sig) {
 	case SIGHUP:
+	case SIGALRM:
 		/* Trigger NTP sync */
 		sighup = 1;
 		break;
@@ -615,6 +621,7 @@ static void setup_signals(void)
 	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGUSR1, &sa, NULL);
 	sigaction(SIGUSR2, &sa, NULL);
+	sigaction(SIGALRM, &sa, NULL);
 }
 
 static void primary_loop(int usd, struct ntp_control *ntpc)
