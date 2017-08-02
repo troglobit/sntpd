@@ -528,9 +528,13 @@ static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_contro
 	struct sockaddr_in *ipv4;
 	socklen_t len = 0;
 
-	(void)ntpc;		/* not used */
+	while (getaddrbyname(host, &ss)) {
+		if (EINVAL != errno && ntpc->live) {
+			/* Wait here a while, networking is probably not up yet. */
+			sleep(1);
+			continue;
+		}
 
-	if (getaddrbyname(host, &ss)) {
 		if (verbose)
 			logit(LOG_ERR, 0, "Unable lookup %s", host);
 
