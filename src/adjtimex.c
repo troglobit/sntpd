@@ -41,23 +41,24 @@
 #include <unistd.h>
 #include <sys/timex.h>
 
+/* Status codes (timex.status) */
 static struct {
 	int bit;
 	const char *name;
 } statlist[] = {
-	{ STA_PLL,       "PLL"       },
-	{ STA_PPSFREQ,   "PPSFREQ"   },
-	{ STA_PPSTIME,   "PPSTIME"   },
-	{ STA_FLL,       "FFL"       },
-	{ STA_INS,       "INS"       },
-	{ STA_DEL,       "DEL"       },
-	{ STA_UNSYNC,    "UNSYNC"    },
-	{ STA_FREQHOLD,  "FREQHOLD"  },
-	{ STA_PPSSIGNAL, "PPSSIGNAL" },
-	{ STA_PPSJITTER, "PPSJITTER" },
-	{ STA_PPSWANDER, "PPSWANDER" },
-	{ STA_PPSERROR,  "PPSERROR"  },
-	{ STA_CLOCKERR,  "CLOCKERR"  },
+	{ STA_PLL,       "PLL"       },		/* enable PLL updates (rw)           */
+	{ STA_PPSFREQ,   "PPSFREQ"   },		/* enable PPS freq discipline (rw)   */
+	{ STA_PPSTIME,   "PPSTIME"   },		/* enable PPS time discipline (rw)   */
+	{ STA_FLL,       "FFL"       },		/* select frequency-lock mode (rw)   */
+	{ STA_INS,       "INS"       },		/* insert leap (rw)                  */
+	{ STA_DEL,       "DEL"       },		/* delete leap (rw)                  */
+	{ STA_UNSYNC,    "UNSYNC"    },		/* clock unsynchronized (rw)         */
+	{ STA_FREQHOLD,  "FREQHOLD"  },		/* hold frequency (rw)               */
+	{ STA_PPSSIGNAL, "PPSSIGNAL" },		/* PPS signal present (ro)           */
+	{ STA_PPSJITTER, "PPSJITTER" },		/* PPS signal jitter exceeded (ro)   */
+	{ STA_PPSWANDER, "PPSWANDER" },		/* PPS signal wander exceeded (ro)   */
+	{ STA_PPSERROR,  "PPSERROR"  },		/* PPS signal calibration error (ro) */
+	{ STA_CLOCKERR,  "CLOCKERR"  },		/* clock hardware fault (ro)         */
 	{ 0, NULL}
 };
 
