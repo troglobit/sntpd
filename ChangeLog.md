@@ -5,21 +5,37 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
-[UNRELEASED][]
---------------
+[2017_PRE][UNRELEASED]
+----------------------
 
 Curated by [Joachim Nilsson][].
 
 ### Changes
 - Add support for IPv6, thanks to Dieter Ries
+- Behavior change: `-L` now required with `-n`, otherwise `stdout` is
+  used.  This to conform with de facto UNIX daemon behavior.
+- Convert to GNU Configure & Build System, with proper `--enable-opts`
+  for all optional features, like precision and mini NTP client
+- Relocate files to `doc/` and `src/` subdirectories
+- Reindent to Linux kernel coding style and add [CONTRIBIBUTING.md][]
+  to help newcomers with basic project info
 - Cleanup README and HOWTO, move to Markdown format for comfortable
   presentation on GitHub.
+- Update and refactor `ntpclient.8` and `adjtimex.1` into mdoc format
 - Move change log from README to separate CHANGELOG file in a format
   proposed by http://keepachangelog.com/
+- Merge in changes from [2015_365][] by Larry
+- Add missing `COPYING` file, GNU license should be included
+- Add systemd unit file for running `ntpclient` as a daemon
+- Add initial Debian packaging to be able to create `.deb` files
 
 ### Fixes
-- Massive cleanup and build fixes to to `mini-ntpclient.c` from DD-WRT.
-- Fix compiler warnings for unused variables when `ENABLE_DEBUG` is unset.
+- Massive cleanup and build fixes to to `mini-ntpclient.c` from DD-WRT
+- Fix compiler warnings for unused variables when `ENABLE_DEBUG` is unset
+- Fix build error when building without `ENABLE_SYSLOG` support
+- Fixes for non-GNU libc systems, replace `%m` and `__progname`
+- Retry DNS lookup of NTP server, useful at boot and if net goes down
+- Restart/reopen network socket at least once a day to prevent lockup
 
 
 [2015_365][] - 2015-12-31
@@ -163,5 +179,6 @@ Curated by [Larry Doolittle][].
 [dd-wrt]: http://svn.dd-wrt.com/browser/src/router/ntpclient/
 [RFC 4330]: http://tools.ietf.org/html/rfc4330
 [Mike Frysinger]: vapier@gentoo.org
+[CONTRIBIBUTING.md]: https://github.com/troglobit/ntpclient/CONTRIBIBUTING.md
 [Joachim Nilsson]: https://github.com/troglobit/ntpclient/
 [Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
