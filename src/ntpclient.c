@@ -541,6 +541,7 @@ static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_contro
 		exit(1);
 	}
 
+	/* Prefer IPv4 over IPv6, for now */
 	if (ss.ss_family == AF_INET) {
 		ipv4 = (struct sockaddr_in *)(&ss);
 		ipv4->sin_port = htons(port);
