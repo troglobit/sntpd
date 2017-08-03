@@ -76,7 +76,7 @@ Usage
 -----
 
     Usage: ntpclient [options] SERVER
-    
+     
      -c count      Stop after count time measurements. Default: 0 (forever)
      -d            Debug, or diagnostics mode  Possible to enable more at compile
      -f frequency  Initialize the frequency offset.  Linux only, requires root
@@ -89,7 +89,7 @@ Usage
                    by default when started as root
      -n            Don't fork.  Prevents ntpclient from daemonizing by default
                    Only when running as root, does nothing for regular users
-				   Use -L with this to use syslog as well, for Finit + systemd
+                   Use -L with this to use syslog as well, for Finit + systemd
      -p port       NTP client UDP port.  Default: 0 ("any available")
      -q min_delay  Minimum packet delay for transaction (default 800 microseconds)
      -s            Simple clock set, implies -c 1 unliess -l is also set
