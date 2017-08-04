@@ -32,13 +32,28 @@ contribute fixes or new features, see the file [CONTRIBUTING.md][].
 Building
 --------
 
-ntpclient uses the well known GNU configure & build system.  To build,
-simply:
+ntpclient uses the [GNU configure & build system][[buildsystem]].  To
+build, simply:
 
 ```sh
     ./configure
     make
 ```
+
+The GNU build system use `/usr/local` as the default install prefix.  In
+many cases this is useful, but many users expect `/usr` or `/opt`.  To
+install into `/usr/sbin/ntpclient` and `/usr/bin/adjtimex`:
+
+```sh
+    $ ./configure --prefix=/usr
+    $ make
+    $ sudo make install-strip
+```
+
+The last command installs, there is also a possiblity to uninstall all
+files using:
+
+    $ sudo make uninstall
 
 For changing the system clock frequency, only the Linux `adjtimex(2)`
 interface is implemented at this time.  Non-Linux systems can only use
@@ -211,6 +226,7 @@ well as a few other small things.
 [RFC 4330]:        http://tools.ietf.org/html/rfc4330
 [Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
 [contact Larry]:   larry@doolittle.boa.org
+[buildsystem]:     https://airs.com/ian/configure/
 [License]:         http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
 [Travis]:          https://travis-ci.org/troglobit/ntpclient
