@@ -5,8 +5,8 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
-[2017_PRE][UNRELEASED]
-----------------------
+[2017_217][] - 2017-08-05
+-------------------------
 
 Curated by [Joachim Nilsson][].
 
@@ -166,7 +166,8 @@ Curated by [Larry Doolittle][].
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
-[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2010_365...HEAD
+[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2017_217...HEAD
+[2017_217]:   https://github.com/troglobit/ntpclient/compare/2010_365...2017_217
 [2015_365]:   https://github.com/troglobit/ntpclient/compare/2010_365...2015_365
 [2010_365]:   https://github.com/troglobit/ntpclient/compare/2010_326...2010_365
 [2010_326]:   https://github.com/troglobit/ntpclient/compare/2010_323...2010_326
