@@ -13,6 +13,6 @@ adjtimex_SOURCES    = adjtimex.c
 if MINI
 ntpclient_SOURCES   = mini-ntpclient.c
 else
-ntpclient_SOURCES   = ntpclient.c phaselock.c
+ntpclient_SOURCES   = ntpclient.c ntpclient.h phaselock.c
 ntpclient_LIBS      = -lrt
 endif
