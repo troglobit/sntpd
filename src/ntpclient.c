@@ -497,7 +497,6 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 static void setup_receive(int usd, uint16_t port)
 {
 	struct sockaddr_in6 sin6;
-	const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
 	int opt = 0;
 
 	/*
