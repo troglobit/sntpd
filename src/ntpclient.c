@@ -1040,6 +1040,7 @@ int main(int argc, char *argv[])
 static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 {
 	int err;
+	static int netdown = 0;
 	struct addrinfo hints;
 	struct addrinfo *result;
 	struct addrinfo *rp;
@@ -1061,22 +1062,36 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 	memset(ss, 0, sizeof(struct sockaddr_storage));
 	err = getaddrinfo(host, NULL, &hints, &result);
 	if (err) {
-		logit(LOG_ERR, 0, "Failed getaddrinfo() for hostname: %s: %s", host, gai_strerror(err));
+		logit(LOG_ERR, 0, "Failed resolving address to hostname %s: %s", host, gai_strerror(err));
+		netdown = errno = ENETDOWN;
 		return 1;
 	}
 
 	/* The first result will be used. IPV4 has higher priority */
+	err = 1;
 	for (rp = result; rp; rp = rp->ai_next) {
 		if (rp->ai_family == AF_INET) {
 			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
+			err = 0;
 			break;
 		}
 		if (rp->ai_family == AF_INET6) {
 			memcpy(ss, (struct sockaddr_in6 *)(rp->ai_addr), sizeof(struct sockaddr_in6));
+			err = 0;
 			break;
 		}
 	}
 	freeaddrinfo(result);
+
+	if (err) {
+		errno = EAGAIN;
+		return 1;
+	}
+
+	if (netdown) {
+		logit(LOG_NOTICE, 0, "Network up, resolved address to hostname %s", host);
+		netdown = 0;
+	}
 
 	return 0;
 }
