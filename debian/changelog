@@ -1,3 +1,9 @@
+ntpclient (2017.246-1) unstable; urgency=medium
+
+  * New upstream release, 2017_246
+
+ -- Joachim Nilsson <troglobit@gmail.com>  Sun, 03 Sep 2017 20:14:16 +0200
+
 ntpclient (2017.217-1) unstable; urgency=low
 
   * Initial Debian Release

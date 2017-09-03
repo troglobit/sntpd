@@ -5,6 +5,21 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
+[2017_246][] - 2017-09-03
+-------------------------
+
+Curated by [Joachim Nilsson][].
+
+### Changes
+- Log successful resolve of NTP host when network has been down
+- Add support for building `.deb` package
+
+### Fixes
+- Fix build warnings
+- Define `_DEFAULT_SOURCE`, needed with newer GLIBC
+- Do not overload `in6addr_any`, exists in `netinet/in.h`
+
+
 [2017_217][] - 2017-08-05
 -------------------------
 
@@ -166,7 +181,8 @@ Curated by [Larry Doolittle][].
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
-[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2017_217...HEAD
+[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2017_246...HEAD
+[2017_246]:   https://github.com/troglobit/ntpclient/compare/2017_217...2017_246
 [2017_217]:   https://github.com/troglobit/ntpclient/compare/2010_365...2017_217
 [2015_365]:   https://github.com/troglobit/ntpclient/compare/2010_365...2015_365
 [2010_365]:   https://github.com/troglobit/ntpclient/compare/2010_326...2010_365
