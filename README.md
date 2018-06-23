@@ -6,11 +6,12 @@ Table of Contents
 -----------------
 
 * [Introduction](#introduction)
-* [Building](#building)
-* [Troubleshooting](#troubleshooting)
 * [Usage](#usage)
+* [Troubleshooting](#troubleshooting)
 * [Bugs](#bugs)
 * [Compliance](#compliance)
+* [Building](#building)
+* [Building from GIT](#building-from-git)
 * [Origin & References](#origin--references)
 
 
@@ -20,71 +21,10 @@ Introduction
 ntpclient is an NTP client for UNIX-like systems, [RFC 1305][] and
 [RFC 4330][].  Its functionality is a small subset of [ntpd][],
 [chrony][], [OpenNTPd][], and [xntpd][].  Since it is much smaller, it
-is also more relevant for embedded systems in need for only a client.
-
-The goal of ntpclient is not only to set your computer's clock right
-once, but keep it there.
+is also more relevant for embedded systems in need of only a client.
 
 Please report bugs to the GitHub [issue tracker][].  If you want to
 contribute fixes or new features, see the file [CONTRIBUTING.md][].
-
-
-Building
---------
-
-ntpclient uses the [GNU configure & build system][[buildsystem]].  To
-build, simply:
-
-```sh
-    ./configure
-    make
-```
-
-The GNU build system use `/usr/local` as the default install prefix.  In
-many cases this is useful, but many users expect `/usr` or `/opt`.  To
-install into `/usr/sbin/ntpclient` and `/usr/bin/adjtimex`:
-
-```sh
-    $ ./configure --prefix=/usr
-    $ make
-    $ sudo make install-strip
-```
-
-The last command installs, there is also a possiblity to uninstall all
-files using:
-
-    $ sudo make uninstall
-
-For changing the system clock frequency, only the Linux `adjtimex(2)`
-interface is implemented at this time.  Non-Linux systems can only use
-ntpclient to measure time differences and set the system clock, by way
-of the POSIX 1003.1-2001 standard, the routines `clock_gettime()` and
-`clock_settime()`.  Also, see section [Bugs](#bugs), below.
-
-There are a few compile-time configurations possible.  E.g., for older
-kernels, before the tickless erea, pre 3.0=, you want to:
-
-    ./configure --disable-siocgstamp
-
-However, first try without changing the default.  That gives you a full-
-featured `ntpclient` that uses modern POSIX time functions and works
-reasonably well with any Linux kernel.
-
-Solaris and other UNIX users may need to adjust the `CFLAGS` slightly.
-For other options, see <kbd>./configure --help</kbd>
-
-
-Troubleshooting
----------------
-
-Some really old Linux systems (e.g., Red Hat EL-3.0 and Ubuntu 4.10)
-have a totally broken POSIX `clock_settime()` implementation.  If you
-get the following with <kbd>ntpclient -s</kbd>:
-
-    clock_settime: Invalid argument
-
-then `configure --enable-obsolete`.  Linux systems that are even older
-won't even compile without that switch set.
 
 
 Usage
@@ -181,15 +121,26 @@ Another tool is `envelope`, which is a perl script that was used for the
 lock studies.  It's kind of a hack and not worth documenting here.
 
 
+Troubleshooting
+---------------
+
+Some really old Linux systems (e.g., Red Hat EL-3.0 and Ubuntu 4.10)
+have a totally broken POSIX `clock_settime()` implementation.  If you
+get the following with <kbd>ntpclient -s</kbd>:
+
+    clock_settime: Invalid argument
+
+then `configure --enable-obsolete`.  Linux systems that are even older
+will not even compile without that switch set.
+
+
 Bugs
 ----
 
 * Doesn't understand the LI (Leap second Indicator) field of an NTP packet
 * Doesn't interact with `adjtimex(2)` status value
-* Can't query multiple servers
-* IPv4 only
+* Cannot query multiple servers
 * Requires Linux `select()` semantics, where timeout value is modified
-* Always returns success (0)
 
 
 Compliance
@@ -207,12 +158,55 @@ Adherence to [RFC 4330][] chapter 10, Best practices:
 8. Not supported (scary opportunity to DOS the _client_)
 
 
+Building
+--------
+
+ntpclient uses the [GNU configure & build system][[buildsystem]]:
+
+```sh
+    ./configure
+    make
+```
+
+The GNU build system use `/usr/local` as the default install prefix.  In
+many cases this is useful, but many users expect `/usr` or `/opt`.  To
+install into `/usr/sbin/ntpclient` and `/usr/bin/adjtimex`:
+
+```sh
+    $ ./configure --prefix=/usr
+    $ make
+    $ sudo make install-strip
+```
+
+The last command installs, there is also a possiblity to uninstall all
+files using:
+
+    $ sudo make uninstall
+
+For changing the system clock frequency, only the Linux `adjtimex(2)`
+interface is implemented at this time.  Non-Linux systems can only use
+ntpclient to measure time differences and set the system clock, by way
+of the POSIX 1003.1-2001 standard, the routines `clock_gettime()` and
+`clock_settime()`.  Also, see section [Bugs](#bugs), below.
+
+There are a few compile-time configurations possible.  E.g., for older
+kernels, before the tickless erea, pre 3.0=, you want to:
+
+    ./configure --disable-siocgstamp
+
+However, first try without changing the default.  That gives you a full-
+featured `ntpclient` that uses modern POSIX time functions and works
+reasonably well with any Linux kernel.
+
+Solaris and other UNIX users may need to adjust the `CFLAGS` slightly.
+For other options, see <kbd>./configure --help</kbd>
+
+
 Building from GIT
 -----------------
 
-If you want to contribute, or simply just try out the latest but
-unreleased features, then you need to know a few things about the
-[GNU build system][buildsystem]:
+If you want to contribute, or try out the latest unreleased features,
+here is a few things to know about [GNU build system][buildsystem]:
 
 - `configure.ac` and a per-directory `Makefile.am` are key files
 - `configure` and `Makefile.in` are generated from `autogen.sh`,
@@ -224,13 +218,13 @@ To build from GIT you first need to clone the repository and run the
 `autogen.sh` script.  This requires `automake` and `autoconf` to be
 installed on your system.
 
-    git clone https://github.com/troglobit/inadyn.git
-    cd inadyn/
+    git clone https://github.com/troglobit/ntpclient.git
+    cd ntpclient/
     ./autogen.sh
     ./configure && make
 
-GIT sources are a moving target and are not recommended for production
-systems, unless you know what you are doing!
+Remember: GIT sources are a moving target and are not recommended for
+production systems, unless you know what you are doing!
 
 
 Origin & References
