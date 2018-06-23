@@ -16,7 +16,7 @@
 .Op Fl i Ar interval
 .Op Fl p Ar port
 .Op Fl q Ar min_delay
-.Ar SERVER
+.Op SERVER
 .Sh DESCRIPTION
 .Nm
 is an NTP (RFC-1305) client for UNIX-alike computers.  Its functionality is a
@@ -51,9 +51,11 @@ Reported by server, see RFC-1305 (microseconds)
 Local clock frequency adjustment (Linux only, ppm*65536)
 .El
 .Sh OPTIONS
-Note, only the
+Note, if the
 .Ar SERVER
-argument is mandatory, all other are optional.
+argument is omitted,
+.Nm
+defaults to use pool.ntp.org.
 .Bl -tag -width Ds
 .It Fl c Ar count
 Stop after count time measurements (default 0 means go forever)
@@ -106,17 +108,16 @@ Display version and copyright information.
 Larry Doolittle maintains the original,
 .Lk http://doolittle.icarus.com/ntpclient/ upstream
 .Pp
-Joachim Nilsson synchronizes this fork periodically with upstream and
-maintains several small additions: syslog, IPv6 support etc. at
+Joachim Nilsson maintains this at
 .Lk https://github.com/troglobit/ntpclient GitHub
 .Sh COPYRIGHT
 The
 .Nm
 package is Copyright 1997-2015 Larry Doolittle, and Copyright 2010-2018
-Joachim Nilsson.  It may be freely copied and modified according to the
-terms of the GNU General Public License, version 2.  If you want to
-distribute ntpclient under other terms, contact Larry.  He might agree
-to other arrangements if you talk to him
+Joachim Nilsson.  It can be freely copied, modified and used according
+to the terms of the GNU General Public License, version 2.  If you want
+to distribute ntpclient under other terms, contact Larry.  He might
+agree to other arrangements if you talk to him
 .Em before
 you start violating the terms of the license.
 .Sh "SEE ALSO"

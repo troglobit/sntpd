@@ -794,7 +794,7 @@ static int usage(int code)
 #ifdef ENABLE_SYSLOG
 		" [-L]"
 #endif
-		" SERVER\n", prognm);
+		" [SERVER]\n", prognm);
 
 	fprintf(stderr, "Options:\n"
 		" -c count      Stop after count time measurements. Default: 0 (forever)\n"
@@ -824,7 +824,7 @@ static int usage(int code)
 		" -V            Display version and copyright information\n"
 		"\n"
 		"Arguments:\n"
-		"    SERVER     NTP server, mandatory, against which to sync system time\n"
+		"  SERVER       Optional NTP server to sync with, default: pool.ntp.org\n"
 		"\n"
 #ifdef PACKAGE_BUGREPORT
 		"Bug report address: " PACKAGE_BUGREPORT "\n"
@@ -989,8 +989,8 @@ int main(int argc, char *argv[])
 		ntpc.server = argv[optind];
 
 	if (ntpc.server == NULL) {
-		fprintf(stderr, "Missing NTP server argument.\n");
-		return usage(1);
+		ntpc.server = (char *)"pool.ntp.org";
+		logit(LOG_DEBUG, 0, "Using server %s", ntpc.server);
 	}
 
 	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count)

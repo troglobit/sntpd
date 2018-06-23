@@ -30,7 +30,7 @@ contribute fixes or new features, see the file [CONTRIBUTING.md][].
 Usage
 -----
 
-    Usage: ntpclient [options] SERVER
+    Usage: ntpclient [options] [SERVER]
      
      -c count      Stop after count time measurements. Default: 0 (forever)
      -d            Debug, or diagnostics mode  Possible to enable more at compile
@@ -53,7 +53,7 @@ Usage
                    lookup errors and program version to be displayed
      -V            Display version and copyright information
      
-     SERVER        NTP server against which to sync system time
+     SERVER        Optional NTP server to sync with, default: pool.ntp.org
 
 Mortal users can use this program for monitoring, but not clock setting
 (with the `-s` or `-l` switches).  The `-l` switch is designed to be
@@ -151,7 +151,7 @@ Adherence to [RFC 4330][] chapter 10, Best practices:
 1. Enforced, unless someone tinkers with the source code
 2. No backoff, but no retry either; this isn't TCP
 3. Not in scope for the upstream source
-4. Not in scope for the upstream source
+4. Defaults to pool.ntp.org, but is configurable
 5. Not in scope for the upstream source
 6. Supported
 7. Supported, connection to server reopened once a day
