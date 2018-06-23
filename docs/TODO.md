@@ -11,7 +11,6 @@ ToDo
 - Ask for pre-release comments from Walter Harms and others
 - Exit without warning if -f is the only option
 - Leap second, crib from openntpd?  worthless!  Look at wikipedia "unix time" article
-- IPv6?
 - Multiple (interleaved) servers  
   compile-time option for unlimited (malloc) or limited (no-malloc,  
   for hard-embedded use) number of servers
