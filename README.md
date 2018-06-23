@@ -30,6 +30,8 @@ contribute fixes or new features, see the file [CONTRIBUTING.md][].
 Usage
 -----
 
+All arguments are optional, ntpclient defaults to use `pool.ntp.org`.
+
     Usage: ntpclient [options] [SERVER]
      
      -c count      Stop after count time measurements. Default: 0 (forever)
@@ -173,15 +175,17 @@ many cases this is useful, but many users expect `/usr` or `/opt`.  To
 install into `/usr/sbin/ntpclient` and `/usr/bin/adjtimex`:
 
 ```sh
-    $ ./configure --prefix=/usr
-    $ make
-    $ sudo make install-strip
+    ./configure --prefix=/usr
+    make
+    sudo make install-strip
 ```
 
 The last command installs, there is also a possiblity to uninstall all
 files using:
 
-    $ sudo make uninstall
+```sh
+    sudo make uninstall
+```
 
 For changing the system clock frequency, only the Linux `adjtimex(2)`
 interface is implemented at this time.  Non-Linux systems can only use
@@ -190,9 +194,11 @@ of the POSIX 1003.1-2001 standard, the routines `clock_gettime()` and
 `clock_settime()`.  Also, see section [Bugs](#bugs), below.
 
 There are a few compile-time configurations possible.  E.g., for older
-kernels, before the tickless erea, pre 3.0=, you want to:
+Linux kernels, before the tickless erea (pre 3.0), you want to:
 
+```sh
     ./configure --disable-siocgstamp
+```
 
 However, first try without changing the default.  That gives you a full-
 featured `ntpclient` that uses modern POSIX time functions and works
@@ -218,10 +224,12 @@ To build from GIT you first need to clone the repository and run the
 `autogen.sh` script.  This requires `automake` and `autoconf` to be
 installed on your system.
 
+```sh
     git clone https://github.com/troglobit/ntpclient.git
     cd ntpclient/
     ./autogen.sh
     ./configure && make
+```
 
 Remember: GIT sources are a moving target and are not recommended for
 production systems, unless you know what you are doing!
