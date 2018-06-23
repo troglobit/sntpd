@@ -161,7 +161,7 @@ Adherence to [RFC 4330][] chapter 10, Best practices:
 Building
 --------
 
-ntpclient uses the [GNU configure & build system][[buildsystem]]:
+ntpclient uses the [GNU configure & build system][buildsystem]:
 
 ```sh
     ./configure
