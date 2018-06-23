@@ -6,7 +6,7 @@ AM_SILENT_RULES([yes])
 
 AC_CONFIG_SRCDIR([src/ntpclient.c])
 AC_CONFIG_HEADER([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile doc/Makefile man/Makefile ntpclient.service])
+AC_CONFIG_FILES([Makefile src/Makefile docs/Makefile man/Makefile ntpclient.service])
 
 # Define necessary build flags
 AC_GNU_SOURCE
