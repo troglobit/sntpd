@@ -19,11 +19,6 @@ issue or pull request with this project:
 
 3. Coding Style
 
-   Lines are allowed to be longer than 72 characters these days, there
-   is no enforced max. length. 
-   
-> **Tip:** Always submit code that follows the style of surrounding code!
-
    The coding style itself is strictly Linux [KNF][], like GIT it is
    becoming a de facto standard for C programming
 
@@ -57,8 +52,8 @@ issue or pull request with this project:
 Example
 -------
 
-Example commit message from the [Pro Git][gitbook] online book, notice
-how `git commit -s` is used to automatically add a `Signed-off-by`:
+Example commit message from the [Pro Git][gitbook] online book.  Tip,
+use `git commit -s` to automatically add a `Signed-off-by`:
 
     Capitalized, short (50 chars or less) summary
     
