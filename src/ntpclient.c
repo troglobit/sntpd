@@ -497,6 +497,9 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 static void setup_receive(int usd, uint16_t port)
 {
 	struct sockaddr_in6 sin6;
+	struct sockaddr_in sin;
+	struct sockaddr *sa;
+	socklen_t len;
 	int opt = 0;
 
 	/*
@@ -505,16 +508,31 @@ static void setup_receive(int usd, uint16_t port)
 	 * connections.  Must disable it before calling bind()
 	 */
 	if (setsockopt(usd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt))) {
-		logit(LOG_ERR, errno, "%s: failed setsockopt", __func__);
-		exit(1);
+		if (ENOPROTOOPT != errno) {
+			logit(LOG_ERR, errno, "Failed disabling IPv6-only socket option");
+			exit(1);
+		}
+
+		/* IPv6 not available, fall back to IPv4 like with socket() */
+		memset(&sin, 0, sizeof(sin));
+		sin.sin_family = AF_INET;
+		sin.sin_addr.s_addr = htonl(INADDR_ANY);
+		sin.sin_port = htons(port);
+
+		sa = (struct sockaddr *)&sin;
+		len = sizeof(sin);
+	} else {
+		memset(&sin6, 0, sizeof(struct sockaddr_in6));
+		sin6.sin6_family = AF_INET6;
+		sin6.sin6_port = htons(port);
+		sin6.sin6_addr = in6addr_any;
+
+		sa = (struct sockaddr *)&sin6;
+		len = sizeof(sin6);
 	}
 
-	memset(&sin6, 0, sizeof(struct sockaddr_in6));
-	sin6.sin6_family = AF_INET6;
-	sin6.sin6_port = htons(port);
-	sin6.sin6_addr = in6addr_any;
-	if (bind(usd, (struct sockaddr *)&sin6, sizeof(sin6)) == -1) {
-		logit(LOG_ERR, errno, "%s: Failed binding to UDP port %u", __func__, port);
+	if (bind(usd, sa, len) == -1) {
+		logit(LOG_ERR, errno, "Failed binding to UDP port %u", port);
 		exit(1);
 	}
 	/* listen(usd,3); this isn't TCP; thanks Alexander! */
@@ -571,8 +589,16 @@ static int setup_socket(struct ntp_control *ntpc)
 	int sd;
 
 	/* using IPV6 socket for IPV4 and IPV6 */
-	if ((sd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP)) == -1)
-		return -1;
+	sd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
+	if (sd == -1) {
+		if (EAFNOSUPPORT == errno) {
+			logit(LOG_WARNING, errno, "IPv6 disabled");
+			sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+		}
+
+		if (sd == -1)
+			return -1;
+	}
 
 	setup_receive(sd, ntpc->local_udp_port);
 	setup_transmit(sd, ntpc->server, NTP_PORT, ntpc);
