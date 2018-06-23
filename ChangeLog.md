@@ -4,6 +4,19 @@ Change Log
 All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
+[UNRELEASED][] - 2018-06-xx
+---------------------------
+
+Curated by [Joachim Nilsson][].
+
+### Changes
+- Cleanup and simplify `README`
+- Renmed `doc/` to `docs/`
+- Moved `TODO` and `CONTRIBUTING.md` to `docs/`
+
+### Fixes
+- Issue #2: Missing fallback to IPv4 on systems with IPv6 disbled
+
 
 [2017_246][] - 2017-09-03
 -------------------------
