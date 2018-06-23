@@ -1,7 +1,7 @@
 /* NTP client
  *
  * Copyright (C) 1997-2015  Larry Doolittle <larry@doolittle.boa.org>
- * Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>
+ * Copyright (C) 2010-2018  Joachim Nilsson <troglobit@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License (Version 2,
@@ -838,7 +838,7 @@ static int version(void)
 {
 	fprintf(stderr, "Larry Doolittle's ntpclient v" PACKAGE_VERSION "\n\n");
 	fprintf(stderr, "Copyright (C) 1997-2015  Larry Doolittle <larry@doolittle.boa.org>\n"
-		"Copyright (C) 2010-2017  Joachim Nilsson <troglobit@gmail.com>\n\n");
+		"Copyright (C) 2010-2018  Joachim Nilsson <troglobit@gmail.com>\n\n");
 	fprintf(stderr, "License GPLv2: GNU GPL version 2 <http://gnu.org/licenses/gpl2.html>\n"
 		"This is free software: you are free to change and redistribute it.\n"
 		"There is NO WARRANTY, to the extent permitted by law.\n");
