@@ -251,7 +251,7 @@ well as a few other small things.
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
 [Travis]:          https://travis-ci.org/troglobit/ntpclient
 [Travis Status]:   https://travis-ci.org/troglobit/ntpclient.png?branch=master
-[CONTRIBUTING.md]: CONTRIBUTING.md
+[CONTRIBUTING.md]: docs/CONTRIBUTING.md
 [issue tracker]:   https://github.com/troglobit/ntpclient/issues
 [HowTo]:           https://github.com/troglobit/ntpclient/doc/HowTo.md
 [Joachim Nilsson]: http://troglobit.com
