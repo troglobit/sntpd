@@ -10,6 +10,9 @@ Changes to Larry's upstream version are interleaved.
 Curated by [Joachim Nilsson][].
 
 ### Changes
+- NTP server argument is now optional, default: `pool.ntp.org`
+- Restore `.tar.gz` archives for `make dist` and release
+- Make `.deb` file part of release
 - Cleanup and simplify `README`
 - Renmed `doc/` to `docs/`
 - Moved `TODO` and `CONTRIBUTING.md` to `docs/`
