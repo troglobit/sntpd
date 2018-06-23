@@ -154,7 +154,7 @@ Adherence to [RFC 4330][] chapter 10, Best practices:
 4. Not in scope for the upstream source
 5. Not in scope for the upstream source
 6. Supported
-7. Not supported
+7. Supported, connection to server reopened once a day
 8. Not supported (scary opportunity to DOS the _client_)
 
 
