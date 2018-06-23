@@ -11,7 +11,8 @@ endif
 MD5 = md5sum
 md5-dist:
 	@for file in $(DIST_ARCHIVES); do	\
-		$(MD5) $$file > $$file.md5;	\
+		$(MD5) $$file > ../$$file.md5;	\
+		mv $$file ../;			\
 	done
 
 ## Check if tagged in git
@@ -37,11 +38,11 @@ package build-deb:
 	dpkg-buildpackage -uc -us -B
 
 ## Target to run when building a release
-release: dist release-hook md5-dist
+release: dist release-hook md5-dist package
 	@echo
 	@echo "Resulting release files:"
 	@echo "================================================================="
 	@for file in $(DIST_ARCHIVES); do						\
 		printf "$$file    \tDistribution tarball\n";				\
-		printf "$$file.md5\t"; cat $$file.md5 | cut -f1 -d' ';			\
+		printf "$$file.md5\t"; cat ../$$file.md5 | cut -f1 -d' ';		\
 	done
