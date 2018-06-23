@@ -1,7 +1,7 @@
 # Larry's versioning scheme: YYYY_DOY, i.e. `date +"%Y_%j"`
 AC_PREREQ(2.61)
-AC_INIT(ntpclient, 2017_246, https://github.com/troglobit/ntpclient/issues,, https://github.com/troglobit/ntpclient)
-AM_INIT_AUTOMAKE([1.11 foreign no-dist-gzip dist-xz])
+AC_INIT(ntpclient, 2018_DEV, https://github.com/troglobit/ntpclient/issues,, https://github.com/troglobit/ntpclient)
+AM_INIT_AUTOMAKE([1.11 foreign dist-xz])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_SRCDIR([src/ntpclient.c])
