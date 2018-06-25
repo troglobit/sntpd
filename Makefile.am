@@ -38,7 +38,7 @@ package build-deb:
 	dpkg-buildpackage -uc -us -B
 
 ## Target to run when building a release
-release: dist release-hook md5-dist package
+release: distcheck release-hook md5-dist package
 	@echo
 	@echo "Resulting release files:"
 	@echo "================================================================="
