@@ -494,26 +494,15 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	return 1;
 }
 
-static void setup_receive(int usd, uint16_t port)
+static void setup_receive(int usd, sa_family_t sin_family, uint16_t port)
 {
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
 	struct sockaddr *sa;
 	socklen_t len;
-	int opt = 0;
 
-	/*
-	 * Setting this means the socket only accepts IPv6 connections
-	 * unset it accepts both IPv6 and IPv4 (mapped address)
-	 * connections.  Must disable it before calling bind()
-	 */
-	if (setsockopt(usd, IPPROTO_IPV6, IPV6_V6ONLY, &opt, sizeof(opt))) {
-		if (ENOPROTOOPT != errno) {
-			logit(LOG_ERR, errno, "Failed disabling IPv6-only socket option");
-			exit(1);
-		}
-
-		/* IPv6 not available, fall back to IPv4 like with socket() */
+	if (sin_family == AF_INET) {
+		/* IPV4 */
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
 		sin.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -522,6 +511,7 @@ static void setup_receive(int usd, uint16_t port)
 		sa = (struct sockaddr *)&sin;
 		len = sizeof(sin);
 	} else {
+		/* IPV6 */
 		memset(&sin6, 0, sizeof(struct sockaddr_in6));
 		sin6.sin6_family = AF_INET6;
 		sin6.sin6_port = htons(port);
@@ -538,33 +528,19 @@ static void setup_receive(int usd, uint16_t port)
 	/* listen(usd,3); this isn't TCP; thanks Alexander! */
 }
 
-static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_control *ntpc)
+static void setup_transmit(int usd, struct sockaddr_storage *ssp , uint16_t port, struct ntp_control *ntpc)
 {
-	struct sockaddr_storage ss;
 	struct sockaddr_in6 *ipv6;
 	struct sockaddr_in *ipv4;
 	socklen_t len = 0;
 
-	while (getaddrbyname(host, &ss)) {
-		if (EINVAL != errno && ntpc->live) {
-			/* Wait here a while, networking is probably not up yet. */
-			sleep(1);
-			continue;
-		}
-
-		if (verbose)
-			logit(LOG_ERR, 0, "Unable lookup %s", host);
-
-		exit(1);
-	}
-
 	/* Prefer IPv4 over IPv6, for now */
-	if (ss.ss_family == AF_INET) {
-		ipv4 = (struct sockaddr_in *)(&ss);
+	if (ssp->ss_family == AF_INET) {
+		ipv4 = (struct sockaddr_in *)ssp;
 		ipv4->sin_port = htons(port);
 		len = sizeof(struct sockaddr_in);
-	} else if (ss.ss_family == AF_INET6) {
-		ipv6 = (struct sockaddr_in6 *)(&ss);
+	} else if (ssp->ss_family == AF_INET6) {
+		ipv6 = (struct sockaddr_in6 *)ssp;
 		ipv6->sin6_port = htons(port);
 		len = sizeof(struct sockaddr_in6);
 	} else {
@@ -572,7 +548,7 @@ static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_contro
 		exit(1);
 	}
 
-	while (connect(usd, (struct sockaddr *)&ss, len) == -1) {
+	while (connect(usd, (struct sockaddr *)ssp, len) == -1) {
 		if (ntpc->live) {
 			/* Wait here a while, networking is probably not up yet. */
 			sleep(1);
@@ -587,21 +563,35 @@ static void setup_transmit(int usd, char *host, uint16_t port, struct ntp_contro
 static int setup_socket(struct ntp_control *ntpc)
 {
 	int sd;
+	struct sockaddr_storage ss;
 
-	/* using IPV6 socket for IPV4 and IPV6 */
-	sd = socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP);
-	if (sd == -1) {
-		if (EAFNOSUPPORT == errno) {
-			logit(LOG_WARNING, errno, "IPv6 disabled");
-			sd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	while (getaddrbyname(ntpc->server, &ss)) {
+		if (EINVAL != errno && ntpc->live) {
+			/* Wait here a while, networking is probably not up yet. */
+			sleep(1);
+			continue;
 		}
 
-		if (sd == -1)
-			return -1;
+		if (verbose)
+			logit(LOG_ERR, 0, "Unable lookup %s", ntpc->server);
+
+		exit(1);
 	}
 
-	setup_receive(sd, ntpc->local_udp_port);
-	setup_transmit(sd, ntpc->server, NTP_PORT, ntpc);
+	/* open socket based on the server address family */
+	if (ss.ss_family == AF_INET || ss.ss_family == AF_INET6) {
+		sd = socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP);
+	} else {
+		logit(LOG_ERR, 0, "%s: Unsupported address family", __func__);
+		exit(1);
+	}
+
+	if (sd == -1) {
+	    return -1;
+	}
+
+	setup_receive(sd, ss.ss_family, ntpc->local_udp_port);
+	setup_transmit(sd, &ss, NTP_PORT, ntpc);
 
 	/*
 	 * Every day: reopen socket and perform a new DNS lookup.
