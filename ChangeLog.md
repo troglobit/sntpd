@@ -4,6 +4,18 @@ Change Log
 All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
+
+[UNRELEASED][]
+--------------
+
+### Changes
+- Add HOWTO.md to distribution and install into docs
+
+### Fixes
+- Issue #3: Open network socket using the address family returned by the
+  hostname, or address, lookup.  Fix by Laura Fang
+
+
 [2018_176][] - 2018-06-25
 -------------------------
 

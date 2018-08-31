@@ -1,7 +1,7 @@
 DISTCHECK_CONFIGURE_FLAGS = --with-systemd=$$dc_install_base/$(systemd)
 SUBDIRS         = src docs man
-doc_DATA        = README.md COPYING ChangeLog.md
-EXTRA_DIST      = README.md ChangeLog.md
+doc_DATA        = README.md docs/HOWTO.md ChangeLog.md COPYING
+EXTRA_DIST      = README.md docs/HOWTO.md ChangeLog.md
 
 if SYSTEMD
 systemd_DATA     = ntpclient.service
