@@ -1,6 +1,6 @@
 # Use `make verison` to get Larry's version number (YYY_DDD) for today
 AC_PREREQ(2.61)
-AC_INIT(ntpclient, 2018_176, https://github.com/troglobit/ntpclient/issues,, https://github.com/troglobit/ntpclient)
+AC_INIT(ntpclient, 2018_244, https://github.com/troglobit/ntpclient/issues,, https://github.com/troglobit/ntpclient)
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz])
 AM_SILENT_RULES([yes])
 

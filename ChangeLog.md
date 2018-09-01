@@ -5,8 +5,8 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
-[UNRELEASED][]
---------------
+[2018_244][] - 2018-09-01
+-------------------------
 
 ### Changes
 - Add HOWTO.md to distribution and install into docs
@@ -209,7 +209,8 @@ Curated by [Larry Doolittle][].
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
-[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2018_176...HEAD
+[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2018_244...HEAD
+[2018_244]:   https://github.com/troglobit/ntpclient/compare/2018_176...2018_244
 [2018_176]:   https://github.com/troglobit/ntpclient/compare/2017_246...2018_176
 [2017_246]:   https://github.com/troglobit/ntpclient/compare/2017_217...2017_246
 [2017_217]:   https://github.com/troglobit/ntpclient/compare/2010_365...2017_217

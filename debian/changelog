@@ -1,3 +1,9 @@
+ntpclient (2018.244) unstable; urgency=medium
+
+  * New upstream release, 2018_244
+
+ -- Joachim Nilsson <troglobit@gmail.com>  Sat, 01 Sep 2018 16:22:15 +0200
+
 ntpclient (2018.176) unstable; urgency=medium
 
   * New upstream release, 2018_176
