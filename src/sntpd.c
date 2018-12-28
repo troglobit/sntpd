@@ -977,7 +977,7 @@ static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage:\n"
-		"  %s [-dh" LOG_OPTION "n" REPLAY_OPTION "tvV] [-f HZ] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
+		"  %s [-dh" LOG_OPTION "n" REPLAY_OPTION "tvV] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
 		"\n"
 		"Options:\n"
 		"  -d       Debug, or diagnostics mode.  Possible to enable more at compile\n"
