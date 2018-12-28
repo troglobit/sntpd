@@ -951,8 +951,10 @@ static int ntpclient(int argc, char *argv[])
 			break;
 
 		case '?':
-		default:
 			return ntpclient_usage(0);
+
+		default:
+			return ntpclient_usage(1);
 		}
 	}
 
