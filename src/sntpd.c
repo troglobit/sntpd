@@ -457,15 +457,21 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 		}
 	}
 
-	/* Not the ideal order for printing, but we want to be sure
+	/*
+	 * Not the ideal order for printing, but we want to be sure
 	 * to do all the time-sensitive thinking (and time setting)
 	 * before we start the output, especially fflush() (which
 	 * could be slow).  Of course, if debug is turned on, speed
-	 * has gone down the drain anyway. */
+	 * has gone down the drain anyway.
+	 */
 	if (ntpc->live) {
 		int new_freq;
 
-		new_freq = contemplate_data(arrival->coarse, (skew1 - skew2) / 2, el_time + sec2u(disp), freq);
+		new_freq = contemplate_data(arrival->coarse,
+					    (skew1 - skew2) / 2,
+					    el_time + sec2u(disp),
+					    freq);
+
 		if (!debug && new_freq != freq)
 			set_freq(new_freq);
 	}
