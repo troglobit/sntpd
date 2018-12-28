@@ -849,25 +849,26 @@ static void run(struct ntp_control *ntpc)
 static int ntpclient_usage(int code)
 {
 	fprintf(stderr,
-		"Usage: ntpclient [-c count] [-d] [-f frequency] [-g goodness] -h hostname\n"
-		"                 [-i interval] [-l] [-p port] [-q min_delay] [-r] [-s] [-t]\n"
+		"Usage:\n"
+		"  ntpclient [-c count] [-d] [-f frequency] [-g goodness] -h hostname\n"
+		"            [-i interval] [-l] [-p port] [-q min_delay] [-r] [-s] [-t]\n"
 		"\n"
 		"Options:\n"
-		" -c count      stop after count time measurements (default 0 means go forever)\n"
-		" -d            print diagnostics (feature can be disabled at compile time)\n"
-		" -f frequency  Initialize frequency offset.  Linux only, requires root\n"
-		" -g goodness   causes ntpclient to stop after getting a result more accurate\n"
-		"               than goodness (microseconds, default 0 means go forever)\n"
-		" -h hostname   (mandatory) NTP server, against which to measure system time\n"
-		" -i interval   check time every interval seconds (default 600)\n"
-		" -l            attempt to lock local clock to server using adjtimex(2)\n"
-		" -p port       local NTP client UDP port (default 0 means \"any available\")\n"
-		" -q min_delay  minimum packet delay for transaction (default 800 microseconds)\n"
+		"  -c count      stop after count time measurements (default 0 means go forever)\n"
+		"  -d            print diagnostics (feature can be disabled at compile time)\n"
+		"  -f frequency  Initialize frequency offset.  Linux only, requires root\n"
+		"  -g goodness   causes ntpclient to stop after getting a result more accurate\n"
+		"                than goodness (microseconds, default 0 means go forever)\n"
+		"  -h hostname   (mandatory) NTP server, against which to measure system time\n"
+		"  -i interval   check time every interval seconds (default 600)\n"
+		"  -l            attempt to lock local clock to server using adjtimex(2)\n"
+		"  -p port       local NTP client UDP port (default 0 means \"any available\")\n"
+		"  -q min_delay  minimum packet delay for transaction (default 800 microseconds)\n"
 #ifdef ENABLE_REPLAY
-		" -r            replay analysis code based on stdin\n"
+		"  -r            replay analysis code based on stdin\n"
 #endif
-		" -s            simple clock set (implies -c 1)\n"
-		" -t            trust network and server, no RFC-4330 recommended cross-checks\n"
+		"  -s            simple clock set (implies -c 1)\n"
+		"  -t            trust network and server, no RFC-4330 recommended cross-checks\n"
 		"\n"
 #ifdef PACKAGE_BUGREPORT
 		"Bug report address: " PACKAGE_BUGREPORT "\n"
@@ -970,39 +971,39 @@ static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage:\n"
-		"  %s [-dhl" LOG_OPTION "n" REPLAY_OPTION "stvV] [-c NUM] [-f HZ] [-g MSEC] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n", prognm);
-
-	fprintf(stderr, "Options:\n"
-		" -c NUM   Stop after NUM count measurements.  Default: 0 (forever)\n"
-		" -d       Debug, or diagnostics mode.  Possible to enable more at compile\n"
-		" -f HZ    Initialize frequency offset.  Linux only, requires root\n"
-		" -g MSEC  Stop after getting a result more accurate than goodness msec,\n"
-		"          microseconds. Default: 0 (forever)\n"
-		" -h       Show summary of command line options and exit\n"
-		" -i SEC   Check time every interval seconds.  Default: 600\n"
-		" -l       Attempt to lock local clock to server using adjtimex(2)\n"
+		"  %s [OPTS] [-c NUM] [-f HZ] [-g MSEC] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
+		"\n"
+		"Options:\n"
+		"  -c NUM   Stop after NUM count measurements.  Default: 0 (forever)\n"
+		"  -d       Debug, or diagnostics mode.  Possible to enable more at compile\n"
+		"  -f HZ    Initialize frequency offset.  Linux only, requires root\n"
+		"  -g MSEC  Stop after getting a result more accurate than goodness msec,\n"
+		"           microseconds. Default: 0 (forever)\n"
+		"  -h       Show summary of command line options and exit\n"
+		"  -i SEC   Check time every interval seconds.  Default: 600\n"
+		"  -l       Attempt to lock local clock to server using adjtimex(2)\n"
 #ifdef ENABLE_SYSLOG
-		" -L       Use syslog instead of stdout for log messages, default unless -n\n"
+		"  -L       Use syslog instead of stdout for log messages, default unless -n\n"
 #endif
-		" -n       Don't fork.  Prevents %s from daemonizing by default\n"
-		"          Use -L with this to use syslog as well, for Finit + systemd\n"
-		" -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
-		" -q MSEC  Minimum packet delay for transaction, default: 800 msec\n"
+		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
+		"           Use -L with this to use syslog as well, for Finit + systemd\n"
+		"  -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
+		"  -q MSEC  Minimum packet delay for transaction, default: 800 msec\n"
 #ifdef ENABLE_REPLAY
-		" -r       Replay analysis code based on stdin\n"
+		"  -r       Replay analysis code based on stdin\n"
 #endif
-		" -s       Simple clock set, implies -c 1 unless -l is also set\n"
-		" -t       Trust network and server, no RFC-4330 recommended validation\n"
-		" -v       Verbose, show time sync events, hostname lookup errors, etc.\n"
-		" -V       Show program version\n"
+		"  -s       Simple clock set, implies -c 1 unless -l is also set\n"
+		"  -t       Trust network and server, no RFC-4330 recommended validation\n"
+		"  -v       Verbose, show time sync events, hostname lookup errors, etc.\n"
+		"  -V       Show program version\n"
 		"\n"
 		"Arguments:\n"
-		"  SERVER  Optional NTP server to sync with, default: pool.ntp.org\n"
+		"  SERVER   Optional NTP server to sync with, default: pool.ntp.org\n"
 		"\n"
 #ifdef PACKAGE_BUGREPORT
 		"Bug report address: " PACKAGE_BUGREPORT "\n"
 #endif
-		"Project homepage: " PACKAGE_URL "\n", prognm);
+		"Project homepage: " PACKAGE_URL "\n", prognm, prognm);
 
 	return code;
 }
