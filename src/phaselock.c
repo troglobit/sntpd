@@ -23,7 +23,7 @@
  */
 
 #include <stdio.h>
-#include "ntpclient.h"
+#include "sntpd.h"
 
 double min_delay = 800.0;  /* global, user-changeable, units are microseconds */
 

@@ -11,13 +11,13 @@ AM_CFLAGS          += -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes
 AM_CPPFLAGS         = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=199309 -D_BSD_SOURCE
 
 bin_PROGRAMS        = adjtimex
-sbin_PROGRAMS       = ntpclient
-
 adjtimex_SOURCES    = adjtimex.c
 
 if MINI
+sbin_PROGRAMS       = ntpclient
 ntpclient_SOURCES   = mini-ntpclient.c
 else
-ntpclient_SOURCES   = ntpclient.c ntpclient.h phaselock.c
-ntpclient_LIBS      = -lrt
+sbin_PROGRAMS       = sntpd
+sntpd_SOURCES       = sntpd.c sntpd.h phaselock.c
+sntpd_LIBS          = -lrt
 endif

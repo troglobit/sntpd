@@ -1,12 +1,12 @@
 # Use `make verison` to get Larry's version number (YYY_DDD) for today
 AC_PREREQ(2.61)
-AC_INIT(ntpclient, 2018_244, https://github.com/troglobit/ntpclient/issues,, https://github.com/troglobit/ntpclient)
+AC_INIT(sntpd, 2018_244, https://github.com/troglobit/sntpd/issues,, https://github.com/troglobit/sntpd)
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz])
 AM_SILENT_RULES([yes])
 
-AC_CONFIG_SRCDIR([src/ntpclient.c])
+AC_CONFIG_SRCDIR([src/sntpd.c])
 AC_CONFIG_HEADER([config.h])
-AC_CONFIG_FILES([Makefile src/Makefile docs/Makefile man/Makefile ntpclient.service])
+AC_CONFIG_FILES([Makefile src/Makefile docs/Makefile man/Makefile sntpd.service])
 
 # Define necessary build flags
 AC_GNU_SOURCE

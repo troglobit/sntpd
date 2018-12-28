@@ -4,7 +4,7 @@ doc_DATA        = README.md docs/HOWTO.md ChangeLog.md COPYING
 EXTRA_DIST      = README.md docs/HOWTO.md ChangeLog.md
 
 if SYSTEMD
-systemd_DATA     = ntpclient.service
+systemd_DATA     = sntpd.service
 endif
 
 ## Larry's versioning scheme: YYYY_DOY, i.e. `date +"%Y_%j"`

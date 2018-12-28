@@ -46,7 +46,7 @@
 #include <sys/time.h>
 #endif
 
-#include "ntpclient.h"
+#include "sntpd.h"
 
 /* XXX fixme - non-automatic build configuration */
 #ifdef __linux__
