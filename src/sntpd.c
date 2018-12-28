@@ -67,12 +67,6 @@ char __hstrerror_buf[10];
 #define MIN_INTERVAL 15
 #endif
 
-#ifdef ENABLE_REPLAY
-#define REPLAY_OPTION   "r"
-#else
-#define REPLAY_OPTION
-#endif
-
 #define JAN_1970        0x83aa7e80	/* 2208988800 1970 - 1900 in seconds */
 #define NTP_PORT (123)
 
@@ -103,7 +97,7 @@ struct ntptime {
 
 struct ntp_control {
 	uint32_t time_of_send[2];
-	int usermode;
+	int usermode;		/* 0: sntpd, 1: ntpclient */
 	int live;
 	int set_clock;		/* non-zero presumably needs root privs */
 	int probe_count;
@@ -118,6 +112,8 @@ struct ntp_control {
 
 int debug = 0;
 int verbose = 0;		/* Verbose flag, produce useful output to log */
+int initial_freq = 0;		/* initial freq value to use */
+int daemonize = 0;
 int log_enable = 0;
 int log_level = LOG_NOTICE;
 const char *prognm = PACKAGE_NAME;
@@ -474,8 +470,8 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 			set_freq(new_freq);
 	}
 
-	/* Display by default for regular users, root users need to supply -d. */
-	if (debug || ntpc->usermode) {
+	/* Display by default for ntpclient users, sntpd users need to supply -v */
+	if (verbose || ntpc->usermode) {
 		logit(LOG_NOTICE, 0, "%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
 		      arrival->coarse / 86400, arrival->coarse % 86400,
 		      arrival->fine / 4294967, el_time, st_time,
@@ -773,113 +769,131 @@ static int do_replay(void)
 }
 #endif
 
-static int usage(int code)
+static void run(struct ntp_control *ntpc)
+{
+	int usd;
+
+	if (initial_freq) {
+#ifdef ENABLE_DEBUG
+		logit(LOG_DEBUG, 0, "Initial frequency %d", initial_freq);
+#endif
+		set_freq(initial_freq);
+	}
+
+	if (ntpc->set_clock && !ntpc->live && !ntpc->goodness && !ntpc->probe_count)
+		ntpc->probe_count = 1;
+
+	/* If user gives a probe count, then assume non-live run and verbose reporting. */
+	if (ntpc->probe_count > 0) {
+		ntpc->live = 0;
+		verbose = 1;
+	}
+
+	/* respect only applicable MUST of RFC-4330 */
+	if (ntpc->probe_count != 1 && ntpc->cycle_time < MIN_INTERVAL)
+		ntpc->cycle_time = MIN_INTERVAL;
+
+#ifdef ENABLE_DEBUG
+	if (debug) {
+		logit(LOG_DEBUG, 0, "Configuration:");
+		logit(LOG_DEBUG, 0, "  -c probe_count %d", ntpc->probe_count);
+		logit(LOG_DEBUG, 0, "  -d (debug)     %d", debug);
+		logit(LOG_DEBUG, 0, "  -g goodness    %d", ntpc->goodness);
+		logit(LOG_DEBUG, 0, "  -h hostname    %s", ntpc->server);
+		logit(LOG_DEBUG, 0, "  -i interval    %d", ntpc->cycle_time);
+		logit(LOG_DEBUG, 0, "  -l live        %d", ntpc->live);
+		logit(LOG_DEBUG, 0, "  -p local_port  %d", ntpc->local_udp_port);
+		logit(LOG_DEBUG, 0, "  -q min_delay   %f", min_delay);
+		logit(LOG_DEBUG, 0, "  -s set_clock   %d", ntpc->set_clock);
+		logit(LOG_DEBUG, 0, "  -t cross_check %d", ntpc->cross_check);
+#ifdef ENABLE_SYSLOG
+		logit(LOG_DEBUG, 0, "  -L log_enable  %d", log_enable);
+#endif
+	}
+#endif /* ENABLE_DEBUG */
+
+	/* Startup sequence */
+	if (daemonize) {
+		if (-1 == daemon(0, 0)) {
+			logit(LOG_ERR, errno, "Failed daemonizing, aborting");
+			exit(1);
+		}
+
+		/*
+		 * Force output to syslog, we have no other way of
+		 * communicating with the user after being daemonized
+		 */
+		log_enable = 1;
+		if (verbose)
+			logit(LOG_NOTICE, 0, "Starting ntpclient v" PACKAGE_VERSION);
+	}
+
+	usd = setup_socket(ntpc);
+	if (usd == -1) {
+		logit(LOG_ERR, errno, "Failed creating UDP socket() to SNTP server");
+		exit(1);
+	}
+
+	setup_signals();
+
+	if (daemonize && verbose)
+		logit(LOG_NOTICE, 0, "Using time sync server: %s", ntpc->server);
+
+	primary_loop(usd, ntpc);
+
+	if (daemonize && verbose)
+		logit(LOG_NOTICE, 0, "Stopping ntpclient v" PACKAGE_VERSION);
+	close(usd);
+}
+
+static int ntpclient_usage(int code)
 {
 	fprintf(stderr,
-		"Usage: %s [-dlnstv] [-c count] [-f frequency] [-g goodness]\n"
-		"                 [-i interval] [-p port] [-q min_delay]"
-#ifdef ENABLE_REPLAY
-		" [-r]"
-#endif
-#ifdef ENABLE_SYSLOG
-		" [-L]"
-#endif
-		" [SERVER]\n", prognm);
-
-	fprintf(stderr, "Options:\n"
-		" -c count      Stop after count time measurements. Default: 0 (forever)\n"
-		" -d            Debug, or diagnostics mode  Possible to enable more at compile\n"
-		" -f frequency  Initialize frequency offset.  Linux only, requires root\n"
-		" -g goodness   Stop after getting a result more accurate than goodness msec,\n"
-		"               microseconds. Default: 0 (forever)\n"
-		" -h            Show summary of command line options and exit\n"
-		" -i interval   Check time every interval seconds.  Default: 600\n"
-		" -l            Attempt to lock local clock to server using adjtimex(2)\n"
-#ifdef ENABLE_SYSLOG
-		" -L            Use syslog instead of stdout for log messages, enabled\n"
-		"               by default when started as root\n"
-#endif
-		" -n            Don't fork.  Prevents %s from daemonizing by default\n"
-		"               Only when running as root, does nothing for regular users\n"
-		"               Use -L with this to use syslog as well, for Finit + systemd\n"
-		" -p port       NTP client UDP port.  Default: 0 (\"any available\")\n"
-		" -q min_delay  Minimum packet delay for transaction (default 800 microseconds)\n"
-#ifdef ENABLE_REPLAY
-		" -r            Replay analysis code based on stdin\n"
-#endif
-		" -s            Simple clock set, implies -c 1 unless -l is also set\n"
-		" -t            Trust network and server, no RFC-4330 recommended validation\n"
-		" -v            Be verbose.  This option will cause time sync events, hostname\n"
-		"               lookup errors and program version to be displayed\n"
-		" -V            Display version and copyright information\n"
+		"Usage: ntpclient [-c count] [-d] [-f frequency] [-g goodness] -h hostname\n"
+		"                 [-i interval] [-l] [-p port] [-q min_delay] [-r] [-s] [-t]\n"
 		"\n"
-		"Arguments:\n"
-		"  SERVER       Optional NTP server to sync with, default: pool.ntp.org\n"
+		"Options:\n"
+		" -c count      stop after count time measurements (default 0 means go forever)\n"
+		" -d            print diagnostics (feature can be disabled at compile time)\n"
+		" -f frequency  Initialize frequency offset.  Linux only, requires root\n"
+		" -g goodness   causes ntpclient to stop after getting a result more accurate\n"
+		"               than goodness (microseconds, default 0 means go forever)\n"
+		" -h hostname   (mandatory) NTP server, against which to measure system time\n"
+		" -i interval   check time every interval seconds (default 600)\n"
+		" -l            attempt to lock local clock to server using adjtimex(2)\n"
+		" -p port       local NTP client UDP port (default 0 means \"any available\")\n"
+		" -q min_delay  minimum packet delay for transaction (default 800 microseconds)\n"
+#ifdef ENABLE_REPLAY
+		" -r            replay analysis code based on stdin\n"
+#endif
+		" -s            simple clock set (implies -c 1)\n"
+		" -t            trust network and server, no RFC-4330 recommended cross-checks\n"
 		"\n"
 #ifdef PACKAGE_BUGREPORT
 		"Bug report address: " PACKAGE_BUGREPORT "\n"
 #endif
-		"Project homepage: " PACKAGE_URL "\n", prognm);
+		"Project homepage: " PACKAGE_URL "\n");
 
 	return code;
 }
 
-static int version(void)
+/* Backwards compat. mode */
+static int ntpclient(int argc, char *argv[])
 {
-	fprintf(stderr, "Larry Doolittle's ntpclient v" PACKAGE_VERSION "\n\n");
-	fprintf(stderr, "Copyright (C) 1997-2015  Larry Doolittle <larry@doolittle.boa.org>\n"
-		"Copyright (C) 2010-2018  Joachim Nilsson <troglobit@gmail.com>\n\n");
-	fprintf(stderr, "License GPLv2: GNU GPL version 2 <http://gnu.org/licenses/gpl2.html>\n"
-		"This is free software: you are free to change and redistribute it.\n"
-		"There is NO WARRANTY, to the extent permitted by law.\n");
-
-	return 1;
-}
-
-static const char *progname(const char *arg0)
-{
-	const char *nm;
-
-	nm = strrchr(arg0, '/');
-	if (nm)
-		nm++;
-	else
-		nm = arg0;
-
-	return nm;
-}
-
-int main(int argc, char *argv[])
-{
-	int c, usd;		/* socket */
-
-	/* These parameters are settable from the command line
-	   the initializations here provide default behavior */
-	int daemonize = 0;
-	int initial_freq = 0;	/* initial freq value to use */
 	struct ntp_control ntpc;
+	int c;
 
-	/* Setup application defaults depending on root/user mode */
 	memset(&ntpc, 0, sizeof(ntpc));
 	ntpc.probe_count = 0;	/* default of 0 means loop forever */
 	ntpc.cycle_time  = 600;	/* seconds */
 	ntpc.goodness    = 0;
 	ntpc.set_clock   = 0;
-	if (geteuid() == 0) {
-		daemonize        = 1;
-		log_enable++;
-		ntpc.usermode    = 0;
-		ntpc.live        = 1;
-		ntpc.cross_check = 0;
-	} else {
-		ntpc.usermode    = 1;
-		ntpc.live        = 0;
-		ntpc.cross_check = 1;
-	}
+	ntpc.usermode    = 1;
+	ntpc.live        = 0;
+	ntpc.cross_check = 1;
 
-	prognm = progname(argv[0]);
 	while (1) {
-		char opts[] = "c:df:g:h::i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
+		char opts[] = "c:df:g:h:i:lp:q:" REPLAY_OPTION "st?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
@@ -904,11 +918,159 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'h':
-			if (!optarg)
-				return usage(0);
-
 			ntpc.server = optarg;
 			break;
+
+		case 'i':
+			ntpc.cycle_time = atoi(optarg);
+			break;
+
+		case 'l':
+			ntpc.live++;
+			break;
+
+		case 'p':
+			ntpc.local_udp_port = atoi(optarg);
+			break;
+
+		case 'q':
+			min_delay = atof(optarg);
+			break;
+
+#ifdef ENABLE_REPLAY
+		case 'r':
+			return do_replay();
+#endif
+
+		case 's':
+			ntpc.set_clock++;
+			break;
+
+		case 't':
+			ntpc.cross_check = 0;
+			break;
+
+		case '?':
+		default:
+			return ntpclient_usage(0);
+		}
+	}
+
+	if (!ntpc.server)
+		return ntpclient_usage(1);
+
+	run(&ntpc);
+
+	return 0;
+}
+
+static int usage(int code)
+{
+	fprintf(stderr,
+		"Usage:\n"
+		"  %s [-dl" LOG_OPTION "n" REPLAY_OPTION "stv] [-c NUM] [-f HZ] [-g MSEC] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n", prognm);
+
+	fprintf(stderr, "Options:\n"
+		" -c NUM   Stop after NUM count measurements.  Default: 0 (forever)\n"
+		" -d       Debug, or diagnostics mode.  Possible to enable more at compile\n"
+		" -f HZ    Initialize frequency offset.  Linux only, requires root\n"
+		" -g MSEC  Stop after getting a result more accurate than goodness msec,\n"
+		"          microseconds. Default: 0 (forever)\n"
+		" -h       Show summary of command line options and exit\n"
+		" -i SEC   Check time every interval seconds.  Default: 600\n"
+		" -l       Attempt to lock local clock to server using adjtimex(2)\n"
+#ifdef ENABLE_SYSLOG
+		" -L       Use syslog instead of stdout for log messages, default unless -n\n"
+#endif
+		" -n       Don't fork.  Prevents %s from daemonizing by default\n"
+		"          Use -L with this to use syslog as well, for Finit + systemd\n"
+		" -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
+		" -q MSEC  Minimum packet delay for transaction, default: 800 msec\n"
+#ifdef ENABLE_REPLAY
+		" -r       Replay analysis code based on stdin\n"
+#endif
+		" -s       Simple clock set, implies -c 1 unless -l is also set\n"
+		" -t       Trust network and server, no RFC-4330 recommended validation\n"
+		" -v       Verbose, show time sync events, hostname lookup errors, etc.\n"
+		" -V       Show program version\n"
+		"\n"
+		"Arguments:\n"
+		"  SERVER  Optional NTP server to sync with, default: pool.ntp.org\n"
+		"\n"
+#ifdef PACKAGE_BUGREPORT
+		"Bug report address: " PACKAGE_BUGREPORT "\n"
+#endif
+		"Project homepage: " PACKAGE_URL "\n", prognm);
+
+	return code;
+}
+
+static const char *progname(const char *arg0)
+{
+	const char *nm;
+
+	nm = strrchr(arg0, '/');
+	if (nm)
+		nm++;
+	else
+		nm = arg0;
+
+	return nm;
+}
+
+int main(int argc, char *argv[])
+{
+	struct ntp_control ntpc;
+	int c;
+
+	/* sntpd is a multicall binary, how are we called? */
+	prognm = progname(argv[0]);
+
+	/* Compat ntpclient */
+	if (!strcmp(prognm, "ntpclient"))
+		return ntpclient(argc, argv);
+
+	/* Default sntpd */
+	memset(&ntpc, 0, sizeof(ntpc));
+	ntpc.probe_count = 0;	/* default of 0 means loop forever */
+	ntpc.cycle_time  = 600;	/* seconds */
+	ntpc.goodness    = 0;
+	ntpc.set_clock   = 0;
+	ntpc.usermode    = 0;
+	ntpc.live        = 1;
+	ntpc.cross_check = 0;
+
+	/* Default to daemon mode for sntpd */
+	daemonize        = 1;
+	log_enable       = 1;
+
+	while (1) {
+		char opts[] = "c:df:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
+
+		c = getopt(argc, argv, opts);
+		if (c == EOF)
+			break;
+
+		switch (c) {
+		case 'c':
+			ntpc.probe_count = atoi(optarg);
+			break;
+
+		case 'd':
+			debug++;
+			log_level = LOG_DEBUG;
+			break;
+
+		case 'f':
+			initial_freq = atoi(optarg);
+			break;
+
+		case 'g':
+			ntpc.goodness = atoi(optarg);
+			break;
+
+		case 'h':
+			return usage(0);
 
 		case 'i':
 			ntpc.cycle_time = atoi(optarg);
@@ -955,7 +1117,8 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'V':
-			return version();
+			puts("v" PACKAGE_VERSION);
+			return 0;
 
 		case '?':
 		default:
@@ -964,16 +1127,11 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef ENABLE_SYSLOG
-	openlog(prognm, LOG_OPTS, LOG_FACILITY);
-	setlogmask(LOG_UPTO(log_level));
-#endif
-
-	if (initial_freq) {
-#ifdef ENABLE_DEBUG
-		logit(LOG_DEBUG, 0, "Initial frequency %d", initial_freq);
-#endif
-		set_freq(initial_freq);
+	if (log_enable > 0) {
+		openlog(prognm, LOG_OPTS, LOG_FACILITY);
+		setlogmask(LOG_UPTO(log_level));
 	}
+#endif
 
 	if (optind < argc && ntpc.server == NULL)
 		ntpc.server = argv[optind];
@@ -983,72 +1141,11 @@ int main(int argc, char *argv[])
 		logit(LOG_DEBUG, 0, "Using server %s", ntpc.server);
 	}
 
-	if (ntpc.set_clock && !ntpc.live && !ntpc.goodness && !ntpc.probe_count)
-		ntpc.probe_count = 1;
+	run(&ntpc);
 
-	/* If user gives a probe count, then assume non-live run and verbose reporting. */
-	if (ntpc.probe_count > 0) {
-		ntpc.live = 0;
-		verbose = 1;
-	}
-
-	/* respect only applicable MUST of RFC-4330 */
-	if (ntpc.probe_count != 1 && ntpc.cycle_time < MIN_INTERVAL)
-		ntpc.cycle_time = MIN_INTERVAL;
-
-#ifdef ENABLE_DEBUG
-	if (debug) {
-		logit(LOG_DEBUG, 0, "Configuration:");
-		logit(LOG_DEBUG, 0, "  -c probe_count %d", ntpc.probe_count);
-		logit(LOG_DEBUG, 0, "  -d (debug)     %d", debug);
-		logit(LOG_DEBUG, 0, "  -g goodness    %d", ntpc.goodness);
-		logit(LOG_DEBUG, 0, "  -h hostname    %s", ntpc.server);
-		logit(LOG_DEBUG, 0, "  -i interval    %d", ntpc.cycle_time);
-		logit(LOG_DEBUG, 0, "  -l live        %d", ntpc.live);
-		logit(LOG_DEBUG, 0, "  -p local_port  %d", ntpc.local_udp_port);
-		logit(LOG_DEBUG, 0, "  -q min_delay   %f", min_delay);
-		logit(LOG_DEBUG, 0, "  -s set_clock   %d", ntpc.set_clock);
-		logit(LOG_DEBUG, 0, "  -t cross_check %d", ntpc.cross_check);
 #ifdef ENABLE_SYSLOG
-		logit(LOG_DEBUG, 0, "  -L log_enable  %d", log_enable);
-#endif
-	}
-#endif /* ENABLE_DEBUG */
-
-	/* Startup sequence */
-	if (daemonize) {
-		if (-1 == daemon(0, 0)) {
-			logit(LOG_ERR, errno, "Failed daemonizing, aborting");
-			exit(1);
-		}
-
-		/*
-		 * Force output to syslog, we have no other way of
-		 * communicating with the user after being daemonized
-		 */
-		log_enable = 1;
-		if (verbose)
-			logit(LOG_NOTICE, 0, "Starting ntpclient v" PACKAGE_VERSION);
-	}
-
-	usd = setup_socket(&ntpc);
-	if (usd == -1) {
-		logit(LOG_ERR, errno, "Failed creating UDP socket() to SNTP server");
-		exit(1);
-	}
-
-	setup_signals();
-
-	if (daemonize && verbose)
-		logit(LOG_NOTICE, 0, "Using time sync server: %s", ntpc.server);
-
-	primary_loop(usd, &ntpc);
-
-	if (daemonize && verbose)
-		logit(LOG_NOTICE, 0, "Stopping ntpclient v" PACKAGE_VERSION);
-	close(usd);
-#ifdef ENABLE_SYSLOG
-	closelog();
+	if (log_enable > 0)
+		closelog();
 #endif
 	return 0;
 }
@@ -1114,7 +1211,6 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 
 /**
  * Local Variables:
- *  compile-command: "make ntpclient"
  *  indent-tabs-mode: t
  *  c-file-style: "linux"
  * End:

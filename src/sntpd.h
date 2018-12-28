@@ -21,6 +21,7 @@
 
 #include <config.h>
 #include <stdarg.h>		/* vsyslog(), vfprintf(), use -D_BSD_SOURCE */
+
 #ifdef ENABLE_SYSLOG
 # include <syslog.h>
 # include <sys/utsname.h>
@@ -29,12 +30,19 @@
 # define LOG_FACILITY    LOG_CRON
 # define LOG_OPTION      "L"
 #else
+# define LOG_OPTION      ""
 # define LOG_ERR         3
 # define LOG_WARNING     4
 # define LOG_NOTICE      5
 # define LOG_INFO        6
 # define LOG_DEBUG       7
 # define LOG_OPTION
+#endif
+
+#ifdef ENABLE_REPLAY
+# define REPLAY_OPTION   "r"
+#else
+# define REPLAY_OPTION   ""
 #endif
 
 extern int debug;
