@@ -968,7 +968,7 @@ static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage:\n"
-		"  %s [-dl" LOG_OPTION "n" REPLAY_OPTION "stv] [-c NUM] [-f HZ] [-g MSEC] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n", prognm);
+		"  %s [-dhl" LOG_OPTION "n" REPLAY_OPTION "stvV] [-c NUM] [-f HZ] [-g MSEC] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n", prognm);
 
 	fprintf(stderr, "Options:\n"
 		" -c NUM   Stop after NUM count measurements.  Default: 0 (forever)\n"
@@ -1045,7 +1045,7 @@ int main(int argc, char *argv[])
 	log_enable       = 1;
 
 	while (1) {
-		char opts[] = "c:df:g:h:i:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
+		char opts[] = "c:df:g:hi:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
