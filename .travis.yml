@@ -25,3 +25,4 @@ script:
   - size /tmp/bin/adjtimex /tmp/sbin/ntpclient
   - /tmp/bin/adjtimex -h
   - /tmp/sbin/ntpclient -h
+  - /tmp/sbin/sntpd -h
