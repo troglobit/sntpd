@@ -99,7 +99,7 @@ struct ntp_control {
 	uint32_t time_of_send[2];
 	int usermode;		/* 0: sntpd, 1: ntpclient */
 	int live;
-	int set_clock;		/* non-zero presumably needs root privs */
+	int set_clock;		/* non-zero presumably needs CAP_SYS_TIME or root */
 	int probe_count;
 	int cycle_time;
 	int goodness;
@@ -450,7 +450,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	}
 
 	/* XXX should I do this if debug flag is set? */
-	if (ntpc->set_clock) {	/* you'd better be root, or ntpclient will exit here! */
+	if (ntpc->set_clock) {	/* CAP_SYS_TIME or root required, or ntpclient will exit here! */
 		set_time(&xmttime);
 		if (verbose) {
 			logit(LOG_NOTICE, 0, "Time synchronized to server %s, stratum %d", ntpc->server, stratum);
@@ -862,7 +862,7 @@ static int ntpclient_usage(int code)
 		"Options:\n"
 		"  -c count      stop after count time measurements (default 0 means go forever)\n"
 		"  -d            print diagnostics (feature can be disabled at compile time)\n"
-		"  -f frequency  Initialize frequency offset.  Linux only, requires root\n"
+		"  -f frequency  Initialize frequency offset.  Linux only, requires CAP_SYS_TIME\n"
 		"  -g goodness   causes ntpclient to stop after getting a result more accurate\n"
 		"                than goodness (microseconds, default 0 means go forever)\n"
 		"  -h hostname   (mandatory) NTP server, against which to measure system time\n"
@@ -977,19 +977,14 @@ static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage:\n"
-		"  %s [OPTS] [-c NUM] [-f HZ] [-g MSEC] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
+		"  %s [-dh" LOG_OPTION "n" REPLAY_OPTION "tvV] [-f HZ] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
 		"\n"
 		"Options:\n"
-		"  -c NUM   Stop after NUM count measurements.  Default: 0 (forever)\n"
 		"  -d       Debug, or diagnostics mode.  Possible to enable more at compile\n"
-		"  -f HZ    Initialize frequency offset.  Linux only, requires root\n"
-		"  -g MSEC  Stop after getting a result more accurate than goodness msec,\n"
-		"           microseconds. Default: 0 (forever)\n"
 		"  -h       Show summary of command line options and exit\n"
 		"  -i SEC   Check time every interval seconds.  Default: 600\n"
-		"  -l       Attempt to lock local clock to server using adjtimex(2)\n"
 #ifdef ENABLE_SYSLOG
-		"  -L       Use syslog instead of stdout for log messages, default unless -n\n"
+		"  -l       Use syslog instead of stdout for log messages, default unless -n\n"
 #endif
 		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
 		"           Use -L with this to use syslog as well, for Finit + systemd\n"
@@ -998,7 +993,6 @@ static int usage(int code)
 #ifdef ENABLE_REPLAY
 		"  -r       Replay analysis code based on stdin\n"
 #endif
-		"  -s       Simple clock set, implies -c 1 unless -l is also set\n"
 		"  -t       Trust network and server, no RFC-4330 recommended validation\n"
 		"  -v       Verbose, show time sync events, hostname lookup errors, etc.\n"
 		"  -V       Show program version\n"
@@ -1054,28 +1048,16 @@ int main(int argc, char *argv[])
 	log_enable       = 1;
 
 	while (1) {
-		char opts[] = "c:df:g:hi:lnp:q:" REPLAY_OPTION "st" LOG_OPTION "vV?";
+		char opts[] = "dhi:" LOG_OPTION "np:q:" REPLAY_OPTION "tvV?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
 			break;
 
 		switch (c) {
-		case 'c':
-			ntpc.probe_count = atoi(optarg);
-			break;
-
 		case 'd':
 			debug++;
 			log_level = LOG_DEBUG;
-			break;
-
-		case 'f':
-			initial_freq = atoi(optarg);
-			break;
-
-		case 'g':
-			ntpc.goodness = atoi(optarg);
 			break;
 
 		case 'h':
@@ -1085,9 +1067,11 @@ int main(int argc, char *argv[])
 			ntpc.cycle_time = atoi(optarg);
 			break;
 
+#ifdef ENABLE_SYSLOG
 		case 'l':
-			ntpc.live++;
+			log_enable++;
 			break;
+#endif
 
 		case 'n':
 			daemonize = 0;
@@ -1107,19 +1091,9 @@ int main(int argc, char *argv[])
 			return do_replay();
 #endif
 
-		case 's':
-			ntpc.set_clock++;
-			break;
-
 		case 't':
 			ntpc.cross_check = 0;
 			break;
-
-#ifdef ENABLE_SYSLOG
-		case 'L':
-			log_enable++;
-			break;
-#endif
 
 		case 'v':
 			++verbose;

@@ -9,10 +9,7 @@
 .Nd Simple NTP daemon and client
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhlLnrstvV
-.Op Fl c Ar NUM
-.Op Fl f Ar HZ
-.Op Fl g Ar MSEC
+.Op Fl dhlnrtvV
 .Op Fl i Ar SEC
 .Op Fl p Ar PORT
 .Op Fl q Ar MSEC
@@ -79,32 +76,21 @@ difference to
 .Nm ntpclient
 which requires a server hostname to be given as argument.
 .Bl -tag -width Ds
-.It Fl c Ar count
-Stop after count time measurements (default 0 means go forever)
 .It Fl d
 NTP debug/diagnostics, very noisy.
-.It Fl f Ar frequency
-Initialize the frequency offset.  Linux only, requires root access.
-.It Fl g Ar goodness
-Stop
-.Nm
-after getting a result more accurate than goodness microseconds,
-default 0 means go forever.
 .It Fl h
 Show summary of command line options and exit.
 .It Fl i Ar interval
 Check time every interval seconds, default 600.
 .It Fl l
-Attempt to lock local clock to server using
-.Xr adjtimex 1 ,
-requires root access.
-.It Fl L
-Use syslog instead of stdout for log messages, default when started as
-root.
+Use syslog instead of stdout for log messages, default unless started
+with
+.Fl n .
 .It Fl n
-Don't fork.  Prevents ntpclient from daemonizing and also implies
-logging to stdout, use
-.Fl L
+Don't fork.  Prevents
+.Nm
+from daemonizing and also implies logging to stdout, use
+.Fl l
 to enable syslog in this mode.
 .It Fl p Ar port
 Local NTP client UDP port, default 0 means "any available".  Very rarely
@@ -113,11 +99,7 @@ necessary to change.
 Minimum packet delay for transaction, default 800 microseconds.
 .It Fl r
 Replay analysis code based on stdin, feature is disabled by default
-compile time.
-.It Fl s
-Simple clock set, implies
-.Fl c Ar 1 ,
-requires root access.
+at compile time.
 .It Fl t
 Trust network and server, no RFC-4330 recommended cross-checks.
 .It Fl v

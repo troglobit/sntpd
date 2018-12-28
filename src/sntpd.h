@@ -28,7 +28,7 @@
 # include <sys/time.h>
 # define LOG_OPTS        (LOG_NOWAIT | LOG_PID)
 # define LOG_FACILITY    LOG_CRON
-# define LOG_OPTION      "L"
+# define LOG_OPTION      "l"
 #else
 # define LOG_OPTION      ""
 # define LOG_ERR         3
