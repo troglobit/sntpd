@@ -17,4 +17,18 @@ else
 sbin_PROGRAMS       = sntpd
 sntpd_SOURCES       = sntpd.c sntpd.h phaselock.c
 sntpd_LIBS          = -lrt
+SYMLINK             = ntpclient
+
+# Hook in install to add sntpd --> ntpclient symlink
+install-exec-hook:
+	@for file in $(SYMLINK); do			\
+		link=$(DESTDIR)$(sbindir)/$$file;	\
+		test -e $$link && continue;		\
+		$(LN_S) $(sbin_PROGRAMS) $$link;	\
+	done
+
+uninstall-hook:
+	@for file in $(SYMLINK); do			\
+		$(RM) $(DESTDIR)$(sbindir)/$$file;	\
+	done
 endif
