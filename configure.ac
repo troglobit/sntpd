@@ -1,6 +1,5 @@
-# Use `make verison` to get Larry's version number (YYY_DDD) for today
 AC_PREREQ(2.61)
-AC_INIT(sntpd, 2018_244, https://github.com/troglobit/sntpd/issues,, https://github.com/troglobit/sntpd)
+AC_INIT(sntpd, 3.0-beta1, https://github.com/troglobit/sntpd/issues,, https://github.com/troglobit/sntpd)
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz])
 AM_SILENT_RULES([yes])
 

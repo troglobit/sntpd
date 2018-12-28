@@ -7,10 +7,6 @@ if SYSTEMD
 systemd_DATA     = sntpd.service
 endif
 
-## Larry's versioning scheme: YYYY_DOY, i.e. `date +"%Y_%j"`
-version:
-	@date +"%Y_%j"
-
 ## Generate MD5 checksum file
 MD5 = md5sum
 md5-dist:
