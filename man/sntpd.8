@@ -1,32 +1,45 @@
-.\" man page for Larry Doolittle's ntpclient
+.\" man page for sntpd and Larry Doolittle's ntpclient
 .\" distributed under GPL
 .\" originally written by Walter Harms
-.Dd Aug 1, 2017
+.Dd Dec 28, 2018
 .\" Please adjust this date whenever revising the manpage.
-.Dt NTPCLIENT 8
+.Dt SNTPD 8
 .Sh NAME
-.Nm ntpclient
-.Nd Simple NTP client
+.Nm sntpd
+.Nd Simple NTP daemon and client
 .Sh SYNOPSIS
 .Nm
 .Op Fl dhlLnrstvV
+.Op Fl c Ar NUM
+.Op Fl f Ar HZ
+.Op Fl g Ar MSEC
+.Op Fl i Ar SEC
+.Op Fl p Ar PORT
+.Op Fl q Ar MSEC
+.Op SERVER
+.Nm ntpclient
+.Op Fl dlrst
 .Op Fl c Ar count
 .Op Fl f Ar frequency
 .Op Fl g Ar goodness
+.Op Fl h Ar hostname
 .Op Fl i Ar interval
 .Op Fl p Ar port
 .Op Fl q Ar min_delay
-.Op SERVER
 .Sh DESCRIPTION
 .Nm
-is an NTP (RFC-1305) client for UNIX-alike computers.  Its functionality is a
-small subset of xntpd, but has the potential to function better within that
-limited scope.  Since it is much smaller than xntpd, it is also more relevant
-for embedded computers.
+is an NTP (RFC-1305) client for UNIX-alike computers.  Its functionality
+is a small subset of xntpd, but has the potential to function better
+within that limited scope.  Since it is much smaller than xntpd, it is
+also more relevant for embedded computers.  It daemonizes itself by
+default and starts synchronizing with the given NTP server, or
+pool.ntp.org if no server is given, using default settings.
 .Pp
-If run as root the program daemonizes itself by default and starts synchronizing
-with the given NTP server using default settings.  When run as a regular user the
-program produces output similar to this:
+.Nm
+is a multicall binary.  When started as
+.Nm ntpclient
+it runs in a compatiblity mode with the original by Larry Doolittle and
+produces output similar to this:
 .Bd -unfilled -offset indent
 Day    Second     Elapsed   Stall  Skew      Dispersion  Freq
 36765  00180.386  1398.0    40.3   953773.9  793.5       -1240000
@@ -51,11 +64,20 @@ Reported by server, see RFC-1305 (microseconds)
 Local clock frequency adjustment (Linux only, ppm*65536)
 .El
 .Sh OPTIONS
-Note, if the
+The following options are supported by
+.Nm
+only.  See the
+.Sx SYNOPSIS
+section for available options for the
+.Nm ntpclient
+compat mode.  Note, if the
 .Ar SERVER
 argument is omitted,
 .Nm
-defaults to use pool.ntp.org.
+defaults to use pool.ntp.org.  This is also the most prominent
+difference to
+.Nm ntpclient
+which requires a server hostname to be given as argument.
 .Bl -tag -width Ds
 .It Fl c Ar count
 Stop after count time measurements (default 0 means go forever)
@@ -105,21 +127,23 @@ information at start/stop to be logged.
 Display version and copyright information.
 .El
 .Sh AUTHORS
-Larry Doolittle maintains the original,
+Larry Doolittle maintains the original
+.Nm ntpclient,
 .Lk http://doolittle.icarus.com/ntpclient/ upstream
 .Pp
-Joachim Nilsson maintains this at
-.Lk https://github.com/troglobit/ntpclient GitHub
+Joachim Nilsson maintains this
+.Nm
+fork at
+.Lk https://github.com/troglobit/sntpd GitHub
 .Sh COPYRIGHT
 The
+.Nm ntpclient
+project is Copyright 1997-2015 Larry Doolittle, and Copyright 2010-2018
+Joachim Nilsson.   The fork by Joachim was renamed
 .Nm
-package is Copyright 1997-2015 Larry Doolittle, and Copyright 2010-2018
-Joachim Nilsson.  It can be freely copied, modified and used according
-to the terms of the GNU General Public License, version 2.  If you want
-to distribute ntpclient under other terms, contact Larry.  He might
-agree to other arrangements if you talk to him
-.Em before
-you start violating the terms of the license.
+in December 2018, but like its ancestor it can be freely copied,
+modified and used according to the terms of the GNU General Public
+License, version 2.
 .Sh "SEE ALSO"
 .Xr adjtimex 1 ,
 .Lk http://www.ntp.org
