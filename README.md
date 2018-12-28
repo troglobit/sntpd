@@ -1,5 +1,5 @@
-ntpclient
-=========
+sntpd
+=====
 [![License Badge][]][License] [![Travis Status][]][Travis]
 
 Table of Contents
@@ -18,53 +18,57 @@ Table of Contents
 Introduction
 ------------
 
-ntpclient is an NTP client for UNIX-like systems, [RFC 1305][] and
-[RFC 4330][].  Its functionality is a small subset of [ntpd][],
-[chrony][], [OpenNTPd][], and [xntpd][].  Since it is much smaller, it
-is also more relevant for embedded systems in need of only a client.
+sntpd is a small NTP daemon and client for UNIX systems implementing
+[RFC 1305][] and [RFC 4330][].  Its functionality is a small subset of
+[ntpd][], [chrony][], [OpenNTPd][], and [xntpd][].  Since it is much
+smaller it is also more relevant for embedded systems in need of only a
+background process to keep the system time in sync.
+
+sntpd is a fork of ntpclient by Larry Doolittle.  As such it implements
+a compatibility mode when called with the name `ntpclient`.
 
 Please report bugs to the GitHub [issue tracker][].  If you want to
 contribute fixes or new features, see the file [CONTRIBUTING.md][].
+
+☞ https://github.com/troglobit/sntpd/releases
 
 
 Usage
 -----
 
-All arguments are optional, ntpclient defaults to use `pool.ntp.org`.
+All arguments are optional, sntpd defaults to use `pool.ntp.org`.
 
-    Usage: ntpclient [options] [SERVER]
-     
-     -c count      Stop after count time measurements. Default: 0 (forever)
-     -d            Debug, or diagnostics mode  Possible to enable more at compile
-     -f frequency  Initialize the frequency offset.  Linux only, requires root
-     -g goodness   Stop after getting a result more accurate than goodness msec,
-                   microseconds. Default: 0 (forever)
-     -h            Show summary of command line options and exit
-     -i interval   Check time every interval seconds.  Default: 600
-     -l            Attempt to lock local clock to server using adjtimex(2)
-     -L            Use syslog instead of stdout for log messages, enabled
-                   by default when started as root
-     -n            Don't fork.  Prevents ntpclient from daemonizing by default
-                   Only when running as root, does nothing for regular users
-                   Use -L with this to use syslog as well, for Finit + systemd
-     -p port       NTP client UDP port.  Default: 0 ("any available")
-     -q min_delay  Minimum packet delay for transaction (default 800 microseconds)
-     -s            Simple clock set, implies -c 1 unliess -l is also set
-     -t            Trust network and server, no RFC-4330 recommended validation
-     -v            Be verbose.  This option will cause time sync events, hostname
-                   lookup errors and program version to be displayed
-     -V            Display version and copyright information
-     
-     SERVER        Optional NTP server to sync with, default: pool.ntp.org
+    Usage:
+	  sntpd [options] [SERVER]
 
-Mortal users can use this program for monitoring, but not clock setting
-(with the `-s` or `-l` switches).  The `-l` switch is designed to be
-robust in any network environment, but has seen the most extensive
+      -c NUM   Stop after count time measurements. Default: 0 (forever)
+      -d       Debug, or diagnostics mode  Possible to enable more at compile
+      -f HZ    Initialize the frequency offset.  Linux only, requires root
+      -g MSEC  Stop after getting a result more accurate than goodness msec,
+               microseconds. Default: 0 (forever)
+      -h       Show summary of command line options and exit
+      -i SEC   Check time every interval seconds.  Default: 600
+      -l       Attempt to lock local clock to server using adjtimex(2)
+      -L       Use syslog instead of stdout for log messages, default unless -n
+      -n       Don't fork.  Prevents sntpd from daemonizing by default
+               Use -L with this to use syslog as well, for Finit + systemd
+      -p PORT  NTP client UDP port.  Default: 0 ("any available")
+      -q MSEC  Minimum packet delay for transaction (default 800 microseconds)
+      -s       Simple clock set, implies -c 1 unliess -l is also set
+      -t       Trust network and server, no RFC-4330 recommended validation
+      -v       Verbose, show time sync events, hostname lookup errors, etc.
+      -V       Show program version
+
+      SERVER   Optional NTP server to sync with, default: pool.ntp.org
+
+Mortal users can use the ntpclient tool for monitoring, but not clock
+setting (with the `-s` or `-l` switches).  The `-l` switch is designed
+to be robust in any network environment, but has seen the most extensive
 testing in a low latency (less than 2 ms) Ethernet environment.  Users
-in other environments should study ntpclient's behavior, and be prepared
-to adjust internal tuning parameters.  A long description of how and why
-to use ntpclient is in the [HowTo][] file.  ntpclient always sends packets
-to the server's UDP port 123.
+in other environments should study sntpd's behavior, and be prepared to
+adjust internal tuning parameters.  A long description of how and why to
+use sntpd and ntpclient is in the [HowTo][] file.  sntpd always sends
+packets to the server's UDP port 123.
 
 One commonly needed tuning parameter for lock mode is `min_delay`, the
 shortest possible round-trip transaction time.  This can be set with the
@@ -105,10 +109,10 @@ described above is replaced by `36765 01380.381 rejected packet` or, if
     36765 01380.381  rejected packet: abs(DISP)>65536
     36765 01380.381  rejected packet: STRATUM==0
 
-To see the actual values of the rejected packet, start ntpclient with
-the `-d` option; this will give a human-readable printout of every
-packet received, including the rejected ones.  To skip these checks, use
-the `-t` switch.
+To see the actual values of the rejected packet, start the ntpclient
+tool or sntpd with the `-d` option; this will give a human-readable
+printout of every packet received, including the rejected ones.  To skip
+these checks, use the `-t` switch.
 
 The file `test.dat` is suitable for piping into <kbd>ntpclient -r</kbd>.
 There are more than 200000 samples (lines) archived for study.  They are
@@ -128,7 +132,7 @@ Troubleshooting
 
 Some really old Linux systems (e.g., Red Hat EL-3.0 and Ubuntu 4.10)
 have a totally broken POSIX `clock_settime()` implementation.  If you
-get the following with <kbd>ntpclient -s</kbd>:
+get the following with <kbd>sntpd -s</kbd>:
 
     clock_settime: Invalid argument
 
@@ -163,7 +167,12 @@ Adherence to [RFC 4330][] chapter 10, Best practices:
 Building
 --------
 
-ntpclient uses the [GNU configure & build system][buildsystem]:
+Please use released, and versioned, tarballs of this project.  All
+releases are available from here:
+
+☞ https://github.com/troglobit/sntpd/releases
+
+sntpd uses the [GNU configure & build system][buildsystem]:
 
 ```sh
     ./configure
@@ -172,7 +181,7 @@ ntpclient uses the [GNU configure & build system][buildsystem]:
 
 The GNU build system use `/usr/local` as the default install prefix.  In
 many cases this is useful, but many users expect `/usr` or `/opt`.  To
-install into `/usr/sbin/ntpclient` and `/usr/bin/adjtimex`:
+install into `/usr/sbin/sntpd` and `/usr/bin/adjtimex`:
 
 ```sh
     ./configure --prefix=/usr
@@ -189,9 +198,9 @@ files using:
 
 For changing the system clock frequency, only the Linux `adjtimex(2)`
 interface is implemented at this time.  Non-Linux systems can only use
-ntpclient to measure time differences and set the system clock, by way
-of the POSIX 1003.1-2001 standard, the routines `clock_gettime()` and
-`clock_settime()`.  Also, see section [Bugs](#bugs), below.
+the ntpclient tool to measure time differences and set the system clock,
+by way of the POSIX 1003.1-2001 standard, the routines `clock_gettime()`
+and `clock_settime()`.  Also, see section [Bugs](#bugs), below.
 
 There are a few compile-time configurations possible.  E.g., for older
 Linux kernels, before the tickless erea (pre 3.0), you want to:
@@ -201,8 +210,8 @@ Linux kernels, before the tickless erea (pre 3.0), you want to:
 ```
 
 However, first try without changing the default.  That gives you a full-
-featured `ntpclient` that uses modern POSIX time functions and works
-reasonably well with any Linux kernel.
+featured `sntpd` and `ntpclient` tool that use a modern POSIX time API
+and works reasonably well with any Linux kernel.
 
 Solaris and other UNIX users may need to adjust the `CFLAGS` slightly.
 For other options, see <kbd>./configure --help</kbd>
@@ -225,14 +234,14 @@ To build from GIT you first need to clone the repository and run the
 installed on your system.
 
 ```sh
-    git clone https://github.com/troglobit/ntpclient.git
-    cd ntpclient/
+    git clone https://github.com/troglobit/sntpd.git
+    cd sntpd/
     ./autogen.sh
     ./configure && make
 ```
 
-Remember: GIT sources are a moving target and are not recommended for
-production systems, unless you know what you are doing!
+**Remember:** GIT sources are a moving target and not recommended for
+              production systems, unless you know what you are doing!
 
 
 Origin & References
@@ -242,9 +251,8 @@ Origin & References
 the terms of the GNU General Public [License][], version 2.  He remains
 the official upstream for `ntpclient`.
 
-This fork at GitHub is maintained by [Joachim Nilsson][] and adds a few
-features like syslog, background daemon, IPv6, and systemd support.  As
-well as a few other small things.
+This sntpd fork at GitHub is maintained by [Joachim Nilsson][] and adds
+features like syslog, background daemon, IPv6, and systemd support.
 
 [ntpd]:            http://www.ntp.org
 [xntpd]:           http://www.eecis.udel.edu/~mills/ntp/
@@ -257,9 +265,9 @@ well as a few other small things.
 [buildsystem]:     https://airs.com/ian/configure/
 [License]:         http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
-[Travis]:          https://travis-ci.org/troglobit/ntpclient
-[Travis Status]:   https://travis-ci.org/troglobit/ntpclient.png?branch=master
+[Travis]:          https://travis-ci.org/troglobit/sntpd
+[Travis Status]:   https://travis-ci.org/troglobit/sntpd.png?branch=master
 [CONTRIBUTING.md]: docs/CONTRIBUTING.md
-[issue tracker]:   https://github.com/troglobit/ntpclient/issues
-[HowTo]:           https://github.com/troglobit/ntpclient/doc/HowTo.md
+[issue tracker]:   https://github.com/troglobit/sntpd/issues
+[HowTo]:           https://github.com/troglobit/sntpd/doc/HowTo.md
 [Joachim Nilsson]: http://troglobit.com
