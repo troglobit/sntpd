@@ -1,23 +1,23 @@
-Source: ntpclient
+Source: sntpd
 Section: net
 Priority: optional
 Maintainer: Joachim Nilsson <troglobit@gmail.com>
-Homepage: https://github.com/troglobit/ntpclient
+Homepage: https://github.com/troglobit/sntpd
 Build-Depends: debhelper (>= 9~), dh-systemd
-Vcs-Git: https://github.com/troglobit/ntpclient.git
-Vcs-Browser: https://github.com/troglobit/ntpclient/commits/
+Vcs-Git: https://github.com/troglobit/sntpd.git
+Vcs-Browser: https://github.com/troglobit/sntpd/commits/
 Standards-Version: 3.9.6
 
-Package: ntpclient
+Package: sntpd
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Conflicts: time-daemon, ntp, adjtimex
 Provides: time-daemon, adjtimex
 Replaces: time-daemon
-Description: Larry Doolittle's simple NTP client
- ntpclient is an NTP (RFC-1305) client for UNIX-alike computers.  Its
+Description: Simple NTP daemon and client
+ sntpd is an NTP (RFC-1305) daemon and client for UNIX systems.  Its
  functionality is a small subset of xntpd, but performs better (or at
  least has the potential to be better) within its limited scope.
  .
- Since ntpclient it is much smaller than xntpd, it is also more relevant
+ Since sntpd it is much smaller than xntpd, it is also more relevant
  for embedded systems.

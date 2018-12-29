@@ -1,3 +1,9 @@
+sntpd (3.0) unstable; urgency=medium
+
+  * New name for project and new version.
+
+ -- Joachim Nilsson <troglobit@gmail.com>  Sat, 29 Dec 2018 12:51:49 +0100
+
 ntpclient (2018.244) unstable; urgency=medium
 
   * New upstream release, 2018_244
