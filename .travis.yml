@@ -26,3 +26,4 @@ script:
   - /tmp/bin/adjtimex -h
   - /tmp/sbin/ntpclient -h
   - /tmp/sbin/sntpd -h
+  - /tmp/sbin/ntpclient -c 1 -h pool.ntp.org
