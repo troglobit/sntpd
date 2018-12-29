@@ -61,11 +61,6 @@ AC_ARG_ENABLE(replay,
         [ac_enable_replay="$enableval"],
         [ac_enable_replay="no"])
 
-AC_ARG_ENABLE(mini,
-        [AS_HELP_STRING([--enable-mini], [Really small ntpclient, from OpenWRT project])],
-        [ac_enable_mini="$enableval"],
-        [ac_enable_mini="no"])
-
 AC_ARG_WITH([systemd],
      [AS_HELP_STRING([--with-systemd=DIR], [Directory for systemd service files])],,
      [with_systemd=auto])
@@ -95,7 +90,6 @@ AS_IF([test "x$with_systemd" = "xyes" -o "x$with_systemd" = "xauto"], [
 AS_IF([test "x$with_systemd" != "xno"],
      [AC_SUBST([systemddir], [$with_systemd])])
 AM_CONDITIONAL(SYSTEMD, [test "x$with_systemd"   != "xno"])
-AM_CONDITIONAL(MINI,    [test "x$ac_enable_mini" != "xno"])
 
 # Expand $sbindir early, into $SBINDIR, for systemd unit file
 # NOTE: This does *not* take prefix/exec_prefix override at "make

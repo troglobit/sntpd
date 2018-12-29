@@ -10,10 +10,6 @@ AM_CPPFLAGS         = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=199309 -D_BSD_SOURCE
 bin_PROGRAMS        = adjtimex
 adjtimex_SOURCES    = adjtimex.c
 
-if MINI
-sbin_PROGRAMS       = ntpclient
-ntpclient_SOURCES   = mini-ntpclient.c
-else
 sbin_PROGRAMS       = sntpd
 sntpd_SOURCES       = sntpd.c sntpd.h phaselock.c
 sntpd_LIBS          = -lrt
@@ -31,4 +27,3 @@ uninstall-hook:
 	@for file in $(SYMLINK); do			\
 		$(RM) $(DESTDIR)$(sbindir)/$$file;	\
 	done
-endif

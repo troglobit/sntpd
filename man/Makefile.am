@@ -1,8 +1,4 @@
 dist_man1_MANS = adjtimex.1
-
-if MINI
-dist_man8_MANS = ntpclient.8
-else
 dist_man8_MANS = sntpd.8
 SYMLINK        = ntpclient.8
 
@@ -18,4 +14,3 @@ uninstall-hook:
 	for file in $(SYMLINK); do			\
 		$(RM) $(DESTDIR)$(man8dir)/$$file;	\
 	done
-endif
