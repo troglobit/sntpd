@@ -42,9 +42,6 @@
 #ifdef PRECISION_SIOCGSTAMP
 #include <sys/ioctl.h>
 #endif
-#ifdef USE_OBSOLETE_GETTIMEOFDAY
-#include <sys/time.h>
-#endif
 
 #include "sntpd.h"
 
@@ -196,8 +193,6 @@ static int set_freq(int new_freq)
 
 static void set_time(struct ntptime *new)
 {
-#ifndef USE_OBSOLETE_GETTIMEOFDAY
-	/* POSIX 1003.1-2001 way to set the system clock */
 	struct timespec tv_set;
 
 	/* it would be even better to subtract half the slop */
@@ -208,42 +203,18 @@ static void set_time(struct ntptime *new)
 		logit(LOG_ERR, errno, "Failed clock_settime()");
 		exit(1);
 	}
+
 	if (debug)
 		logit(LOG_DEBUG, 0, "Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
-#else
-	/* Traditional Linux way to set the system clock */
-	struct timeval tv_set;
-
-	/* it would be even better to subtract half the slop */
-	tv_set.tv_sec = new->coarse - JAN_1970;
-	/* divide xmttime.fine by 4294.967296 */
-	tv_set.tv_usec = USEC(new->fine);
-	if (settimeofday(&tv_set, NULL) < 0) {
-		logit(LOG_ERR, errno, "Failed settimeofday()");
-		exit(1);
-	}
-	if (debug)
-		logit(LOG_DEBUG, 0, "Set time to %lu.%.6lu", tv_set.tv_sec, tv_set.tv_usec);
-#endif
 }
 
 static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
 {
-#ifndef USE_OBSOLETE_GETTIMEOFDAY
-	/* POSIX 1003.1-2001 way to get the system time */
 	struct timespec now;
 
 	clock_gettime(CLOCK_REALTIME, &now);
 	*time_coarse = now.tv_sec + JAN_1970;
 	*time_fine = NTPFRAC(now.tv_nsec / 1000);
-#else
-	/* Traditional Linux way to get the system time */
-	struct timeval now;
-
-	gettimeofday(&now, NULL);
-	*time_coarse = now.tv_sec + JAN_1970;
-	*time_fine = NTPFRAC(now.tv_usec);
-#endif
 }
 
 static void send_packet(int usd, uint32_t time_sent[2])
