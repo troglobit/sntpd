@@ -41,11 +41,6 @@ AC_ARG_ENABLE(siocgstamp,
         [ac_enable_siocgstamp="$enableval"],
         [ac_enable_siocgstamp="yes"])
 
-AC_ARG_ENABLE(syslog,
-        [AS_HELP_STRING([--disable-syslog], [Disable syslog support, log to stderr instead])],
-        [ac_enable_syslog="$enableval"],
-        [ac_enable_syslog="yes"])
-
 AC_ARG_ENABLE(obsolete,
         [AS_HELP_STRING([--enable-obsolete], [Use obsolete gettimeofday(), really old systems])],
         [ac_enable_obsolete="$enableval"],
@@ -73,9 +68,6 @@ AS_IF([test "x$ac_enable_obsolete" = "xyes"],
 
 AS_IF([test "x$ac_enable_debug" = "xyes"],
 	AC_DEFINE([ENABLE_DEBUG], [], [Debug NTP protocol data]))
-
-AS_IF([test "x$ac_enable_syslog" = "xyes"],
-	AC_DEFINE([ENABLE_SYSLOG], [], [Debug NTP protocol data]))
 
 AS_IF([test "x$ac_enable_replay" = "xyes"],
 	AC_DEFINE([ENABLE_REPLAY], [], [Support for replay analysis from stdin]))

@@ -139,7 +139,6 @@ void logit(int severity, int syserr, const char *format, ...)
 	vsnprintf(buf, sizeof(buf), format, ap);
 	va_end(ap);
 
-#ifdef ENABLE_SYSLOG
 	if (log_enable > 0) {
 		if (syserr)
 			syslog(severity, "%s: %s", buf, strerror(syserr));
@@ -148,7 +147,7 @@ void logit(int severity, int syserr, const char *format, ...)
 
 		return;
 	}
-#endif
+
 	if (severity == LOG_WARNING)
 		fputs("Warning - ", stderr);
 	else if (severity == LOG_ERR)
@@ -812,11 +811,8 @@ static void run(struct ntp_control *ntpc)
 		logit(LOG_DEBUG, 0, "  -q min_delay   %f", min_delay);
 		logit(LOG_DEBUG, 0, "  -s set_clock   %d", ntpc->set_clock);
 		logit(LOG_DEBUG, 0, "  -t cross_check %d", ntpc->cross_check);
-#ifdef ENABLE_SYSLOG
-		logit(LOG_DEBUG, 0, "  -L log_enable  %d", log_enable);
-#endif
 	}
-#endif /* ENABLE_DEBUG */
+#endif
 
 	/* Startup sequence */
 	if (daemonize) {
@@ -977,15 +973,13 @@ static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage:\n"
-		"  %s [-dh" LOG_OPTION "n" REPLAY_OPTION "tvV] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
+		"  %s [-dhln" REPLAY_OPTION "tvV] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
 		"\n"
 		"Options:\n"
 		"  -d       Debug, or diagnostics mode.  Possible to enable more at compile\n"
 		"  -h       Show summary of command line options and exit\n"
 		"  -i SEC   Check time every interval seconds.  Default: 600\n"
-#ifdef ENABLE_SYSLOG
 		"  -l       Use syslog instead of stdout for log messages, default unless -n\n"
-#endif
 		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
 		"           Use -L with this to use syslog as well, for Finit + systemd\n"
 		"  -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
@@ -1045,10 +1039,9 @@ int main(int argc, char *argv[])
 
 	/* Default to daemon mode for sntpd */
 	daemonize        = 1;
-	log_enable       = 1;
 
 	while (1) {
-		char opts[] = "dhi:" LOG_OPTION "np:q:" REPLAY_OPTION "tvV?";
+		char opts[] = "dhi:lnp:q:" REPLAY_OPTION "tvV?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
@@ -1067,11 +1060,9 @@ int main(int argc, char *argv[])
 			ntpc.cycle_time = atoi(optarg);
 			break;
 
-#ifdef ENABLE_SYSLOG
 		case 'l':
 			log_enable++;
 			break;
-#endif
 
 		case 'n':
 			daemonize = 0;
@@ -1109,12 +1100,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-#ifdef ENABLE_SYSLOG
 	if (log_enable > 0) {
 		openlog(prognm, LOG_OPTS, LOG_FACILITY);
 		setlogmask(LOG_UPTO(log_level));
 	}
-#endif
 
 	if (optind < argc && ntpc.server == NULL)
 		ntpc.server = argv[optind];
@@ -1126,10 +1115,9 @@ int main(int argc, char *argv[])
 
 	run(&ntpc);
 
-#ifdef ENABLE_SYSLOG
 	if (log_enable > 0)
 		closelog();
-#endif
+
 	return 0;
 }
 

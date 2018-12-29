@@ -21,23 +21,12 @@
 
 #include <config.h>
 #include <stdarg.h>		/* vsyslog(), vfprintf(), use -D_BSD_SOURCE */
+#include <syslog.h>
+#include <sys/utsname.h>
+#include <sys/time.h>
 
-#ifdef ENABLE_SYSLOG
-# include <syslog.h>
-# include <sys/utsname.h>
-# include <sys/time.h>
-# define LOG_OPTS        (LOG_NOWAIT | LOG_PID)
-# define LOG_FACILITY    LOG_CRON
-# define LOG_OPTION      "l"
-#else
-# define LOG_OPTION      ""
-# define LOG_ERR         3
-# define LOG_WARNING     4
-# define LOG_NOTICE      5
-# define LOG_INFO        6
-# define LOG_DEBUG       7
-# define LOG_OPTION
-#endif
+#define LOG_OPTS        (LOG_NOWAIT | LOG_PID)
+#define LOG_FACILITY    LOG_CRON
 
 #ifdef ENABLE_REPLAY
 # define REPLAY_OPTION   "r"
