@@ -42,7 +42,7 @@ AC_ARG_ENABLE(siocgstamp,
         [ac_enable_siocgstamp="yes"])
 
 AC_ARG_ENABLE(debug,
-        [AS_HELP_STRING([--enable-debug], [Enable debug of NTP protocol])],
+        [AS_HELP_STRING([--enable-debug], [Enable debug of NTP protocol, developer mode])],
         [ac_enable_debug="$enableval"],
         [ac_enable_debug="no"])
 
