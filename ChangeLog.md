@@ -96,7 +96,7 @@ Curated by [Larry Doolittle][].  Changes since `ntpclient_2010_365.tar.gz`,
 - Move `_POSIX_C_SOURCE` and `_BSD_SOURCE` to Makefile
 
 ### Fixes
-- Dixed and re-enabled `-DPRECISION_SIOCGSTAMP`, seems to work properly
+- Fixed and re-enabled `-DPRECISION_SIOCGSTAMP`, seems to work properly
   with modern (e.g., 3.x or 4.x) Linux kernel
 - use `LDLIBES` instad of `LDFLAGS` for `-lrt` in Makefile (thanks, ChristophGr)
 
