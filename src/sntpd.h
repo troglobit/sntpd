@@ -20,7 +20,6 @@
 #define NTPCLIENT_H_
 
 #include <config.h>
-#include <stdarg.h>		/* vsyslog(), vfprintf(), use -D_BSD_SOURCE */
 #include <syslog.h>
 #include <sys/utsname.h>
 #include <sys/time.h>
@@ -38,12 +37,16 @@ extern int debug;
 extern int log_enable;
 extern int verbose;
 
+extern const char *prognm;
+
 extern double min_delay;        /* global tuning parameter */
 
-/* prototypes for functions defined in ntpclient.c */
+/* logit.c */
+void log_init(void);
+void log_exit(void);
 void logit(int severity, int syserr, const char *format, ...);
 
-/* prototype for function defined in phaselock.c */
+/* phaselock.c */
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
 
 #endif /* NTPCLIENT_H_ */

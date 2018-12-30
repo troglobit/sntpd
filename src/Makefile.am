@@ -11,7 +11,7 @@ bin_PROGRAMS        = adjtimex
 adjtimex_SOURCES    = adjtimex.c
 
 sbin_PROGRAMS       = sntpd
-sntpd_SOURCES       = sntpd.c sntpd.h phaselock.c
+sntpd_SOURCES       = sntpd.c sntpd.h logit.c phaselock.c
 sntpd_LIBS          = -lrt
 SYMLINK             = ntpclient
 

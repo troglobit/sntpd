@@ -111,8 +111,7 @@ int debug = 0;
 int verbose = 0;		/* Verbose flag, produce useful output to log */
 int initial_freq = 0;		/* initial freq value to use */
 int daemonize = 0;
-int log_enable = 0;
-int log_level = LOG_NOTICE;
+
 const char *prognm = PACKAGE_NAME;
 static int sighup = 0;
 static int sigterm = 0;
@@ -123,38 +122,6 @@ extern char *optarg;		/* according to man 2 getopt */
 static void send_packet(int usd, uint32_t time_sent[2]);
 static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
 static int getaddrbyname(char *host, struct sockaddr_storage *ss);
-
-void logit(int severity, int syserr, const char *format, ...)
-{
-	va_list ap;
-	char buf[200];
-
-	if (log_level < severity)
-		return;
-
-	va_start(ap, format);
-	vsnprintf(buf, sizeof(buf), format, ap);
-	va_end(ap);
-
-	if (log_enable > 0) {
-		if (syserr)
-			syslog(severity, "%s: %s", buf, strerror(syserr));
-		else
-			syslog(severity, "%s", buf);
-
-		return;
-	}
-
-	if (severity == LOG_WARNING)
-		fputs("Warning - ", stderr);
-	else if (severity == LOG_ERR)
-		fputs("ERROR - ", stderr);
-
-	if (syserr)
-		fprintf(stderr, "%s: %s\n", buf, strerror(errno));
-	else
-		fprintf(stderr, "%s\n", buf);
-}
 
 /* OS dependent routine to get the current value of clock frequency */
 static int get_current_freq(void)
@@ -880,7 +847,6 @@ static int ntpclient(int argc, char *argv[])
 
 		case 'd':
 			debug++;
-			log_level = LOG_DEBUG;
 			break;
 
 		case 'f':
@@ -935,7 +901,11 @@ static int ntpclient(int argc, char *argv[])
 	if (!ntpc.server)
 		return ntpclient_usage(1);
 
+	log_init();
+
 	run(&ntpc);
+
+	log_exit();
 
 	return 0;
 }
@@ -1021,7 +991,6 @@ int main(int argc, char *argv[])
 		switch (c) {
 		case 'd':
 			debug++;
-			log_level = LOG_DEBUG;
 			break;
 
 		case 'h':
@@ -1071,10 +1040,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (log_enable > 0) {
-		openlog(prognm, LOG_OPTS, LOG_FACILITY);
-		setlogmask(LOG_UPTO(log_level));
-	}
+	log_init();
 
 	if (optind < argc && ntpc.server == NULL)
 		ntpc.server = argv[optind];
@@ -1086,8 +1052,7 @@ int main(int argc, char *argv[])
 
 	run(&ntpc);
 
-	if (log_enable > 0)
-		closelog();
+	log_exit();
 
 	return 0;
 }
