@@ -131,7 +131,7 @@ static int get_current_freq(void)
 
 	txc.modes = 0;
 	if (adjtimex(&txc) < 0) {
-		logit(LOG_ERR, errno, "Failed adjtimex(GET)");
+		ERR(errno, "Failed adjtimex(GET)");
 		exit(1);
 	}
 	return txc.freq;
@@ -149,7 +149,7 @@ static int set_freq(int new_freq)
 	txc.modes = ADJ_FREQUENCY;
 	txc.freq = new_freq;
 	if (adjtimex(&txc) < 0) {
-		logit(LOG_ERR, errno, "Failed adjtimex(SET)");
+		ERR(errno, "Failed adjtimex(SET)");
 		exit(1);
 	}
 	return txc.freq;
@@ -167,12 +167,12 @@ static void set_time(struct ntptime *new)
 	/* divide xmttime.fine by 4294.967296 */
 	tv_set.tv_nsec = USEC(new->fine) * 1000;
 	if (clock_settime(CLOCK_REALTIME, &tv_set) < 0) {
-		logit(LOG_ERR, errno, "Failed clock_settime()");
+		ERR(errno, "Failed clock_settime()");
 		exit(1);
 	}
 
 	if (debug)
-		logit(LOG_DEBUG, 0, "Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
+		DBG("Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
 }
 
 static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
@@ -197,10 +197,10 @@ static void send_packet(int usd, uint32_t time_sent[2])
 
 #ifdef ENABLE_DEBUG
 	if (debug)
-		logit(LOG_DEBUG, 0, "Sending packet ...");
+		DBG("Sending packet ...");
 #endif
 	if (sizeof(data) != 48) {
-		logit(LOG_ERR, 0, "Packet size error");
+		ERR(0, "Packet size error");
 		return;
 	}
 
@@ -221,7 +221,7 @@ static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 	struct timeval udp_arrival;
 
 	if (ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0) {
-		logit(LOG_ERR, errno, "Failed ioctl(SIOCGSTAMP)");
+		ERR(errno, "Failed ioctl(SIOCGSTAMP)");
 		ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
 	} else {
 		udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
@@ -241,7 +241,7 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 
 	(void)data_len;
 	(void)ntpc;		/* not used */
-	logit(LOG_DEBUG, 0, "packet of length %d received", data_len);
+	DBG("packet of length %d received", data_len);
 
 	if (sa_source->ss_family == AF_INET) {
 		ipv4 = (struct sockaddr_in *)(sa_source);
@@ -250,7 +250,7 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 		ipv6 = (struct sockaddr_in6 *)(sa_source);
 		port = ntohs(ipv6->sin6_port);
 	} else {
-		logit(LOG_DEBUG, 0, "%s: Unsupported address family", __func__);
+		DBG("%s: Unsupported address family", __func__);
 		return 1;
 	}
 
@@ -260,7 +260,7 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 	 * wrong too often.
 	 */
 	if (NTP_PORT != port) {
-		logit(LOG_INFO, 0, "%s: invalid port: %u", __func__, port);
+		INFO("%s: invalid port: %u", __func__, port);
 		return 1;
 	}
 
@@ -335,15 +335,15 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 
 #ifdef ENABLE_DEBUG
 	if (debug) {
-		logit(LOG_DEBUG, 0, "LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d", li, vn, mode, stratum, poll, prec);
-		logit(LOG_DEBUG, 0, "Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp),
+		DBG("LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d", li, vn, mode, stratum, poll, prec);
+		DBG("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp),
 		      refid >> 24 & 0xff, refid >> 16 & 0xff, refid >> 8 & 0xff, refid & 0xff);
-		logit(LOG_DEBUG, 0, "Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
-		logit(LOG_DEBUG, 0, "(sent)    %u.%.6u", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
-		logit(LOG_DEBUG, 0, "Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));
-		logit(LOG_DEBUG, 0, "Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));
-		logit(LOG_DEBUG, 0, "Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));
-		logit(LOG_DEBUG, 0, "Our recv  %u.%.6u", arrival->coarse, USEC(arrival->fine));
+		DBG("Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
+		DBG("(sent)    %u.%.6u", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
+		DBG("Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));
+		DBG("Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));
+		DBG("Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));
+		DBG("Our recv  %u.%.6u", arrival->coarse, USEC(arrival->fine));
 	}
 #endif
 
@@ -355,12 +355,12 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 
 #ifdef ENABLE_DEBUG
 	if (debug) {
-		logit(LOG_DEBUG, 0, "Total elapsed: %9.2f", el_time);
-		logit(LOG_DEBUG, 0, "Server stall:  %9.2f", st_time);
-		logit(LOG_DEBUG, 0, "Slop:          %9.2f", el_time - st_time);
-		logit(LOG_DEBUG, 0, "Skew:          %9.2f", (skew1 - skew2) / 2);
-		logit(LOG_DEBUG, 0, "Frequency:     %9d", freq);
-		logit(LOG_DEBUG, 0, " Day   Second     Elapsed    Stall     Skew  Dispersion  Freq");
+		DBG("Total elapsed: %9.2f", el_time);
+		DBG("Server stall:  %9.2f", st_time);
+		DBG("Slop:          %9.2f", el_time - st_time);
+		DBG("Skew:          %9.2f", (skew1 - skew2) / 2);
+		DBG("Frequency:     %9d", freq);
+		DBG(" Day   Second     Elapsed    Stall     Skew  Dispersion  Freq");
 	}
 #endif
 
@@ -390,7 +390,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	if (ntpc->set_clock) {	/* CAP_SYS_TIME or root required, or ntpclient will exit here! */
 		set_time(&xmttime);
 		if (verbose) {
-			logit(LOG_NOTICE, 0, "Time synchronized to server %s, stratum %d", ntpc->server, stratum);
+			LOG("Time synchronized to server %s, stratum %d", ntpc->server, stratum);
 		}
 	}
 
@@ -415,7 +415,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 
 	/* Display by default for ntpclient users, sntpd users need to supply -v */
 	if (verbose || ntpc->usermode) {
-		logit(LOG_NOTICE, 0, "%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
+		LOG("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
 		      arrival->coarse / 86400, arrival->coarse % 86400,
 		      arrival->fine / 4294967, el_time, st_time,
 		      (skew1 - skew2) / 2, sec2u(disp), freq);
@@ -425,7 +425,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	return 0;
  fail:
 	if (debug || verbose) {
-		logit(LOG_ERR, 0, "%d %.5d.%.3d rejected packet: %s",
+		ERR(0, "%d %.5d.%.3d rejected packet: %s",
 		      arrival->coarse / 86400, arrival->coarse % 86400,
 		      arrival->fine / 4294967, drop_reason);
 	}
@@ -461,7 +461,7 @@ static void setup_receive(int usd, sa_family_t sin_family, uint16_t port)
 	}
 
 	if (bind(usd, sa, len) == -1) {
-		logit(LOG_ERR, errno, "Failed binding to UDP port %u", port);
+		ERR(errno, "Failed binding to UDP port %u", port);
 		exit(1);
 	}
 	/* listen(usd,3); this isn't TCP; thanks Alexander! */
@@ -483,7 +483,7 @@ static void setup_transmit(int usd, struct sockaddr_storage *ssp , uint16_t port
 		ipv6->sin6_port = htons(port);
 		len = sizeof(struct sockaddr_in6);
 	} else {
-		logit(LOG_ERR, 0, "%s: Unsupported address family", __func__);
+		ERR(0, "%s: Unsupported address family", __func__);
 		exit(1);
 	}
 
@@ -494,7 +494,7 @@ static void setup_transmit(int usd, struct sockaddr_storage *ssp , uint16_t port
 			continue;
 		}
 
-		logit(LOG_ERR, errno, "Failed connecting to NTP server");
+		ERR(errno, "Failed connecting to NTP server");
 		exit(1);
 	}
 }
@@ -512,7 +512,7 @@ static int setup_socket(struct ntp_control *ntpc)
 		}
 
 		if (verbose)
-			logit(LOG_ERR, 0, "Unable lookup %s", ntpc->server);
+			ERR(0, "Unable lookup %s", ntpc->server);
 
 		exit(1);
 	}
@@ -521,7 +521,7 @@ static int setup_socket(struct ntp_control *ntpc)
 	if (ss.ss_family == AF_INET || ss.ss_family == AF_INET6) {
 		sd = socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP);
 	} else {
-		logit(LOG_ERR, 0, "%s: Unsupported address family", __func__);
+		ERR(0, "%s: Unsupported address family", __func__);
 		exit(1);
 	}
 
@@ -594,7 +594,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 
 #ifdef ENABLE_DEBUG
 	if (debug)
-		logit(LOG_DEBUG, 0, "Listening...");
+		DBG("Listening...");
 #endif
 	probes_sent = 0;
 	sa_xmit_len = sizeof(sa_xmit);
@@ -613,10 +613,10 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 			close(usd);
 			usd = setup_socket(ntpc);
 			if (-1 == usd) {
-				logit(LOG_ERR, errno, "Failed reopening NTP socket");
+				ERR(errno, "Failed reopening NTP socket");
 				return;
 			}
-			logit(LOG_DEBUG, 0, "Got SIGHUP, triggering resync with NTP server.");
+			DBG("Got SIGHUP, triggering resync with NTP server.");
 		}
 
 		FD_ZERO(&fds);
@@ -625,7 +625,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 		if ((i != 1) || (!FD_ISSET(usd, &fds))) {
 			if (i < 0) {
 				if (errno != EINTR)
-					logit(LOG_ERR, errno, "Failed select()");
+					ERR(errno, "Failed select()");
 				continue;
 			}
 			if (to.tv_sec == 0) {
@@ -643,7 +643,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 		error = ntpc->goodness;
 		pack_len = recvfrom(usd, incoming, sizeof_incoming, 0, (struct sockaddr *)&sa_xmit, &sa_xmit_len);
 		if (pack_len < 0) {
-			logit(LOG_ERR, errno, "Failed recvfrom()");
+			ERR(errno, "Failed recvfrom()");
 		} else if (pack_len > 0 && (unsigned)pack_len < sizeof_incoming) {
 			get_packet_timestamp(usd, &udp_arrival_ntp);
 			if (check_source(pack_len, &sa_xmit, ntpc))
@@ -651,7 +651,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0)
 				continue;
 		} else {
-			logit(LOG_ERR, 0, "Ooops.  pack_len=%d", pack_len);
+			ERR(0, "Ooops.  pack_len=%d", pack_len);
 		}
 
 		/*
@@ -684,26 +684,26 @@ static int do_replay(void)
 	while (fgets(line, sizeof line, stdin)) {
 		n = sscanf(line, "%d %f %f %f %lf %f %d", &day, &sec, &el_time, &st_time, &skew, &disp, &freq);
 		if (n == 7) {
-			logit(LOG_DEBUG, 0, "%s", line);
+			DBG("%s", line);
 			absolute = day * 86400 + (int)sec;
 			errorbar = el_time + disp;
 #ifdef ENABLE_DEBUG
 			if (debug)
-				logit(LOG_DEBUG, 0, "Contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
+				DBG("Contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
 #endif
 			if (last_fake_time == 0)
 				simulated_freq = freq;
 			fake_delta_time += (absolute - last_fake_time) * ((double)(freq - simulated_freq)) / 65536;
 #ifdef ENABLE_DEBUG
 			if (debug)
-				logit(LOG_DEBUG, 0, "Fake %f %d", fake_delta_time, simulated_freq);
+				DBG("Fake %f %d", fake_delta_time, simulated_freq);
 #endif
 			skew += fake_delta_time;
 			freq = simulated_freq;
 			last_fake_time = absolute;
 			simulated_freq = contemplate_data(absolute, skew, errorbar, freq);
 		} else {
-			logit(LOG_ERR, 0, "Replay input error");
+			ERR(0, "Replay input error");
 			return 2;
 		}
 	}
@@ -718,7 +718,7 @@ static void run(struct ntp_control *ntpc)
 
 	if (initial_freq) {
 #ifdef ENABLE_DEBUG
-		logit(LOG_DEBUG, 0, "Initial frequency %d", initial_freq);
+		DBG("Initial frequency %d", initial_freq);
 #endif
 		set_freq(initial_freq);
 	}
@@ -738,24 +738,24 @@ static void run(struct ntp_control *ntpc)
 
 #ifdef ENABLE_DEBUG
 	if (debug) {
-		logit(LOG_DEBUG, 0, "Configuration:");
-		logit(LOG_DEBUG, 0, "  -c probe_count %d", ntpc->probe_count);
-		logit(LOG_DEBUG, 0, "  -d (debug)     %d", debug);
-		logit(LOG_DEBUG, 0, "  -g goodness    %d", ntpc->goodness);
-		logit(LOG_DEBUG, 0, "  -h hostname    %s", ntpc->server);
-		logit(LOG_DEBUG, 0, "  -i interval    %d", ntpc->cycle_time);
-		logit(LOG_DEBUG, 0, "  -l live        %d", ntpc->live);
-		logit(LOG_DEBUG, 0, "  -p local_port  %d", ntpc->local_udp_port);
-		logit(LOG_DEBUG, 0, "  -q min_delay   %f", min_delay);
-		logit(LOG_DEBUG, 0, "  -s set_clock   %d", ntpc->set_clock);
-		logit(LOG_DEBUG, 0, "  -t cross_check %d", ntpc->cross_check);
+		DBG("Configuration:");
+		DBG("  -c probe_count %d", ntpc->probe_count);
+		DBG("  -d (debug)     %d", debug);
+		DBG("  -g goodness    %d", ntpc->goodness);
+		DBG("  -h hostname    %s", ntpc->server);
+		DBG("  -i interval    %d", ntpc->cycle_time);
+		DBG("  -l live        %d", ntpc->live);
+		DBG("  -p local_port  %d", ntpc->local_udp_port);
+		DBG("  -q min_delay   %f", min_delay);
+		DBG("  -s set_clock   %d", ntpc->set_clock);
+		DBG("  -t cross_check %d", ntpc->cross_check);
 	}
 #endif
 
 	/* Startup sequence */
 	if (daemonize) {
 		if (-1 == daemon(0, 0)) {
-			logit(LOG_ERR, errno, "Failed daemonizing, aborting");
+			ERR(errno, "Failed daemonizing, aborting");
 			exit(1);
 		}
 
@@ -765,24 +765,24 @@ static void run(struct ntp_control *ntpc)
 		 */
 		log_enable = 1;
 		if (verbose)
-			logit(LOG_NOTICE, 0, "Starting ntpclient v" PACKAGE_VERSION);
+			LOG("Starting ntpclient v" PACKAGE_VERSION);
 	}
 
 	usd = setup_socket(ntpc);
 	if (usd == -1) {
-		logit(LOG_ERR, errno, "Failed creating UDP socket() to SNTP server");
+		ERR(errno, "Failed creating UDP socket() to SNTP server");
 		exit(1);
 	}
 
 	setup_signals();
 
 	if (daemonize && verbose)
-		logit(LOG_NOTICE, 0, "Using time sync server: %s", ntpc->server);
+		LOG("Using time sync server: %s", ntpc->server);
 
 	primary_loop(usd, ntpc);
 
 	if (daemonize && verbose)
-		logit(LOG_NOTICE, 0, "Stopping ntpclient v" PACKAGE_VERSION);
+		LOG("Stopping ntpclient v" PACKAGE_VERSION);
 	close(usd);
 }
 
@@ -1047,7 +1047,7 @@ int main(int argc, char *argv[])
 
 	if (ntpc.server == NULL) {
 		ntpc.server = (char *)"pool.ntp.org";
-		logit(LOG_DEBUG, 0, "Using server %s", ntpc.server);
+		DBG("Using server %s", ntpc.server);
 	}
 
 	run(&ntpc);
@@ -1082,7 +1082,7 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 	memset(ss, 0, sizeof(struct sockaddr_storage));
 	err = getaddrinfo(host, NULL, &hints, &result);
 	if (err) {
-		logit(LOG_ERR, 0, "Failed resolving address to hostname %s: %s", host, gai_strerror(err));
+		ERR(0, "Failed resolving address to hostname %s: %s", host, gai_strerror(err));
 		netdown = errno = ENETDOWN;
 		return 1;
 	}
@@ -1109,7 +1109,7 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 	}
 
 	if (netdown) {
-		logit(LOG_NOTICE, 0, "Network up, resolved address to hostname %s", host);
+		LOG("Network up, resolved address to hostname %s", host);
 		netdown = 0;
 	}
 
