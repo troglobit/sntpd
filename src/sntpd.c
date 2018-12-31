@@ -121,7 +121,6 @@ extern char *optarg;		/* according to man 2 getopt */
 /* prototypes for some local routines */
 static void send_packet(int usd, uint32_t time_sent[2]);
 static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
-static int getaddrbyname(char *host, struct sockaddr_storage *ss);
 
 /* OS dependent routine to get the current value of clock frequency */
 static int get_current_freq(void)
@@ -497,6 +496,65 @@ static void setup_transmit(int usd, struct sockaddr_storage *ssp , uint16_t port
 		ERR(errno, "Failed connecting to NTP server");
 		exit(1);
 	}
+}
+
+static int getaddrbyname(char *host, struct sockaddr_storage *ss)
+{
+	int err;
+	static int netdown = 0;
+	struct addrinfo hints;
+	struct addrinfo *result;
+	struct addrinfo *rp;
+
+	if (!host || !ss) {
+		errno = EINVAL;
+		return 1;
+	}
+
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = 0;
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_protocol = 0;
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
+
+	memset(ss, 0, sizeof(struct sockaddr_storage));
+	err = getaddrinfo(host, NULL, &hints, &result);
+	if (err) {
+		ERR(0, "Failed resolving address to hostname %s: %s", host, gai_strerror(err));
+		netdown = errno = ENETDOWN;
+		return 1;
+	}
+
+	/* The first result will be used. IPV4 has higher priority */
+	err = 1;
+	for (rp = result; rp; rp = rp->ai_next) {
+		if (rp->ai_family == AF_INET) {
+			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
+			err = 0;
+			break;
+		}
+		if (rp->ai_family == AF_INET6) {
+			memcpy(ss, (struct sockaddr_in6 *)(rp->ai_addr), sizeof(struct sockaddr_in6));
+			err = 0;
+			break;
+		}
+	}
+	freeaddrinfo(result);
+
+	if (err) {
+		errno = EAGAIN;
+		return 1;
+	}
+
+	if (netdown) {
+		LOG("Network up, resolved address to hostname %s", host);
+		netdown = 0;
+	}
+
+	return 0;
 }
 
 static int setup_socket(struct ntp_control *ntpc)
@@ -1053,65 +1111,6 @@ int main(int argc, char *argv[])
 	run(&ntpc);
 
 	log_exit();
-
-	return 0;
-}
-
-static int getaddrbyname(char *host, struct sockaddr_storage *ss)
-{
-	int err;
-	static int netdown = 0;
-	struct addrinfo hints;
-	struct addrinfo *result;
-	struct addrinfo *rp;
-
-	if (!host || !ss) {
-		errno = EINVAL;
-		return 1;
-	}
-
-	memset(&hints, 0, sizeof(struct addrinfo));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = 0;
-	hints.ai_flags = AI_PASSIVE;
-	hints.ai_protocol = 0;
-	hints.ai_canonname = NULL;
-	hints.ai_addr = NULL;
-	hints.ai_next = NULL;
-
-	memset(ss, 0, sizeof(struct sockaddr_storage));
-	err = getaddrinfo(host, NULL, &hints, &result);
-	if (err) {
-		ERR(0, "Failed resolving address to hostname %s: %s", host, gai_strerror(err));
-		netdown = errno = ENETDOWN;
-		return 1;
-	}
-
-	/* The first result will be used. IPV4 has higher priority */
-	err = 1;
-	for (rp = result; rp; rp = rp->ai_next) {
-		if (rp->ai_family == AF_INET) {
-			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
-			err = 0;
-			break;
-		}
-		if (rp->ai_family == AF_INET6) {
-			memcpy(ss, (struct sockaddr_in6 *)(rp->ai_addr), sizeof(struct sockaddr_in6));
-			err = 0;
-			break;
-		}
-	}
-	freeaddrinfo(result);
-
-	if (err) {
-		errno = EAGAIN;
-		return 1;
-	}
-
-	if (netdown) {
-		LOG("Network up, resolved address to hostname %s", host);
-		netdown = 0;
-	}
 
 	return 0;
 }
