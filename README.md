@@ -60,7 +60,14 @@ All arguments are optional, sntpd defaults to use `pool.ntp.org`.
 
       SERVER   Optional NTP server to sync with, default: pool.ntp.org
 
-Mortal users can use the ntpclient tool for monitoring, but not clock
+
+Compatibility
+-------------
+
+The sntpd project comes with a compatiblity mode triggered when called
+as `ntpclient`.  This mode supports the original command line options.
+
+Mortal users can use the `ntpclient` tool for monitoring, but not clock
 setting (with the `-s` or `-l` switches).  The `-l` switch is designed
 to be robust in any network environment, but has seen the most extensive
 testing in a low latency (less than 2 ms) Ethernet environment.  Users
