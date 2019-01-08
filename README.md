@@ -18,19 +18,24 @@ Table of Contents
 Introduction
 ------------
 
-sntpd is a small NTP daemon and client for UNIX systems implementing
-[RFC 1305][] and [RFC 4330][].  Its functionality is a small subset of
-[ntpd][], [chrony][], [OpenNTPd][], and [xntpd][].  Since it is much
-smaller it is also more relevant for embedded systems in need of only a
-background process to keep the system time in sync.
+sntpd is a small SNTP client for UNIX systems, implementing [RFC 1305][]
+and [RFC 4330][].  Its functionality is only a small subset of [ntpd][],
+[chrony][], [OpenNTPd][], and [xntpd][].  Since it is much smaller it is
+also more relevant for embedded systems in need of only a background
+process to keep the system time in sync.
 
 sntpd is a fork of ntpclient by Larry Doolittle.  As such it implements
-a compatibility mode when called with the name `ntpclient`.
+a compatibility mode when called with the name `ntpclient`.  The name
+has been changed to indicate the expanded feature set, e.g. a background
+daemon mode, IPv6, syslog, as well as changes in command line options.
 
 Please report bugs to the GitHub [issue tracker][].  If you want to
 contribute fixes or new features, see the file [CONTRIBUTING.md][].
 
-☞ https://github.com/troglobit/sntpd/releases
+**Note:** sntpd currently has no support for acting as an SNTP server.
+  Patches to add support for this are most welcome.
+
+We recommend official ☞ https://github.com/troglobit/sntpd/releases
 
 
 Usage
