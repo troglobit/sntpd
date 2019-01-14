@@ -5,6 +5,24 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
+[v3.0][UNRELEASED]
+------------------
+
+First release as sntpd, which is a multicall binary with support for the
+behavior of ntpclient.
+
+### Changes
+
+- Fix #4: Rename project from ntpclient to sntpd to avoid confusion with
+  the original ntpclient.  This change also restores original command
+  line options, and semantics, when called with the name `ntpclient`
+- New, stripped down, command line options when called as `sntpd`
+- Updates to man page, new name and separate command line options
+- Drop OpenWRT `mini-ntpclient.c` from project, with configure option
+- Drop `--disable-syslog` configure option
+- Drop support for *really* old systems, no more `gettimeofday()`
+
+
 [2018_244][] - 2018-09-01
 -------------------------
 
