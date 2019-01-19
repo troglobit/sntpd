@@ -29,13 +29,11 @@ a compatibility mode when called with the name `ntpclient`.  The name
 has been changed to indicate the expanded feature set, e.g. a background
 daemon mode, IPv6, syslog, as well as changes in command line options.
 
-Please report bugs to the GitHub [issue tracker][].  If you want to
+Use the GitHub [issue tracker][] to report bugs.  If you want to
 contribute fixes or new features, see the file [CONTRIBUTING.md][].
 
 **Note:** sntpd currently has no support for acting as an SNTP server.
   Patches to add support for this are most welcome.
-
-We recommend official ☞ https://github.com/troglobit/sntpd/releases
 
 
 Usage
