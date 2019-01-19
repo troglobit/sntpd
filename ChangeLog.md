@@ -1,15 +1,15 @@
 Change Log
 ==========
 
-All notable changes to the project are documented in this file.
-Changes to Larry's upstream version are interleaved.
+All notable changes to the project are documented in this file.  Changes
+to Larry's upstream version are interleaved.
 
 
 [v3.0][UNRELEASED]
 ------------------
 
-First release as sntpd, which is a multicall binary with support for the
-behavior of ntpclient.
+First release as sntpd, a multicall binary with support for the behavior
+of the original ntpclient.
 
 ### Changes
 
