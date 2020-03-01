@@ -10,15 +10,33 @@ compiler:
   - gcc
   - clang
 
+env:
+  global:
+   # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+   #   via the "travis encrypt" command using the project repo's public key
+   - secure: "XSdSDc+GVopPss0SmWqAjQOBaMtxIUl34ulAXWKft9prBk9I5aVjSrLFcfE/EEvoW/rAHwLrr2jZSNwI/nzWcQ9z9p6U2BcVsLyPaatT32LLivzJs+cRUHIgVGWWAVd7yerzxhT7U+XQp0FpKW/VPeyo05P2vWYzvbwFlTf0leDg9K7lbB+kGGfUnel25Uiu144lDGovHDdzm8hcB90ay0jigWRvA/aS22BO/ktMhcWn7CkcyztsffWsRSGEIPaQQQX659CNaAaqkfDxr38ALof2L3pktlJlRDmxWhXFVhAqDVt2FOMzVY9rlnkMaX6ZKehgwgqRhG4STySPKSxxdhyC/Kkvb1Lm9ubxKv9cWQLJaviLGQZVSNa91WhxE+a62OB857Cz41r1216RQC87zk/sJ3Cx/ue0DVxKf7DqLvsFxeHRtBSKWlaLaF6axWT4OMiaQE4BBXgij+omq5PHQNwGKbsRB8q7cyHNV+UopecmLKgtSDi4zCKm3j5f0lfAmKzpyILu5xDrGbPFOfPCHDJTwoIsbB3msTsLrDsVTpCB+BUoAd2Z5GTPR0Fj8TdFh+YgPBfE92QJvoVrsX2Q2s5u5mmU4aCCugU+VtCbXzuL3HFK1NXsxFeGdUi3YQYpQR9um+RibK87G5gP+wMMvmh5HF4ZgQ5LhpaMaIcLJug="
+
+before_install:
+  - echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+
 addons:
   apt:
     packages:
       - tree
+  coverity_scan:
+    project:
+      name: "troglobit/sntpd"
+      description: "sntpd is a fork of Larry Doolittle's ntpclient"
+    notification_email: troglobit@gmail.com
+    build_command_prepend: "./autogen.sh && ./configure --prefix="
+    build_command: "make clean all"
+    branch_pattern: dev
 
 script:
   - ./autogen.sh
   - ./configure --prefix=
-  - make -j5
+  - make clean
+  - make V=1 -j5
   - DESTDIR=/tmp make install-strip
   - tree /tmp
   - ldd  /tmp/bin/adjtimex /tmp/sbin/ntpclient

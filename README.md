@@ -1,6 +1,6 @@
 sntpd
 =====
-[![License Badge][]][License] [![Travis Status][]][Travis]
+[![License Badge][]][License] [![Travis Status][]][Travis] [![Coverity Status][]][Coverity Scan]
 
 Table of Contents
 -----------------
@@ -275,3 +275,5 @@ features like syslog, background daemon, IPv6, and systemd support.
 [issue tracker]:   https://github.com/troglobit/sntpd/issues
 [HowTo]:           https://github.com/troglobit/sntpd/doc/HowTo.md
 [Joachim Nilsson]: http://troglobit.com
+[Coverity Scan]:   https://scan.coverity.com/projects/20498
+[Coverity Status]: https://scan.coverity.com/projects/20498/badge.svg
