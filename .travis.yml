@@ -25,12 +25,14 @@ addons:
   coverity_scan:
     project:
       name: "troglobit/sntpd"
-      description: "sntpd is a fork of Larry Doolittle's ntpclient"
+      description: "sntpd is a fork of ntpclient by Larry Doolittle"
     notification_email: troglobit@gmail.com
     build_command_prepend: "./autogen.sh && ./configure --prefix="
     build_command: "make clean all"
     branch_pattern: dev
 
+# We don't store generated files (configure and Makefile) in GIT,
+# so we must customize the default build script to run ./autogen.sh
 script:
   - ./autogen.sh
   - ./configure --prefix=
