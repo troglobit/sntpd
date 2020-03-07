@@ -54,4 +54,13 @@ void logit(int severity, int syserr, const char *format, ...);
 /* phaselock.c */
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
 
+/* Workaround for missing SIOCGSTAMP after Linux 5.1 64-bit timestamp fixes. */
+#ifndef SIOCGSTAMP
+# ifdef SIOCGSTAMP_OLD
+#  define SIOCGSTAMP SIOCGSTAMP_OLD
+# else
+#  define SIOCGSTAMP 0x8906
+# endif
+#endif
+
 #endif /* NTPCLIENT_H_ */
