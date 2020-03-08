@@ -3,21 +3,38 @@ Section: net
 Priority: optional
 Maintainer: Joachim Nilsson <troglobit@gmail.com>
 Homepage: https://github.com/troglobit/sntpd
-Build-Depends: debhelper (>= 9~), dh-systemd
+Build-Depends: debhelper (>= 10), systemd
+Standards-Version: 4.3.0
+Vcs-Browser: https://github.com/troglobit/sntpd
 Vcs-Git: https://github.com/troglobit/sntpd.git
-Vcs-Browser: https://github.com/troglobit/sntpd/commits/
-Standards-Version: 3.9.6
+
+Package: adjtimex-sntpd
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Conflicts: adjtimex
+Provides: adjtimex
+Description: Kernel time variables configuration utility
+ This package provides a utility to manipulate kernel time variables.
+ For a machine connected to the Internet, or equipped with a precision
+ oscillator or radio clock, the best way to keep the system clock
+ accurate is using NTP (Network Time Protocol).  However, for a
+ standalone or intermittently connected machine, you may use adjtimex
+ instead to at least correct for systematic drift.  It can optionally
+ adjust the system clock using the CMOS clock as a reference, and can
+ log times for long-term estimation of drift rates.
+ .
+ This version of adjtimex comes from the sntpd package.
 
 Package: sntpd
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Conflicts: time-daemon, ntp, adjtimex
-Provides: time-daemon, adjtimex
+Conflicts: time-daemon, ntp
+Provides: time-daemon
 Replaces: time-daemon
 Description: Simple NTP daemon and client
  sntpd is an NTP (RFC-1305) daemon and client for UNIX systems.  Its
  functionality is a small subset of xntpd, but performs better (or at
  least has the potential to be better) within its limited scope.
  .
- Since sntpd it is much smaller than xntpd, it is also more relevant
+ Since sntpd it is much smaller than ntpd, it is also more relevant
  for embedded systems.

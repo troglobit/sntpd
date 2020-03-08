@@ -1,0 +1,3 @@
+lib/systemd/system/sntpd.service
+usr/sbin/sntpd
+usr/share/man/man8/sntpd.8
