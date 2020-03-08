@@ -38,17 +38,14 @@
 #define INFO(fmt, args...)       logit(LOG_INFO,      0, fmt, ##args)
 #define DBG(fmt,  args...)       logit(LOG_DEBUG,     0, fmt, ##args)
 
-extern int debug;
-extern int log_enable;
-extern int verbose;
-
 extern const char *prognm;
-
 extern double min_delay;        /* global tuning parameter */
 
 /* logit.c */
-void log_init(void);
+void log_init(int use_syslog, int level);
 void log_exit(void);
+int  log_str2lvl(char *arg);
+
 void logit(int severity, int syserr, const char *format, ...);
 
 /* phaselock.c */

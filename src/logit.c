@@ -1,17 +1,38 @@
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>		/* vsyslog(), vfprintf(), use -D_BSD_SOURCE */
 #include <string.h>
+#define SYSLOG_NAMES
+#include <syslog.h>
+#include <sys/param.h>		/* MIN()/MAX() */
 
 #include "sntpd.h"
 
-int log_enable = 0;
-int log_level = LOG_NOTICE;
-
-void log_init(void)
+struct {
+	const char *name;
+	int val;
+} prionm[] =
 {
-	if (debug > 0)
-		log_level = LOG_DEBUG;
+	{ "none",    INTERNAL_NOPRI },		/* INTERNAL */
+	{ "crit",    LOG_CRIT       },
+	{ "alert",   LOG_ALERT      },
+	{ "panic",   LOG_EMERG      },
+	{ "error",   LOG_ERR        },
+	{ "warning", LOG_WARNING    },
+	{ "notice",  LOG_NOTICE     },
+	{ "info",    LOG_INFO       },
+	{ "debug",   LOG_DEBUG      },
+	{ NULL, -1 }
+};
+
+static int log_enable = 0;
+static int log_level = LOG_NOTICE;
+
+void log_init(int use_syslog, int level)
+{
+	log_enable = use_syslog;
+	log_level  = level;
 
 	if (log_enable <= 0)
 		return;
@@ -26,6 +47,20 @@ void log_exit(void)
 		return;
 
 	closelog();
+}
+
+int log_str2lvl(char *arg)
+{
+	int i;
+
+	for (i = 0; prionm[i].name; i++) {
+		size_t len = MIN(strlen(prionm[i].name), strlen(arg));
+
+		if (!strncasecmp(prionm[i].name, arg, len))
+			return prionm[i].val;
+	}
+
+	return atoi(arg);
 }
 
 void logit(int severity, int syserr, const char *format, ...)

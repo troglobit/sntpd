@@ -1,4 +1,4 @@
-/* NTP client
+/* Simple NTP client
  *
  * Copyright (C) 1997-2015  Larry Doolittle <larry@doolittle.boa.org>
  * Copyright (C) 2010-2018  Joachim Nilsson <troglobit@gmail.com>
@@ -107,10 +107,10 @@ struct ntp_control {
 	char serv_addr[4];
 };
 
-int debug = 0;
-int verbose = 0;		/* Verbose flag, produce useful output to log */
+int dry = 0;			/* Dry run, no time corrections */
 int initial_freq = 0;		/* initial freq value to use */
 int daemonize = 0;
+int logging = 1;
 
 const char *prognm = PACKAGE_NAME;
 static int sighup  = 0;
@@ -387,8 +387,8 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 #undef FAIL
 	}
 
-	/* XXX should I do this if debug flag is set? */
-	if (ntpc->set_clock) {	/* CAP_SYS_TIME or root required, or ntpclient will exit here! */
+	if (!dry && ntpc->set_clock) {
+		/* CAP_SYS_TIME or root required, or sntpd will exit here! */
 		set_time(&xmttime);
 		LOG("Time synchronized to server %s, stratum %d", ntpc->server, stratum);
 	}
@@ -408,17 +408,16 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 					    el_time + sec2u(disp),
 					    freq);
 
-		if (!debug && new_freq != freq)
+		if (!dry && new_freq != freq)
 			set_freq(new_freq);
 	}
 
-	/* Display by default for ntpclient users, sntpd users need to supply -v */
-	if (verbose || ntpc->usermode) {
-		LOG("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
-		      arrival->coarse / 86400, arrival->coarse % 86400,
-		      arrival->fine / 4294967, el_time, st_time,
-		      (skew1 - skew2) / 2, sec2u(disp), freq);
-	}
+	/* Display by default for ntpclient users, sntpd must run with -l info */
+	INFO("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
+	     arrival->coarse / 86400, arrival->coarse % 86400,
+	     arrival->fine / 4294967, el_time, st_time,
+	     (skew1 - skew2) / 2, sec2u(disp), freq);
+
 	*error = el_time - st_time;
 
 	return 0;
@@ -759,6 +758,7 @@ static int do_replay(void)
 		n = sscanf(line, "%d %f %f %f %lf %f %d", &day, &sec, &el_time, &st_time, &skew, &disp, &freq);
 		if (n == 7) {
 			DBG("%s", line);
+
 			absolute = day * 86400 + (int)sec;
 			errorbar = el_time + disp;
 #ifdef ENABLE_DEBUG
@@ -784,8 +784,17 @@ static int do_replay(void)
 }
 #endif
 
-static void run(struct ntp_control *ntpc)
+static void run(struct ntp_control *ntpc, int log_level)
 {
+	if (daemonize) {
+		/*
+		 * Force output to syslog, we have no other way of
+		 * communicating with the user after being daemonized
+		 */
+		logging = 1;
+	}
+	log_init(logging, log_level);
+
 	if (initial_freq) {
 		DBG("Initial frequency %d", initial_freq);
 		set_freq(initial_freq);
@@ -794,11 +803,9 @@ static void run(struct ntp_control *ntpc)
 	if (ntpc->set_clock && !ntpc->live && !ntpc->goodness && !ntpc->probe_count)
 		ntpc->probe_count = 1;
 
-	/* If user gives a probe count, then assume non-live run and verbose reporting. */
-	if (ntpc->probe_count > 0) {
+	/* If user gives a probe count, then assume non-live run */
+	if (ntpc->probe_count > 0)
 		ntpc->live = 0;
-		verbose = 1;
-	}
 
 	/* respect only applicable MUST of RFC-4330 */
 	if (ntpc->probe_count != 1 && ntpc->cycle_time < MIN_INTERVAL)
@@ -824,12 +831,6 @@ static void run(struct ntp_control *ntpc)
 			ERR(errno, "Failed daemonizing, aborting");
 			exit(1);
 		}
-
-		/*
-		 * Force output to syslog, we have no other way of
-		 * communicating with the user after being daemonized
-		 */
-		log_enable = 1;
 	}
 
 	if (!ntpc->usermode)
@@ -842,6 +843,8 @@ static void run(struct ntp_control *ntpc)
 
 	if (!ntpc->usermode)
 		LOG("Stopping " PACKAGE_NAME " v" PACKAGE_VERSION);
+
+	log_exit();
 }
 
 static int ntpclient_usage(int code)
@@ -853,7 +856,7 @@ static int ntpclient_usage(int code)
 		"\n"
 		"Options:\n"
 		"  -c count      stop after count time measurements (default 0 means go forever)\n"
-		"  -d            print diagnostics (feature can be disabled at compile time)\n"
+		"  -d            Dry run, connect to server, do calculations, no time correction\n"
 		"  -f frequency  Initialize frequency offset.  Linux only, requires CAP_SYS_TIME\n"
 		"  -g goodness   causes ntpclient to stop after getting a result more accurate\n"
 		"                than goodness (microseconds, default 0 means go forever)\n"
@@ -890,6 +893,8 @@ static int ntpclient(int argc, char *argv[])
 	ntpc.usermode    = 1;
 	ntpc.live        = 0;
 	ntpc.cross_check = 1;
+	daemonize        = 0;
+	logging          = 0;
 
 	while (1) {
 		char opts[] = "c:df:g:h:i:lp:q:" REPLAY_OPTION "st?";
@@ -904,7 +909,7 @@ static int ntpclient(int argc, char *argv[])
 			break;
 
 		case 'd':
-			debug++;
+			dry++;
 			break;
 
 		case 'f':
@@ -959,11 +964,7 @@ static int ntpclient(int argc, char *argv[])
 	if (!ntpc.server)
 		return ntpclient_usage(1);
 
-	log_init();
-
-	run(&ntpc);
-
-	log_exit();
+	run(&ntpc, dry ? LOG_DEBUG : LOG_INFO);
 
 	return 0;
 }
@@ -972,13 +973,13 @@ static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage:\n"
-		"  %s [-dhln" REPLAY_OPTION "tvV] [-i SEC] [-p PORT] [-q MSEC] [SERVER]\n"
+		"  %s [-dhn" REPLAY_OPTION "stV] [-i SEC] [-l LEVEL] [-p PORT] [-q MSEC] [SERVER]\n"
 		"\n"
 		"Options:\n"
-		"  -d       Debug, or diagnostics mode.  Possible to enable more at compile\n"
+		"  -d       Dry run, no time correction, useful for debugging\n"
 		"  -h       Show summary of command line options and exit\n"
 		"  -i SEC   Check time every interval seconds.  Default: 600\n"
-		"  -l       Use syslog instead of stdout for log messages, default unless -n\n"
+		"  -l LEVEL Set log level: none, err, notice (default), info, debug\n"
 		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
 		"           Use -L with this to use syslog as well, for Finit + systemd\n"
 		"  -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
@@ -986,8 +987,8 @@ static int usage(int code)
 #ifdef ENABLE_REPLAY
 		"  -r       Replay analysis code based on stdin\n"
 #endif
+		"  -s       Use syslog instead of stdout for log messages, default unless -n\n"
 		"  -t       Trust network and server, no RFC-4330 recommended validation\n"
-		"  -v       Verbose, show time sync events, hostname lookup errors, etc.\n"
 		"  -V       Show program version\n"
 		"\n"
 		"Arguments:\n"
@@ -1017,6 +1018,7 @@ static const char *progname(const char *arg0)
 int main(int argc, char *argv[])
 {
 	struct ntp_control ntpc;
+	int log_level = LOG_NOTICE;
 	int c;
 
 	/* sntpd is a multicall binary, how are we called? */
@@ -1040,7 +1042,7 @@ int main(int argc, char *argv[])
 	daemonize        = 1;
 
 	while (1) {
-		char opts[] = "dhi:lnp:q:" REPLAY_OPTION "tvV?";
+		char opts[] = "dhi:l:np:q:" REPLAY_OPTION "stV?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
@@ -1048,7 +1050,7 @@ int main(int argc, char *argv[])
 
 		switch (c) {
 		case 'd':
-			debug++;
+			dry = 1;
 			break;
 
 		case 'h':
@@ -1059,12 +1061,14 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'l':
-			log_enable++;
+			log_level = log_str2lvl(optarg);
+			if (log_level == -1)
+				return usage(1);
 			break;
 
 		case 'n':
 			daemonize = 0;
-			log_enable--;
+			logging--;
 			break;
 
 		case 'p':
@@ -1080,12 +1084,12 @@ int main(int argc, char *argv[])
 			return do_replay();
 #endif
 
-		case 't':
-			ntpc.cross_check = 0;
+		case 's':
+			logging++;
 			break;
 
-		case 'v':
-			++verbose;
+		case 't':
+			ntpc.cross_check = 0;
 			break;
 
 		case 'V':
@@ -1098,19 +1102,13 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	log_init();
-
 	if (optind < argc && ntpc.server == NULL)
 		ntpc.server = argv[optind];
 
-	if (ntpc.server == NULL) {
+	if (ntpc.server == NULL)
 		ntpc.server = (char *)"pool.ntp.org";
-		DBG("Using server %s", ntpc.server);
-	}
 
-	run(&ntpc);
-
-	log_exit();
+	run(&ntpc, log_level);
 
 	return 0;
 }
