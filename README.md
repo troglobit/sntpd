@@ -42,19 +42,19 @@ Usage
 All arguments are optional, sntpd defaults to use `pool.ntp.org`.
 
     Usage:
-	  sntpd [options] [SERVER]
+      sntpd [options] [SERVER]
 
-      -d       Debug, or diagnostics mode  Possible to enable more at compile
+      -d       Dry run, no time correction, useful for debugging
       -h       Show summary of command line options and exit
       -i SEC   Check time every interval seconds.  Default: 600
-      -l       Use syslog instead of stdout for log messages, default unless -n
+      -l LEVEL Set log level: none, err, warn, notice (default), info, debug
       -n       Don't fork.  Prevents sntpd from daemonizing by default
-               Use -l with this to use syslog as well, for Finit + systemd
+               Use '-s' with this to use syslog as well, for Finit + systemd
       -p PORT  NTP client UDP port.  Default: 0 ("any available")
-      -q MSEC  Minimum packet delay for transaction (default 800 microseconds)
-      -t       Trust network and server, no RFC-4330 recommended validation
-      -v       Verbose, show time sync events, hostname lookup errors, etc.
-      -V       Show program version
+      -q USEC  Minimum packet delay for transaction, default: 800 usec
+      -s       Use syslog instead of stdout, default unless -n
+      -t       Trust network and server, disable RFC4330 validation
+      -v       Show program version
 
       SERVER   Optional NTP server to sync with, default: pool.ntp.org
 

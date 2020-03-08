@@ -12,7 +12,7 @@
 .Op Fl dhnrstv
 .Op Fl i Ar SEC
 .Op Fl p Ar PORT
-.Op Fl q Ar MSEC
+.Op Fl q Ar USEC
 .Op SERVER
 .Nm ntpclient
 .Op Fl dlrst
@@ -107,10 +107,10 @@ Don't fork.  Prevents
 from daemonizing and also implies logging to stdout, use
 .Fl s
 to enable syslog in this mode.
-.It Fl p Ar port
+.It Fl p Ar PORT
 Local NTP client UDP port, default 0 means "any available".  Very rarely
 necessary to change.
-.It Fl q Ar min_delay
+.It Fl q Ar USEC
 Minimum packet delay for transaction, default 800 microseconds.
 .It Fl r
 Replay analysis code based on stdin, feature is disabled by default

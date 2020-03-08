@@ -973,17 +973,17 @@ static int usage(int code)
 {
 	fprintf(stderr,
 		"Usage:\n"
-		"  %s [-dhn" REPLAY_OPTION "stV] [-i SEC] [-l LEVEL] [-p PORT] [-q MSEC] [SERVER]\n"
+		"  %s [-dhn" REPLAY_OPTION "stV] [-i SEC] [-l LEVEL] [-p PORT] [-q USEC] [SERVER]\n"
 		"\n"
 		"Options:\n"
 		"  -d       Dry run, no time correction, useful for debugging\n"
 		"  -h       Show summary of command line options and exit\n"
 		"  -i SEC   Check time every interval seconds.  Default: 600\n"
-		"  -l LEVEL Set log level: none, err, notice (default), info, debug\n"
+		"  -l LEVEL Set log level: none, err, warn, notice (default), info, debug\n"
 		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
 		"           Use with '-s' to use syslog as well, for Finit + systemd\n"
 		"  -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
-		"  -q MSEC  Minimum packet delay for transaction, default: 800 msec\n"
+		"  -q USEC  Minimum packet delay for transaction, default: 800 usec\n"
 #ifdef ENABLE_REPLAY
 		"  -r       Replay analysis code based on stdin\n"
 #endif
