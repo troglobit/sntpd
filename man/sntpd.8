@@ -1,7 +1,7 @@
 .\" man page for sntpd and Larry Doolittle's ntpclient
 .\" distributed under GPL
 .\" originally written by Walter Harms
-.Dd Dec 28, 2018
+.Dd Mar 8, 2020
 .\" Please adjust this date whenever revising the manpage.
 .Dt SNTPD 8
 .Sh NAME
@@ -9,7 +9,7 @@
 .Nd Simple NTP daemon and client
 .Sh SYNOPSIS
 .Nm
-.Op Fl dhlnrtvV
+.Op Fl dhnrstv
 .Op Fl i Ar SEC
 .Op Fl p Ar PORT
 .Op Fl q Ar MSEC
@@ -77,20 +77,35 @@ difference to
 which requires a server hostname to be given as argument.
 .Bl -tag -width Ds
 .It Fl d
-NTP debug/diagnostics, very noisy.
+Dry run, no time correction, useful for debugging.
 .It Fl h
 Show summary of command line options and exit.
-.It Fl i Ar interval
+.It Fl i Ar SEC
 Check time every interval seconds, default 600.
-.It Fl l
-Use syslog instead of stdout for log messages, default unless started
-with
-.Fl n .
+.It Fl l Ar LEVEL
+Set log level for syslog messages:
+.Pp
+.Bl -tag -width WARNING -compact -offset indent
+.It Cm none
+Disable all logging
+.It Cm error
+Error conditions
+.It Cm warning
+Warning conditions
+.It Cm notice
+Normal but significant condition (default)
+.It Cm info
+Informational, all time sync events
+.It Cm debug
+Debug-level messages, like
+.Cm info
+but more, very noisy
+.El
 .It Fl n
 Don't fork.  Prevents
 .Nm
 from daemonizing and also implies logging to stdout, use
-.Fl l
+.Fl s
 to enable syslog in this mode.
 .It Fl p Ar port
 Local NTP client UDP port, default 0 means "any available".  Very rarely
@@ -100,13 +115,16 @@ Minimum packet delay for transaction, default 800 microseconds.
 .It Fl r
 Replay analysis code based on stdin, feature is disabled by default
 at compile time.
+.It Fl s
+Use syslog instead of stdout for log messages, default unless started
+with
+.Fl n .
 .It Fl t
 Trust network and server, no RFC-4330 recommended cross-checks.
 .It Fl v
-Verbose operation.  This option will cause time sync events, and version
-information at start/stop to be logged.
-.It Fl V
-Display version and copyright information.
+Display
+.Nm
+version.
 .El
 .Sh AUTHORS
 Larry Doolittle maintains the original
