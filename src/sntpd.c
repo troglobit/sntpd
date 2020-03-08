@@ -1019,7 +1019,6 @@ int main(int argc, char *argv[])
 {
 	struct ntp_control ntpc;
 	int log_level = LOG_NOTICE;
-	int c;
 
 	/* sntpd is a multicall binary, how are we called? */
 	prognm = progname(argv[0]);
@@ -1043,6 +1042,7 @@ int main(int argc, char *argv[])
 
 	while (1) {
 		char opts[] = "dhi:l:np:q:" REPLAY_OPTION "stv?";
+		int c;
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
