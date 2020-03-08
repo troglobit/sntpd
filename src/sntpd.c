@@ -981,14 +981,14 @@ static int usage(int code)
 		"  -i SEC   Check time every interval seconds.  Default: 600\n"
 		"  -l LEVEL Set log level: none, err, notice (default), info, debug\n"
 		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
-		"           Use -L with this to use syslog as well, for Finit + systemd\n"
+		"           Use with '-s' to use syslog as well, for Finit + systemd\n"
 		"  -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
 		"  -q MSEC  Minimum packet delay for transaction, default: 800 msec\n"
 #ifdef ENABLE_REPLAY
 		"  -r       Replay analysis code based on stdin\n"
 #endif
-		"  -s       Use syslog instead of stdout for log messages, default unless -n\n"
-		"  -t       Trust network and server, no RFC-4330 recommended validation\n"
+		"  -s       Use syslog instead of stdout, default unless -n\n"
+		"  -t       Trust network and server, disable RFC4330 validation\n"
 		"  -v       Show program version\n"
 		"\n"
 		"Arguments:\n"
