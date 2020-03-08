@@ -119,7 +119,7 @@ static int sigterm = 0;
 extern char *optarg;		/* according to man 2 getopt */
 
 /* prototypes for some local routines */
-static void send_packet(int usd, uint32_t time_sent[2]);
+static int send_packet(int usd, uint32_t time_sent[2]);
 static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
 
 /* OS dependent routine to get the current value of clock frequency */
@@ -183,7 +183,7 @@ static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
 	*time_fine = NTPFRAC(now.tv_nsec / 1000);
 }
 
-static void send_packet(int usd, uint32_t time_sent[2])
+static int send_packet(int usd, uint32_t time_sent[2])
 {
 	uint32_t data[12];
 
@@ -200,7 +200,7 @@ static void send_packet(int usd, uint32_t time_sent[2])
 #endif
 	if (sizeof(data) != 48) {
 		ERR(0, "Packet size error");
-		return;
+		return -1;
 	}
 
 	memset(data, 0, sizeof data);
@@ -211,7 +211,8 @@ static void send_packet(int usd, uint32_t time_sent[2])
 
 	data[10] = htonl(time_sent[0]);	/* Transmit Timestamp coarse */
 	data[11] = htonl(time_sent[1]);	/* Transmit Timestamp fine   */
-	send(usd, data, 48, 0);
+
+	return send(usd, data, 48, 0);
 }
 
 static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
@@ -690,10 +691,15 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 				if (probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)
 					break;
 
-				send_packet(usd, ntpc->time_of_send);
-				++probes_sent;
-				to.tv_sec = ntpc->cycle_time;
-				to.tv_usec = 0;
+				if (send_packet(usd, ntpc->time_of_send) == -1) {
+					ERR(errno, "Failed sending probe");
+					to.tv_sec = MIN_INTERVAL;
+					to.tv_usec = 0;
+				} else {
+					++probes_sent;
+					to.tv_sec = ntpc->cycle_time;
+					to.tv_usec = 0;
+				}
 			}
 			continue;
 		}
