@@ -26,7 +26,7 @@ addons:
       name: "troglobit/sntpd"
       description: "sntpd is a fork of ntpclient by Larry Doolittle"
     notification_email: troglobit@gmail.com
-    build_command_prepend: "./autogen.sh && ./configure --prefix="
+    build_command_prepend: "./autogen.sh && ./configure --prefix= --with-adjtimex --with-ntpclient"
     build_command: "make clean all"
     branch_pattern: dev
 
@@ -34,7 +34,7 @@ addons:
 # so we must customize the default build script to run ./autogen.sh
 script:
   - ./autogen.sh
-  - ./configure --prefix=
+  - ./configure --prefix= --with-adjtimex --with-ntpclient
   - make clean
   - make V=1 -j5
   - DESTDIR=/tmp make install-strip
