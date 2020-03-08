@@ -989,7 +989,7 @@ static int usage(int code)
 #endif
 		"  -s       Use syslog instead of stdout for log messages, default unless -n\n"
 		"  -t       Trust network and server, no RFC-4330 recommended validation\n"
-		"  -V       Show program version\n"
+		"  -v       Show program version\n"
 		"\n"
 		"Arguments:\n"
 		"  SERVER   Optional NTP server to sync with, default: pool.ntp.org\n"
@@ -1042,7 +1042,7 @@ int main(int argc, char *argv[])
 	daemonize        = 1;
 
 	while (1) {
-		char opts[] = "dhi:l:np:q:" REPLAY_OPTION "stV?";
+		char opts[] = "dhi:l:np:q:" REPLAY_OPTION "stv?";
 
 		c = getopt(argc, argv, opts);
 		if (c == EOF)
@@ -1092,7 +1092,7 @@ int main(int argc, char *argv[])
 			ntpc.cross_check = 0;
 			break;
 
-		case 'V':
+		case 'v':
 			puts("v" PACKAGE_VERSION);
 			return 0;
 
