@@ -113,7 +113,7 @@ int initial_freq = 0;		/* initial freq value to use */
 int daemonize = 0;
 
 const char *prognm = PACKAGE_NAME;
-static int sighup  = 1;		/* initial setup */
+static int sighup  = 0;
 static int sigterm = 0;
 
 extern char *optarg;		/* according to man 2 getopt */
@@ -666,7 +666,7 @@ static void primary_loop(struct ntp_control *ntpc)
 			ntpc->live = 0;
 			break;
 		}
-		if (sighup) {
+		if (sighup || usd == -1) {
 			int init;
 
 			sighup = 0;
