@@ -83,15 +83,13 @@ static int search(int rp, int j, int s0, int s1, int sign, struct _seg *answer)
 
 	for (n = next_up(j); n != next_up(rp); n = next_up(n)) {
 #ifdef ENABLE_DEBUG
-		if (debug)
-			DBG("d_ring[%d].s.ss[%d]=%f d_ring[%d].s.ss[%d]=%f",
-			    n, s0, d_ring[n].s.ss[s0], j, s1, d_ring[j].s.ss[s1]);
+		DBG("d_ring[%d].s.ss[%d]=%f d_ring[%d].s.ss[%d]=%f",
+		    n, s0, d_ring[n].s.ss[s0], j, s1, d_ring[j].s.ss[s1]);
 #endif
 		dt = d_ring[n].absolute - d_ring[j].absolute;
 		slope = (d_ring[n].s.ss[s0] - d_ring[j].s.ss[s1]) / dt;
 #ifdef ENABLE_DEBUG
-		if (debug) 
-			DBG("slope %d%d%d [%d,%d] = %f", s0, s1, sign, j, n, slope);
+		DBG("slope %d%d%d [%d,%d] = %f", s0, s1, sign, j, n, slope);
 #endif
 		if (cinit || (slope < answer->slope) ^ sign) {
 			answer->slope = slope;
@@ -147,8 +145,10 @@ static double find_shift(double slope, double offset)
 
 	if (shift2 < shift)
 		shift = shift2;
-	if (debug)
-		DBG("find_shift %f %f -> %f", slope, offset, shift);
+
+#ifdef ENABLE_DEBUG
+	DBG("find_shift %f %f -> %f", slope, offset, shift);
+#endif
 	if (shift  < 0)
 		return 0.0;
 
@@ -159,18 +159,19 @@ static void polygon_point(struct _seg *s)
 {
 	double l, r;
 
-	if (debug)
-		DBG("loop %f %f", s->slope, s->offset);
+#ifdef ENABLE_DEBUG
+	DBG("loop %f %f", s->slope, s->offset);
+#endif
 
 	l = find_shift(- s->slope,   s->offset);
 	r = find_shift(  s->slope, - s->offset);
 	if (l < df.l_min) df.l_min = l;
 	if (r < df.r_min) df.r_min = r;
 
-	if (debug) {
-		DBG("constraint left:  %f %f", l, df.l_min);
-		DBG("constraint right: %f %f", r, df.r_min);
-        }
+#ifdef ENABLE_DEBUG
+	DBG("constraint left:  %f %f", l, df.l_min);
+	DBG("constraint right: %f %f", r, df.r_min);
+#endif
 }
 
 /* Something like linear feedback to be used when we are "close" to
@@ -196,8 +197,9 @@ static double find_df_center(struct _seg *min, struct _seg *max, double gross_df
 	if (max->offset < -crit_time || min->offset > crit_time)
 		return 0.0;
 
-	if (debug)
-		DBG("find_df_center %f %f", delta, factor);
+#ifdef ENABLE_DEBUG
+	DBG("find_df_center %f %f", delta, factor);
+#endif
 
 	return factor * delta;
 }
@@ -206,7 +208,7 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 {
 	/*  Here is the actual phase lock loop.
 	 *  Need to keep a ring buffer of points to make a rational
-	 *  decision how to proceed.  if (debug) print a lot.
+	 *  decision how to proceed.
 	 */
 	static int rp=0, valid=0;
 	int both_sides_now=0;
@@ -220,8 +222,9 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 	int inconsistent=0, max_imax, max_imin=0, min_imax, min_imin=0;
 	int computed_freq=freq;
 
-	if (debug)
-		DBG("contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
+#ifdef ENABLE_DEBUG
+	DBG("contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
+#endif
 
 	d_ring[rp].absolute = absolute;
 	d_ring[rp].skew     = skew;
@@ -237,9 +240,10 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			d_ring[j].s.s.max = d_ring[j].skew - cum + d_ring[j].errorbar;
 			d_ring[j].s.s.min = d_ring[j].skew - cum - d_ring[j].errorbar;
 
-			if (debug)
-				DBG("hist %d %d %f %f %f", j, d_ring[j].absolute - absolute,
-				    cum, d_ring[j].s.s.min, d_ring[j].s.s.max);
+#ifdef ENABLE_DEBUG
+			DBG("hist %d %d %f %f %f", j, d_ring[j].absolute - absolute,
+			    cum, d_ring[j].s.s.min, d_ring[j].s.s.max);
+#endif
 
 			n = next_dn(j);
 			if (n == rp) break;
@@ -266,17 +270,19 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 				save_min=check;
 			}
 
-			if (debug)
-				DBG("maxseg[%d] = %f *x+ %f",
-				    c, maxseg[c].slope, maxseg[c].offset);
+#ifdef ENABLE_DEBUG
+			DBG("maxseg[%d] = %f *x+ %f", c, maxseg[c].slope, maxseg[c].offset);
 
+#endif
 			last_slope = maxseg[c].slope;
 			c++;
 			if (nextj == rp) break;
 		}
 		if (dinit==1) inconsistent=1;
-		if (debug && dinit==0)
+#ifdef ENABLE_DEBUG
+		if (dinit==0)
 			DBG("mincross %f *x+ %f", save_min.slope, save_min.offset);
+#endif
 		max_avail=c;
 		/*
 		 * Pass 3: find the convex up envelope of s.min, composed of
@@ -289,16 +295,19 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 			        search(rp, j, 1, 0, 0, &check);
 			if (check.slope > minseg[c].slope && check.slope < last_slope &&
 			    (dinit || check.slope < save_max.slope)) {dinit=0; save_max=check; }
-			if (debug)
-				DBG("minseg[%d] = %f *x+ %f",
-				    c, minseg[c].slope, minseg[c].offset);
+
+#ifdef ENABLE_DEBUG
+			DBG("minseg[%d] = %f *x+ %f", c, minseg[c].slope, minseg[c].offset);
+#endif
 			last_slope = minseg[c].slope;
 			c++;
 			if (nextj == rp) break;
 		}
 		if (dinit==1) inconsistent=1;
-		if (debug && dinit==0)
+#ifdef ENABLE_DEBUG
+		if (dinit==0)
 			DBG("maxcross %f *x+ %f", save_max.slope, save_max.offset);
+#endif
 		min_avail=c;
 		/*
 		 * Pass 4: splice together the convex polygon that forms
@@ -319,9 +328,12 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 				break;
 			if (dinit==0) polygon_point(&maxseg[c]);
 		}
-		if (dinit && debug)
+		if (dinit) {
+#ifdef ENABLE_DEBUG
 			DBG("found maxseg vs. save_min inconsistency");
-		if (dinit) inconsistent=1;
+#endif
+			inconsistent=1;
+		}
 		max_imax = c;
 		maxseg[max_imax] = save_max;
 
@@ -336,36 +348,45 @@ int contemplate_data(unsigned int absolute, double skew, double errorbar, int fr
 				break;
 			if (dinit==0) polygon_point(&minseg[c]);
 		}
-		if (dinit && debug)
+		if (dinit) {
+#ifdef ENABLE_DEBUG
 			DBG("found minseg vs. save_max inconsistency");
-		if (dinit) inconsistent=1;
+#endif
+			inconsistent=1;
+		}
 		min_imax = c;
 		minseg[min_imax] = save_max;
 
 		/* not needed for analysis, but shouldn't hurt either */
-		if (debug)
-			polygon_point(&save_min);
+#ifdef ENABLE_DEBUG
+		polygon_point(&save_min);
+#endif
 		} /* !inconsistent */
 
 		/*
 		 * Pass 5: decide on a new freq */
 		if (inconsistent) {
-			if (debug)
-				DBG("# inconsistent");
+#ifdef ENABLE_DEBUG
+			DBG("# inconsistent");
+#endif
 		} else {
 			delta_f = find_df(&both_sides_now);
-			if (debug)
-				DBG("find_df() = %e", delta_f);
+#ifdef ENABLE_DEBUG
+			DBG("find_df() = %e", delta_f);
+#endif
 			delta_f += find_df_center(&save_min,&save_max, delta_f);
 			delta_freq = delta_f*65536+.5;
-			if (debug)
-				DBG("delta_f %f  delta_freq %d  bsn %d", delta_f, delta_freq, both_sides_now);
+
+#ifdef ENABLE_DEBUG
+			DBG("delta_f %f  delta_freq %d  bsn %d", delta_f, delta_freq, both_sides_now);
+#endif
 			computed_freq -= delta_freq;
-			if (debug) {
-				LOG("# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
-				LOG("       ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
-				LOG(" delta_f %.3f computed_freq %d", delta_f, computed_freq);
-			}
+
+#ifdef ENABLE_DEBUG
+			DBG("# box [( %.3f , %.1f ) ",  save_min.slope, save_min.offset);
+			DBG("       ( %.3f , %.1f )] ", save_max.slope, save_max.offset);
+ 			DBG(" delta_f %.3f computed_freq %d", delta_f, computed_freq);
+#endif
 			if (computed_freq < -MAX_C) computed_freq=-MAX_C;
 			if (computed_freq >  MAX_C) computed_freq= MAX_C;
 		}
