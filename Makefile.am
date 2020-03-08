@@ -1,4 +1,3 @@
-DISTCHECK_CONFIGURE_FLAGS = --with-systemd=$$dc_install_base/$(systemd)
 SUBDIRS         = src docs man
 doc_DATA        = README.md docs/HOWTO.md ChangeLog.md COPYING
 EXTRA_DIST      = README.md docs/HOWTO.md ChangeLog.md
@@ -38,7 +37,7 @@ package build-deb:
 	dpkg-buildpackage -uc -us -B
 
 ## Target to run when building a release
-release: distcheck release-hook md5-dist package
+release: release-hook distcheck md5-dist package
 	@echo
 	@echo "Resulting release files:"
 	@echo "========================================================================="
@@ -49,3 +48,5 @@ release: distcheck release-hook md5-dist package
 	@for file in `cd ..; ls $(PACKAGE)_$(subst _,.,$(VERSION))*`; do		\
 		printf "%-40s Debian/Ubuntu package file\n" $$file;			\
 	done
+
+DISTCHECK_CONFIGURE_FLAGS = --with-systemd=$$dc_install_base/$(systemd)
