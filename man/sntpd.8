@@ -25,12 +25,18 @@
 .Op Fl q Ar min_delay
 .Sh DESCRIPTION
 .Nm
-is an NTP (RFC-1305) client for UNIX-alike computers.  Its functionality
-is a small subset of xntpd, but has the potential to function better
-within that limited scope.  Since it is much smaller than xntpd, it is
-also more relevant for embedded computers.  It daemonizes itself by
-default and starts synchronizing with the given NTP server, or
-pool.ntp.org if no server is given, using default settings.
+is an NTP (RFC-1305) client and server for UNIX-alike computers.  Its
+functionality is a small subset of xntpd, but has the potential to
+function better within that limited scope.  Since it is much smaller
+than xntpd, it is also more relevant for embedded computers.  It
+daemonizes itself by default and starts synchronizing with the given NTP
+server, or pool.ntp.org if no server is given, using default settings.
+.Pp
+.Nm
+has a very limited server mode, by default listening on UDP port 123 for
+client connections.  The intention of this mode is to serve time from a
+central router to small subnets where routing is not desired.  Similar
+to a DHCP relay agent.
 .Pp
 .Nm
 is a multicall binary.  When started as
@@ -108,8 +114,12 @@ from daemonizing and also implies logging to stdout, use
 .Fl s
 to enable syslog in this mode.
 .It Fl p Ar PORT
-Local NTP client UDP port, default 0 means "any available".  Very rarely
-necessary to change.
+By default
+.Nm
+starts up its very limited server mode, prepared to serve clients with
+time on UDP port 123.  This option can be used to change the server
+listening port, or to disable the server mode, by setting port to zero
+(0).
 .It Fl q Ar USEC
 Minimum packet delay for transaction, default 800 microseconds.
 .It Fl r

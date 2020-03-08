@@ -25,87 +25,16 @@
  * labelled "XXX fixme - non-automatic build configuration".
  */
 
-#include <config.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include "config.h"
+#include <getopt.h>
 #include <signal.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <netdb.h>		/* getaddrinfo -> gethostbyname */
-#include <arpa/inet.h>
 #include <time.h>
-#include <unistd.h>
-#include <errno.h>
 #ifdef PRECISION_SIOCGSTAMP
 #include <sys/ioctl.h>
 #endif
 
 #include "sntpd.h"
-
-/* XXX fixme - non-automatic build configuration */
-#ifdef __linux__
-#include <sys/utsname.h>
-#include <sys/time.h>
-#include <sys/timex.h>
-#else
-extern struct hostent *gethostbyname(const char *name);
-extern int h_errno;
-char __hstrerror_buf[10];
-
-#define hstrerror(errnum) \
-	snprintf(__hstrerror_buf, sizeof(__hstrerror_buf), "Error %d", errnum)
-#endif
-
-/* Default to the RFC-4330 specified value */
-#ifndef MIN_INTERVAL
-#define MIN_INTERVAL 15
-#endif
-
-#define JAN_1970        0x83aa7e80	/* 2208988800 1970 - 1900 in seconds */
-#define NTP_PORT (123)
-
-/* How to multiply by 4294.967296 quickly (and not quite exactly)
- * without using floating point or greater than 32-bit integers.
- * If you want to fix the last 12 microseconds of error, add in
- * (2911*(x))>>28)
- */
-#define NTPFRAC(x) ( 4294*(x) + ( (1981*(x))>>11 ) )
-
-/* The reverse of the above, needed if we want to set our microsecond
- * clock (via clock_settime) based on the incoming time in NTP format.
- * Basically exact.
- */
-#define USEC(x) ( ( (x) >> 12 ) - 759 * ( ( ( (x) >> 10 ) + 32768 ) >> 16 ) )
-
-/* Converts NTP delay and dispersion, apparently in seconds scaled
- * by 65536, to microseconds.  RFC-1305 states this time is in seconds,
- * doesn't mention the scaling.
- * Should somehow be the same as 1000000 * x / 65536
- */
-#define sec2u(x) ( (x) * 15.2587890625 )
-
-struct ntptime {
-	unsigned int coarse;
-	unsigned int fine;
-};
-
-struct ntp_control {
-	uint32_t time_of_send[2];
-	int usermode;		/* 0: sntpd, 1: ntpclient */
-	int live;
-	int set_clock;		/* non-zero presumably needs CAP_SYS_TIME or root */
-	int probe_count;
-	int cycle_time;
-	int goodness;
-	int cross_check;
-
-	uint16_t local_udp_port;
-	char *server;		/* must be set */
-	char serv_addr[4];
-};
 
 int dry = 0;			/* Dry run, no time corrections */
 int initial_freq = 0;		/* initial freq value to use */
@@ -116,10 +45,11 @@ const char *prognm = PACKAGE_NAME;
 static int sighup  = 0;
 static int sigterm = 0;
 
-extern char *optarg;		/* according to man 2 getopt */
+struct ntp_peers peer;
+double root_delay;
+double root_dispersion;
 
 /* prototypes for some local routines */
-static int send_packet(int usd, uint32_t time_sent[2]);
 static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error);
 
 /* OS dependent routine to get the current value of clock frequency */
@@ -173,16 +103,16 @@ static void set_time(struct ntptime *new)
 	DBG("Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
 }
 
-static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
+void ntpc_gettime(struct ntptime *nt)
 {
 	struct timespec now;
 
 	clock_gettime(CLOCK_REALTIME, &now);
-	*time_coarse = now.tv_sec + JAN_1970;
-	*time_fine = NTPFRAC(now.tv_nsec / 1000);
+	nt->coarse = now.tv_sec + JAN_1970;
+	nt->fine   = NTPFRAC(now.tv_nsec / 1000);
 }
 
-static int send_packet(int usd, uint32_t time_sent[2])
+static int send_packet(int usd, struct ntptime *time_sent)
 {
 	uint32_t data[12];
 
@@ -206,29 +136,29 @@ static int send_packet(int usd, uint32_t time_sent[2])
 	data[0] = htonl((LI << 30) | (VN << 27) | (MODE << 24) | (STRATUM << 16) | (POLL << 8) | (PREC & 0xff));
 	data[1] = htonl(1 << 16);	/* Root Delay (seconds) */
 	data[2] = htonl(1 << 16);	/* Root Dispersion (seconds) */
-	ntpc_gettime(time_sent, time_sent + 1);
+	ntpc_gettime(time_sent);
 
-	data[10] = htonl(time_sent[0]);	/* Transmit Timestamp coarse */
-	data[11] = htonl(time_sent[1]);	/* Transmit Timestamp fine   */
+	data[10] = htonl(time_sent->coarse);	/* Transmit Timestamp coarse */
+	data[11] = htonl(time_sent->fine);	/* Transmit Timestamp fine   */
 
 	return send(usd, data, 48, 0);
 }
 
-static void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
+void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 {
 #ifdef PRECISION_SIOCGSTAMP
 	struct timeval udp_arrival;
 
 	if (ioctl(usd, SIOCGSTAMP, &udp_arrival) < 0) {
 		ERR(errno, "Failed ioctl(SIOCGSTAMP)");
-		ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
+		ntpc_gettime(udp_arrival_ntp);
 	} else {
 		udp_arrival_ntp->coarse = udp_arrival.tv_sec + JAN_1970;
 		udp_arrival_ntp->fine = NTPFRAC(udp_arrival.tv_usec);
 	}
 #else
 	(void)usd;		/* not used */
-	ntpc_gettime(&udp_arrival_ntp->coarse, &udp_arrival_ntp->fine);
+	ntpc_gettime(udp_arrival_ntp);
 #endif
 }
 
@@ -261,8 +191,10 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 	 * wrong too often.
 	 */
 	if (NTP_PORT != port) {
-		INFO("%s: invalid port: %u", __func__, port);
-		return 1;
+		if (port != ntpc->udp_port) {
+			INFO("%s: invalid port: %u", __func__, port);
+			return 1;
+		}
 	}
 
 	return 0;
@@ -293,6 +225,8 @@ static double ntpdiff(struct ntptime *start, struct ntptime *stop)
  */
 static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_control *ntpc, int *error)
 {
+	static int first = 1;
+
 	/* straight out of RFC-1305 Appendix A */
 	int li, vn, mode, stratum, prec;
 	int delay, disp;
@@ -301,8 +235,9 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	int poll, refid;
 	struct ntptime reftime;
 #endif
+	struct ntptimes pkt_root_delay, pkt_root_dispersion;
 	struct ntptime orgtime, rectime, xmttime;
-	double el_time, st_time, skew1, skew2;
+	double el_time, st_time, skew1, skew2, dtemp;
 	int freq;
 	const char *drop_reason = NULL;
 
@@ -340,16 +275,16 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 		DBG("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp),
 		      refid >> 24 & 0xff, refid >> 16 & 0xff, refid >> 8 & 0xff, refid & 0xff);
 		DBG("Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
-		DBG("(sent)    %u.%.6u", ntpc->time_of_send[0], USEC(ntpc->time_of_send[1]));
-		DBG("Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));
-		DBG("Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));
-		DBG("Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));
-		DBG("Our recv  %u.%.6u", arrival->coarse, USEC(arrival->fine));
+		DBG("(sent)    %u.%.6u", ntpc->time_of_send.coarse, USEC(ntpc->time_of_send.fine));
+		DBG("Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));   /* T1 */
+		DBG("Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));   /* T2 */
+		DBG("Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));   /* T3 */
+		DBG("Our recv  %u.%.6u", arrival->coarse, USEC(arrival->fine)); /* T4 */
 	}
 #endif
 
-	el_time = ntpdiff(&orgtime, arrival);	/* elapsed */
-	st_time = ntpdiff(&rectime, &xmttime);	/* stall */
+	el_time = ntpdiff(&orgtime, arrival);	/* elapsed: (T4 - T1)*/
+	st_time = ntpdiff(&rectime, &xmttime);	/* stall: (T3 - T2) */
 	skew1 = ntpdiff(&orgtime, &rectime);
 	skew2 = ntpdiff(&xmttime, arrival);
 	freq = get_current_freq();
@@ -361,7 +296,6 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 		DBG("Slop:          %9.2f", el_time - st_time);
 		DBG("Skew:          %9.2f", (skew1 - skew2) / 2);
 		DBG("Frequency:     %9d", freq);
-		DBG(" Day   Second     Elapsed    Stall     Skew  Dispersion  Freq");
 	}
 #endif
 
@@ -374,7 +308,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 			FAIL("VN<3");	/* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
 		if (mode != 4)
 			FAIL("MODE!=3");
-		if (orgtime.coarse != ntpc->time_of_send[0] || orgtime.fine != ntpc->time_of_send[1])
+		if (orgtime.coarse != ntpc->time_of_send.coarse || orgtime.fine != ntpc->time_of_send.fine)
 			FAIL("ORG!=sent");
 		if (xmttime.coarse == 0 && xmttime.fine == 0)
 			FAIL("XMT==0");
@@ -392,6 +326,26 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 		set_time(&xmttime);
 		LOG("Time synchronized to server %s, stratum %d", ntpc->server, stratum);
 	}
+
+	/* Update last time set ... */
+	pkt_root_delay.coarse = ((uint32_t)delay >> 16) & 0xFFFF;
+	pkt_root_delay.fine   = ((uint32_t)delay >>  0) & 0xFFFF;
+	pkt_root_dispersion.coarse = ((uint32_t)disp >> 16) & 0xFFFF;
+	pkt_root_dispersion.fine   = ((uint32_t)disp >>  0) & 0xFFFF;
+
+	peer.last_update_ts = xmttime;
+	peer.last_rootdelay = wire2d32(&pkt_root_delay);
+	peer.last_rootdisp  = wire2d32(&pkt_root_dispersion);
+
+	/* delay = (T4 - T1) - (T3 - T2) */
+	peer.last_delay = (wire2d64(arrival) - wire2d64(&orgtime)) - (wire2d64(&xmttime) - wire2d64(&rectime));
+	if (peer.last_delay < G_precision_sec)
+                peer.last_delay = G_precision_sec;
+
+	root_delay = peer.last_rootdelay + peer.last_delay;
+	dtemp = G_precision_sec + MIN_DISP; /* XXX: Fixme, see BusyBox ntpd.c */
+	root_dispersion = peer.last_rootdisp + dtemp;
+//	LOG("Calculated root_delay %f, root_dispersion %f", root_delay, root_dispersion);
 
 	/*
 	 * Not the ideal order for printing, but we want to be sure
@@ -412,7 +366,15 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 			set_freq(new_freq);
 	}
 
-	/* Display by default for ntpclient users, sntpd must run with -l info */
+	/*
+	 * Display by default for ntpclient users, sntpd must run with -l info:
+	 * Day   Second      Elapsed    Stall      Skew  Dispersion  Freq
+	 * 43896 75886.786    6653.0      2.4     798.9  14663.7     92907
+	 */
+	if (first) {
+		INFO("Day   Second      Elapsed    Stall      Skew  Dispersion   Freq");
+		first = 0;
+	}
 	INFO("%d %.5d.%.3d  %8.1f %8.1f  %8.1f %8.1f %9d",
 	     arrival->coarse / 86400, arrival->coarse % 86400,
 	     arrival->fine / 4294967, el_time, st_time,
@@ -429,7 +391,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	return 1;
 }
 
-static void setup_receive(int usd, sa_family_t sin_family, uint16_t port)
+void setup_receive(int usd, sa_family_t sin_family, uint16_t port)
 {
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
@@ -463,7 +425,7 @@ static void setup_receive(int usd, sa_family_t sin_family, uint16_t port)
 	/* listen(usd,3); this isn't TCP; thanks Alexander! */
 }
 
-static void setup_transmit(int usd, struct sockaddr_storage *ssp , uint16_t port, struct ntp_control *ntpc)
+static void setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port, struct ntp_control *ntpc)
 {
 	struct sockaddr_in6 *ipv6;
 	struct sockaddr_in *ipv4;
@@ -556,8 +518,8 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 
 static int setup_socket(struct ntp_control *ntpc)
 {
-	int sd;
 	struct sockaddr_storage ss;
+	int sd;
 
 	while (getaddrbyname(ntpc->server, &ss)) {
 		if (EINVAL != errno && ntpc->live) {
@@ -583,7 +545,7 @@ static int setup_socket(struct ntp_control *ntpc)
 	}
 
 	setup_receive(sd, ss.ss_family, ntpc->local_udp_port);
-	setup_transmit(sd, &ss, NTP_PORT, ntpc);
+	setup_transmit(sd, &ss, ntpc->udp_port, ntpc);
 
 	/*
 	 * Every day: reopen socket and perform a new DNS lookup.
@@ -642,9 +604,13 @@ static void loop(struct ntp_control *ntpc)
 	struct ntptime udp_arrival_ntp;
 	static uint32_t incoming_word[325];
 	int usd = -1;
+	int sd = -1;
 
 #define incoming ((char *) incoming_word)
 #define sizeof_incoming (sizeof incoming_word)
+
+	if (ntpc->server_port)
+		sd = server_init(ntpc->server_port);
 
 #ifdef ENABLE_DEBUG
 	if (debug)
@@ -686,18 +652,22 @@ static void loop(struct ntp_control *ntpc)
 
 		FD_ZERO(&fds);
 		FD_SET(usd, &fds);
+		if (sd > -1)
+			FD_SET(sd, &fds);
+
 		i = select(usd + 1, &fds, NULL, NULL, &to);	/* Wait on read or error */
-		if ((i != 1) || (!FD_ISSET(usd, &fds))) {
+		if (i <= 0) {
 			if (i < 0) {
 				if (errno != EINTR)
 					ERR(errno, "Failed select()");
 				continue;
 			}
+
 			if (to.tv_sec == 0) {
 				if (probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)
 					break;
 
-				if (send_packet(usd, ntpc->time_of_send) == -1) {
+				if (send_packet(usd, &ntpc->time_of_send) == -1) {
 					ERR(errno, "Failed sending probe");
 					to.tv_sec = MIN_INTERVAL;
 					to.tv_usec = 0;
@@ -707,6 +677,11 @@ static void loop(struct ntp_control *ntpc)
 					to.tv_usec = 0;
 				}
 			}
+			continue;
+		}
+
+		if (sd > -1 && FD_ISSET(sd, &fds)) {
+			server_recv(sd);
 			continue;
 		}
 
@@ -893,6 +868,7 @@ static int ntpclient(int argc, char *argv[])
 	ntpc.usermode    = 1;
 	ntpc.live        = 0;
 	ntpc.cross_check = 1;
+	ntpc.udp_port    = NTP_PORT;
 	daemonize        = 0;
 	logging          = 0;
 
@@ -982,7 +958,7 @@ static int usage(int code)
 		"  -l LEVEL Set log level: none, err, warn, notice (default), info, debug\n"
 		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
 		"           Use with '-s' to use syslog as well, for Finit + systemd\n"
-		"  -p PORT  NTP client UDP port.  Default: 0 (\"any available\")\n"
+		"  -p PORT  SNTP server mode port, default: 123, use 0 to disable\n"
 		"  -q USEC  Minimum packet delay for transaction, default: 800 usec\n"
 #ifdef ENABLE_REPLAY
 		"  -r       Replay analysis code based on stdin\n"
@@ -1036,6 +1012,7 @@ int main(int argc, char *argv[])
 	ntpc.usermode    = 0;
 	ntpc.live        = 1;
 	ntpc.cross_check = 0;
+	ntpc.server_port = NTP_PORT; /* Server mode enabled by default */
 
 	/* Default to daemon mode for sntpd */
 	daemonize        = 1;
@@ -1072,7 +1049,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'p':
-			ntpc.local_udp_port = atoi(optarg);
+			ntpc.server_port = atoi(optarg);
 			break;
 
 		case 'q':
@@ -1102,11 +1079,26 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (optind < argc && ntpc.server == NULL)
-		ntpc.server = argv[optind];
+	if (optind < argc) {
+		char *arg;
+		char *ptr;
 
-	if (ntpc.server == NULL)
-		ntpc.server = (char *)"pool.ntp.org";
+		arg = strdup(argv[optind]);
+		if (!arg)
+			return 1;
+
+		ptr = strchr(arg, ':');
+		if (ptr) {
+			*ptr++ = 0;
+			ntpc.udp_port = atoi(ptr);
+		}
+		ntpc.server = arg;
+	}
+
+	if (ntpc.server == NULL || ntpc.server[0] == 0)
+		ntpc.server = strdup("pool.ntp.org");
+	if (ntpc.udp_port == 0)
+		ntpc.udp_port = NTP_PORT;
 
 	run(&ntpc, log_level);
 

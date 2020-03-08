@@ -32,8 +32,8 @@ daemon mode, IPv6, syslog, as well as changes in command line options.
 Use the GitHub [issue tracker][] to report bugs.  If you want to
 contribute fixes or new features, see the file [CONTRIBUTING.md][].
 
-**Note:** sntpd currently has no support for acting as an SNTP server.
-  Patches to add support for this are most welcome.
+**Note:** sntpd has _limited_ support for acting as an SNTP server.
+	The server mode is enabled by default, disable with `-p 0`.
 
 
 Usage
@@ -50,7 +50,7 @@ All arguments are optional, sntpd defaults to use `pool.ntp.org`.
       -l LEVEL Set log level: none, err, warn, notice (default), info, debug
       -n       Don't fork.  Prevents sntpd from daemonizing by default
                Use '-s' with this to use syslog as well, for Finit + systemd
-      -p PORT  NTP client UDP port.  Default: 0 ("any available")
+      -p PORT  SNTP server mode port, default: 123, use 0 to disable
       -q USEC  Minimum packet delay for transaction, default: 800 usec
       -s       Use syslog instead of stdout, default unless -n
       -t       Trust network and server, disable RFC4330 validation
