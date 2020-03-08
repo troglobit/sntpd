@@ -1,7 +1,7 @@
 AC_PREREQ(2.61)
 AC_INIT(sntpd, 3.0-beta1, https://github.com/troglobit/sntpd/issues,, https://github.com/troglobit/sntpd)
 AC_CONFIG_AUX_DIR(aux)
-AM_INIT_AUTOMAKE([1.11 foreign dist-xz])
+AM_INIT_AUTOMAKE([1.11 foreign])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_SRCDIR([src/sntpd.c])
