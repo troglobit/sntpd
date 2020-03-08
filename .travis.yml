@@ -39,8 +39,8 @@ script:
   - make V=1 -j5
   - DESTDIR=/tmp make install-strip
   - tree /tmp
-  - ldd  /tmp/bin/adjtimex /tmp/sbin/ntpclient
-  - size /tmp/bin/adjtimex /tmp/sbin/ntpclient
+  - ldd  /tmp/bin/adjtimex /tmp/sbin/sntpd
+  - size /tmp/bin/adjtimex /tmp/sbin/sntpd
   - /tmp/bin/adjtimex -h
   - /tmp/sbin/ntpclient -h
   - /tmp/sbin/sntpd -h
