@@ -170,8 +170,7 @@ static void set_time(struct ntptime *new)
 		exit(1);
 	}
 
-	if (debug)
-		DBG("Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
+	DBG("Set time to %lu.%.9lu", tv_set.tv_sec, tv_set.tv_nsec);
 }
 
 static void ntpc_gettime(uint32_t *time_coarse, uint32_t *time_fine)
@@ -241,7 +240,9 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 
 	(void)data_len;
 	(void)ntpc;		/* not used */
+#ifdef ENABLE_DEBUG
 	DBG("packet of length %d received", data_len);
+#endif
 
 	if (sa_source->ss_family == AF_INET) {
 		ipv4 = (struct sockaddr_in *)(sa_source);
@@ -389,9 +390,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	/* XXX should I do this if debug flag is set? */
 	if (ntpc->set_clock) {	/* CAP_SYS_TIME or root required, or ntpclient will exit here! */
 		set_time(&xmttime);
-		if (verbose) {
-			LOG("Time synchronized to server %s, stratum %d", ntpc->server, stratum);
-		}
+		LOG("Time synchronized to server %s, stratum %d", ntpc->server, stratum);
 	}
 
 	/*
@@ -424,11 +423,9 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 
 	return 0;
  fail:
-	if (debug || verbose) {
-		ERR(0, "%d %.5d.%.3d rejected packet: %s",
-		      arrival->coarse / 86400, arrival->coarse % 86400,
-		      arrival->fine / 4294967, drop_reason);
-	}
+	ERR(0, "%d %.5d.%.3d rejected packet: %s",
+	    arrival->coarse / 86400, arrival->coarse % 86400,
+	    arrival->fine / 4294967, drop_reason);
 
 	return 1;
 }
@@ -570,9 +567,7 @@ static int setup_socket(struct ntp_control *ntpc)
 			continue;
 		}
 
-		if (verbose)
-			ERR(0, "Unable lookup %s", ntpc->server);
-
+		ERR(0, "Unable lookup %s", ntpc->server);
 		exit(1);
 	}
 
@@ -767,15 +762,13 @@ static int do_replay(void)
 			absolute = day * 86400 + (int)sec;
 			errorbar = el_time + disp;
 #ifdef ENABLE_DEBUG
-			if (debug)
-				DBG("Contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
+			DBG("Contemplate %u %.1f %.1f %d", absolute, skew, errorbar, freq);
 #endif
 			if (last_fake_time == 0)
 				simulated_freq = freq;
 			fake_delta_time += (absolute - last_fake_time) * ((double)(freq - simulated_freq)) / 65536;
 #ifdef ENABLE_DEBUG
-			if (debug)
-				DBG("Fake %f %d", fake_delta_time, simulated_freq);
+			DBG("Fake %f %d", fake_delta_time, simulated_freq);
 #endif
 			skew += fake_delta_time;
 			freq = simulated_freq;
@@ -794,9 +787,7 @@ static int do_replay(void)
 static void run(struct ntp_control *ntpc)
 {
 	if (initial_freq) {
-#ifdef ENABLE_DEBUG
 		DBG("Initial frequency %d", initial_freq);
-#endif
 		set_freq(initial_freq);
 	}
 
@@ -814,19 +805,17 @@ static void run(struct ntp_control *ntpc)
 		ntpc->cycle_time = MIN_INTERVAL;
 
 #ifdef ENABLE_DEBUG
-	if (debug) {
-		DBG("Configuration:");
-		DBG("  -c probe_count %d", ntpc->probe_count);
-		DBG("  -d (debug)     %d", debug);
-		DBG("  -g goodness    %d", ntpc->goodness);
-		DBG("  -h hostname    %s", ntpc->server);
-		DBG("  -i interval    %d", ntpc->cycle_time);
-		DBG("  -l live        %d", ntpc->live);
-		DBG("  -p local_port  %d", ntpc->local_udp_port);
-		DBG("  -q min_delay   %f", min_delay);
-		DBG("  -s set_clock   %d", ntpc->set_clock);
-		DBG("  -t cross_check %d", ntpc->cross_check);
-	}
+	DBG("Configuration:");
+	DBG("  probe_count %d", ntpc->probe_count);
+	DBG("  Dry run     %d", dry);
+	DBG("  goodness    %d", ntpc->goodness);
+	DBG("  hostname    %s", ntpc->server);
+	DBG("  interval    %d", ntpc->cycle_time);
+	DBG("  live        %d", ntpc->live);
+	DBG("  local_port  %d", ntpc->local_udp_port);
+	DBG("  min_delay   %f", min_delay);
+	DBG("  set_clock   %d", ntpc->set_clock);
+	DBG("  cross_check %d", ntpc->cross_check);
 #endif
 
 	/* Startup sequence */
@@ -841,19 +830,18 @@ static void run(struct ntp_control *ntpc)
 		 * communicating with the user after being daemonized
 		 */
 		log_enable = 1;
-		if (verbose)
-			LOG("Starting ntpclient v" PACKAGE_VERSION);
 	}
 
+	if (!ntpc->usermode)
+		LOG("Starting " PACKAGE_NAME " v" PACKAGE_VERSION);
 	setup_signals();
 
-	if (daemonize && verbose)
-		LOG("Using time sync server: %s", ntpc->server);
+	INFO("Using time sync server: %s", ntpc->server);
 
 	loop(ntpc);
 
-	if (daemonize && verbose)
-		LOG("Stopping ntpclient v" PACKAGE_VERSION);
+	if (!ntpc->usermode)
+		LOG("Stopping " PACKAGE_NAME " v" PACKAGE_VERSION);
 }
 
 static int ntpclient_usage(int code)
