@@ -7,8 +7,10 @@ AM_CFLAGS          += -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes
 # _BSD_SOURCE to be able to build on older GLIBC and other C libs.
 AM_CPPFLAGS         = -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=199309 -D_BSD_SOURCE
 
+if WITH_ADJTIMEX
 bin_PROGRAMS        = adjtimex
 adjtimex_SOURCES    = adjtimex.c
+endif
 
 sbin_PROGRAMS       = sntpd
 sntpd_SOURCES       = sntpd.c sntpd.h logit.c phaselock.c

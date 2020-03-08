@@ -64,6 +64,13 @@ AS_IF([test "x$ac_enable_debug" = "xyes"],
 AS_IF([test "x$ac_enable_replay" = "xyes"],
 	AC_DEFINE([ENABLE_REPLAY], [], [Support for replay analysis from stdin]))
 
+AC_ARG_WITH(adjtimex,
+     AS_HELP_STRING([--with-adjtimex], [Build adjtimex tool, default: disabled]),
+     [adjtimex=$withval], [adjtimex='no'])
+
+AS_IF([test "x$adjtimex" != "xno"], with_adjtimex="yes", with_adjtimex="no")
+AM_CONDITIONAL([WITH_ADJTIMEX], [test "x$with_adjtimex" != "xno"])
+
 AC_ARG_WITH(ntpclient,
      AS_HELP_STRING([--with-ntpclient], [Create ntpclient symlink, default: disabled]),
      [ntpclient=$withval], [ntpclient='no'])
