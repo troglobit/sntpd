@@ -113,7 +113,7 @@ int initial_freq = 0;		/* initial freq value to use */
 int daemonize = 0;
 
 const char *prognm = PACKAGE_NAME;
-static int sighup = 0;
+static int sighup  = 1;		/* initial setup */
 static int sigterm = 0;
 
 extern char *optarg;		/* according to man 2 getopt */
@@ -638,7 +638,7 @@ static void setup_signals(void)
 	sigaction(SIGALRM, &sa, NULL);
 }
 
-static void primary_loop(int usd, struct ntp_control *ntpc)
+static void primary_loop(struct ntp_control *ntpc)
 {
 	fd_set fds;
 	struct sockaddr_storage sa_xmit;
@@ -647,6 +647,7 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	struct timeval to;
 	struct ntptime udp_arrival_ntp;
 	static uint32_t incoming_word[325];
+	int usd = -1;
 
 #define incoming ((char *) incoming_word)
 #define sizeof_incoming (sizeof incoming_word)
@@ -666,16 +667,27 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 			break;
 		}
 		if (sighup) {
+			int init;
+
 			sighup = 0;
 			to.tv_sec = 0;
 			to.tv_usec = 0;
-			close(usd);
+
+			if (usd == -1)
+				init = 1;
+			else
+				close(usd);
+
 			usd = setup_socket(ntpc);
-			if (-1 == usd) {
-				ERR(errno, "Failed reopening NTP socket");
+			if (usd == -1) {
+				ERR(errno, init ? "Failed creating UDP socket()"
+				    : "Failed reopening NTP socket");
 				return;
 			}
-			DBG("Got SIGHUP, triggering resync with NTP server.");
+
+			if (!init)
+				DBG("Got SIGHUP, triggering resync with NTP server.");
+			init = 0;
 		}
 
 		FD_ZERO(&fds);
@@ -732,6 +744,9 @@ static void primary_loop(int usd, struct ntp_control *ntpc)
 	}
 #undef incoming
 #undef sizeof_incoming
+
+	if (usd != -1)
+		close(usd);
 }
 
 #ifdef ENABLE_REPLAY
@@ -778,8 +793,6 @@ static int do_replay(void)
 
 static void run(struct ntp_control *ntpc)
 {
-	int usd;
-
 	if (initial_freq) {
 #ifdef ENABLE_DEBUG
 		DBG("Initial frequency %d", initial_freq);
@@ -832,22 +845,15 @@ static void run(struct ntp_control *ntpc)
 			LOG("Starting ntpclient v" PACKAGE_VERSION);
 	}
 
-	usd = setup_socket(ntpc);
-	if (usd == -1) {
-		ERR(errno, "Failed creating UDP socket() to SNTP server");
-		exit(1);
-	}
-
 	setup_signals();
 
 	if (daemonize && verbose)
 		LOG("Using time sync server: %s", ntpc->server);
 
-	primary_loop(usd, ntpc);
+	primary_loop(ntpc);
 
 	if (daemonize && verbose)
 		LOG("Stopping ntpclient v" PACKAGE_VERSION);
-	close(usd);
 }
 
 static int ntpclient_usage(int code)
