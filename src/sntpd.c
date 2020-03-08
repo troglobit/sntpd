@@ -642,7 +642,7 @@ static void loop(struct ntp_control *ntpc)
 			if (usd == -1) {
 				ERR(errno, init ? "Failed creating UDP socket()"
 				    : "Failed reopening NTP socket");
-				return;
+				goto done;
 			}
 
 			if (!init)
@@ -713,9 +713,11 @@ static void loop(struct ntp_control *ntpc)
 	}
 #undef incoming
 #undef sizeof_incoming
-
+done:
 	if (usd != -1)
 		close(usd);
+	if (sd != -1)
+		close(sd);
 }
 
 #ifdef ENABLE_REPLAY
