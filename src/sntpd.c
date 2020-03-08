@@ -638,7 +638,7 @@ static void setup_signals(void)
 	sigaction(SIGALRM, &sa, NULL);
 }
 
-static void primary_loop(struct ntp_control *ntpc)
+static void loop(struct ntp_control *ntpc)
 {
 	fd_set fds;
 	struct sockaddr_storage sa_xmit;
@@ -850,7 +850,7 @@ static void run(struct ntp_control *ntpc)
 	if (daemonize && verbose)
 		LOG("Using time sync server: %s", ntpc->server);
 
-	primary_loop(ntpc);
+	loop(ntpc);
 
 	if (daemonize && verbose)
 		LOG("Stopping ntpclient v" PACKAGE_VERSION);
