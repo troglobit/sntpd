@@ -1,5 +1,7 @@
 dist_man1_MANS = adjtimex.1
 dist_man8_MANS = sntpd.8
+
+if WITH_NTPCLIENT
 SYMLINK        = ntpclient.8
 
 # Hook in install to add sntpd.8 --> ntpclient.8 symlink
@@ -14,3 +16,4 @@ uninstall-hook:
 	for file in $(SYMLINK); do			\
 		$(RM) $(DESTDIR)$(man8dir)/$$file;	\
 	done
+endif

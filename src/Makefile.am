@@ -13,6 +13,8 @@ adjtimex_SOURCES    = adjtimex.c
 sbin_PROGRAMS       = sntpd
 sntpd_SOURCES       = sntpd.c sntpd.h logit.c phaselock.c
 sntpd_LIBS          = -lrt
+
+if WITH_NTPCLIENT
 SYMLINK             = ntpclient
 
 # Hook in install to add sntpd --> ntpclient symlink
@@ -27,3 +29,4 @@ uninstall-hook:
 	@for file in $(SYMLINK); do			\
 		$(RM) $(DESTDIR)$(sbindir)/$$file;	\
 	done
+endif

@@ -64,6 +64,13 @@ AS_IF([test "x$ac_enable_debug" = "xyes"],
 AS_IF([test "x$ac_enable_replay" = "xyes"],
 	AC_DEFINE([ENABLE_REPLAY], [], [Support for replay analysis from stdin]))
 
+AC_ARG_WITH(ntpclient,
+     AS_HELP_STRING([--with-ntpclient], [Create ntpclient symlink, default: disabled]),
+     [ntpclient=$withval], [ntpclient='no'])
+
+AS_IF([test "x$ntpclient" != "xno"], with_ntpclient="yes", with_ntpclient="no")
+AM_CONDITIONAL([WITH_NTPCLIENT], [test "x$with_ntpclient" != "xno"])
+
 AS_IF([test "x$with_systemd" = "xyes" -o "x$with_systemd" = "xauto"], [
      def_systemd=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)
      AS_IF([test "x$def_systemd" = "x"],
