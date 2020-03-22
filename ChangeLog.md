@@ -5,22 +5,36 @@ All notable changes to the project are documented in this file.  Changes
 to Larry's upstream version are interleaved.
 
 
-[v3.0][UNRELEASED]
-------------------
+[v3.0][] - 2020-03-22
+---------------------
 
-First release as sntpd, a multicall binary with support for the behavior
-of the original ntpclient.
+First release as sntpd, with support for both acting as a (very limited)
+server and a client.  It is a "multicall" binary where it can be called
+as `ntpclient` to simulate the behavior of the original ntpclient.
 
 ### Changes
 
-- Fix #4: Rename project from ntpclient to sntpd to avoid confusion with
-  the original ntpclient.  This change also restores original command
-  line options, and semantics, when called with the name `ntpclient`
+- Initial support for a very limited server mode, enabled by default on
+  port 123.  The server reports itself as strata 1 and LOCL clock.  The
+  root delay and root dispersion calculation is rough at best.  Much of
+  the server calculation is inspired by the BusyBox ntpd, please use
+  that one instead
+- Changes to Debian packaging, `adjtimex` is now in its own `.deb`
 - New, stripped down, command line options when called as `sntpd`
 - Updates to man page, new name and separate command line options
 - Drop OpenWRT `mini-ntpclient.c` from project, with configure option
 - Drop `--disable-syslog` configure option
 - Drop support for *really* old systems, no more `gettimeofday()`
+
+### Fixes
+- Fix #4: Rename project from ntpclient to sntpd to avoid confusion with
+  the original ntpclient.  This change also restores original command
+  line options, and semantics, when called with the name `ntpclient`
+- Fix man page spelling errors, found by lintian
+- Add workaround for missing `SIGGSTAMP` on Linux 5.1 and later
+- Fix issues found by Coverity Scan:
+  - check return value of `send()`
+  - handle uninitialized socket
 
 
 [2018_244][] - 2018-09-01
@@ -223,11 +237,12 @@ Curated by [Larry Doolittle][].
 - Source is now as 64-bit clean as practical; tested on Alpha
 - Optional patches provided by Andy Warner, see `andyw.patch`
 - Optional patches provided by Linksys, see linksys.patch
-- Removed unreasonable 15020 day offset in date column ([xntpd] has this
+- Removed unreasonable 15020 day offset in date column ([xntpd][] has this
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
-[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/2018_244...HEAD
+[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/v3.0...HEAD
+[v3.0]:       https://github.com/troglobit/ntpclient/compare/2018_244...v3.0
 [2018_244]:   https://github.com/troglobit/ntpclient/compare/2018_176...2018_244
 [2018_176]:   https://github.com/troglobit/ntpclient/compare/2017_246...2018_176
 [2017_246]:   https://github.com/troglobit/ntpclient/compare/2017_217...2017_246
