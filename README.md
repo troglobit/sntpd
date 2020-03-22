@@ -18,11 +18,11 @@ Table of Contents
 Introduction
 ------------
 
-sntpd is a small SNTP client for UNIX systems, implementing [RFC 1305][]
-and [RFC 4330][].  Its functionality is only a small subset of [ntpd][],
-[chrony][], [OpenNTPd][], and [xntpd][].  Since it is much smaller it is
-also more relevant for embedded systems in need of only a background
-process to keep the system time in sync.
+sntpd is a small SNTP server and client for UNIX systems, implementing
+[RFC 1305][] and [RFC 4330][].  Its functionality is only a small subset
+of [ntpd][], [chrony][], [OpenNTPd][], and [xntpd][].  Since it is much
+smaller it is also more relevant for embedded systems in need of only a
+background process to keep the system time in sync (client mode).
 
 sntpd is a fork of ntpclient by Larry Doolittle.  As such it implements
 a compatibility mode when called with the name `ntpclient`.  The name
