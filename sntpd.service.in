@@ -8,7 +8,7 @@ Requires=network-online.target
 
 [Service]
 Type=simple
-ExecStart=@SBINDIR@/sntpd -n pool.ntp.org
+ExecStart=@SBINDIR@/sntpd -sn pool.ntp.org
 
 [Install]
 WantedBy=multi-user.target
