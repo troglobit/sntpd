@@ -51,7 +51,7 @@ as `ntpclient` to simulate the behavior of the original ntpclient.
 [2018_176][] - 2018-06-25
 -------------------------
 
-The Stuttgart release.  Curated by [Joachim Nilsson][].
+The Stuttgart release.  Curated by [Joachim Wiberg][].
 
 ### Changes
 - NTP server argument is now optional, default: `pool.ntp.org`
@@ -68,7 +68,7 @@ The Stuttgart release.  Curated by [Joachim Nilsson][].
 [2017_246][] - 2017-09-03
 -------------------------
 
-Curated by [Joachim Nilsson][].
+Curated by [Joachim Wiberg][].
 
 ### Changes
 - Log successful resolve of NTP host when network has been down
@@ -83,7 +83,7 @@ Curated by [Joachim Nilsson][].
 [2017_217][] - 2017-08-05
 -------------------------
 
-Curated by [Joachim Nilsson][].
+Curated by [Joachim Wiberg][].
 
 ### Changes
 - Add support for IPv6, thanks to Dieter Ries
@@ -162,7 +162,7 @@ Curated by [Larry Doolittle][].  Changes since `ntpclient_2007_365.tar.gz`.
 [2010_323][] - 2010-11-19
 -------------------------
 
-Curated by [Joachim Nilsson][].
+Curated by [Joachim Wiberg][].
 
 ### Changes
 - Support for resync with server on `SIGHUP`
@@ -172,7 +172,7 @@ Curated by [Joachim Nilsson][].
 [2010_300][] - 2010-10-27
 -------------------------
 
-Curated by [Joachim Nilsson][].
+Curated by [Joachim Wiberg][].
 
 ### Changes
 - Prefix all log messages with "ntpclient:"
@@ -241,24 +241,24 @@ Curated by [Larry Doolittle][].
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
-[UNRELEASED]: https://github.com/troglobit/ntpclient/compare/v3.0...HEAD
-[v3.0]:       https://github.com/troglobit/ntpclient/compare/2018_244...v3.0
-[2018_244]:   https://github.com/troglobit/ntpclient/compare/2018_176...2018_244
-[2018_176]:   https://github.com/troglobit/ntpclient/compare/2017_246...2018_176
-[2017_246]:   https://github.com/troglobit/ntpclient/compare/2017_217...2017_246
-[2017_217]:   https://github.com/troglobit/ntpclient/compare/2010_365...2017_217
-[2015_365]:   https://github.com/troglobit/ntpclient/compare/2010_365...2015_365
-[2010_365]:   https://github.com/troglobit/ntpclient/compare/2010_326...2010_365
-[2010_326]:   https://github.com/troglobit/ntpclient/compare/2010_323...2010_326
-[2010_323]:   https://github.com/troglobit/ntpclient/compare/2010_300...2010_323
-[2010_300]:   https://github.com/troglobit/ntpclient/compare/2007_365...2010_300
-[2007_365]:   https://github.com/troglobit/ntpclient/compare/2006_318...2007_365
-[2006_318]:   https://github.com/troglobit/ntpclient/compare/2003_194...2006_318
-[2003_194]:   https://github.com/troglobit/ntpclient/compare/2000_345...2003_194
-[xntpd]: http://www.eecis.udel.edu/~mills/ntp/
-[dd-wrt]: http://svn.dd-wrt.com/browser/src/router/ntpclient/
-[RFC 4330]: http://tools.ietf.org/html/rfc4330
-[Mike Frysinger]: vapier@gentoo.org
+[UNRELEASED]:        https://github.com/troglobit/ntpclient/compare/v3.0...HEAD
+[v3.0]:              https://github.com/troglobit/ntpclient/compare/2018_244...v3.0
+[2018_244]:          https://github.com/troglobit/ntpclient/compare/2018_176...2018_244
+[2018_176]:          https://github.com/troglobit/ntpclient/compare/2017_246...2018_176
+[2017_246]:          https://github.com/troglobit/ntpclient/compare/2017_217...2017_246
+[2017_217]:          https://github.com/troglobit/ntpclient/compare/2010_365...2017_217
+[2015_365]:          https://github.com/troglobit/ntpclient/compare/2010_365...2015_365
+[2010_365]:          https://github.com/troglobit/ntpclient/compare/2010_326...2010_365
+[2010_326]:          https://github.com/troglobit/ntpclient/compare/2010_323...2010_326
+[2010_323]:          https://github.com/troglobit/ntpclient/compare/2010_300...2010_323
+[2010_300]:          https://github.com/troglobit/ntpclient/compare/2007_365...2010_300
+[2007_365]:          https://github.com/troglobit/ntpclient/compare/2006_318...2007_365
+[2006_318]:          https://github.com/troglobit/ntpclient/compare/2003_194...2006_318
+[2003_194]:          https://github.com/troglobit/ntpclient/compare/2000_345...2003_194
+[xntpd]:             http://www.eecis.udel.edu/~mills/ntp/
+[dd-wrt]:            http://svn.dd-wrt.com/browser/src/router/ntpclient/
+[RFC 4330]:          http://tools.ietf.org/html/rfc4330
+[Mike Frysinger]:    vapier@gentoo.org
 [CONTRIBIBUTING.md]: https://github.com/troglobit/ntpclient/CONTRIBIBUTING.md
-[Joachim Nilsson]: https://github.com/troglobit/ntpclient/
-[Larry Doolittle]: http://doolittle.icarus.com/ntpclient/
+[Joachim Wiberg]:    https://github.com/troglobit/sntpd/
+[Larry Doolittle]:   http://doolittle.icarus.com/ntpclient/

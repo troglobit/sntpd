@@ -1,7 +1,7 @@
 /* Simple NTP client
  *
  * Copyright (C) 1997-2015  Larry Doolittle <larry@doolittle.boa.org>
- * Copyright (C) 2010-2018  Joachim Nilsson <troglobit@gmail.com>
+ * Copyright (C) 2010-2022  Joachim Wiberg <troglobit@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License (Version 2,

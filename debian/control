@@ -1,7 +1,7 @@
 Source: sntpd
 Section: net
 Priority: optional
-Maintainer: Joachim Nilsson <troglobit@gmail.com>
+Maintainer: Joachim Wiberg <troglobit@gmail.com>
 Homepage: https://github.com/troglobit/sntpd
 Build-Depends: debhelper (>= 10), systemd
 Standards-Version: 4.3.0

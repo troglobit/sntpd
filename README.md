@@ -255,7 +255,7 @@ Origin & References
 the terms of the GNU General Public [License][], version 2.  He remains
 the official upstream for `ntpclient`.
 
-This sntpd fork at GitHub is maintained by [Joachim Nilsson][] and adds
+This sntpd fork at GitHub is maintained by [Joachim Wiberg][] and adds
 features like syslog, background daemon, IPv6, and systemd support.
 
 [ntpd]:            http://www.ntp.org
@@ -274,6 +274,6 @@ features like syslog, background daemon, IPv6, and systemd support.
 [CONTRIBUTING.md]: docs/CONTRIBUTING.md
 [issue tracker]:   https://github.com/troglobit/sntpd/issues
 [HowTo]:           https://github.com/troglobit/sntpd/doc/HowTo.md
-[Joachim Nilsson]: http://troglobit.com
+[Joachim Wiberg]:  http://troglobit.com
 [Coverity Scan]:   https://scan.coverity.com/projects/20498
 [Coverity Status]: https://scan.coverity.com/projects/20498/badge.svg
