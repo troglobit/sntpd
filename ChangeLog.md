@@ -1,8 +1,24 @@
 Change Log
 ==========
 
-All notable changes to the project are documented in this file.  Changes
-to Larry's upstream version are interleaved.
+All notable changes to the project are documented in this file.
+Changes to Larry's upstream version are interleaved.
+
+
+[v3.1][UNRELEASED] - 2022-03-12
+-------------------------------
+
+### Changes
+- Slightly improved log messages when failing to resolve DNS names
+- Update co-author's last name, changed from Nilsson to Wiberg 2021
+
+### Fixes
+- Call `res_init()` when retrying resolving DNS names, this fixes long
+  hangs in `setup_socket()` which sntpd seemingly never recover from.
+  This in turn caused it to not respond to `SIGTERM` properly, while in
+  this state (init)
+- When either of `bind()` or `connect()` fail in `setup_socket()`,
+  return back to main `loop()` to handle retries, and catch signals
 
 
 [v3.0][] - 2020-03-22
@@ -13,7 +29,6 @@ server and a client.  It is a "multicall" binary where it can be called
 as `ntpclient` to simulate the behavior of the original ntpclient.
 
 ### Changes
-
 - Initial support for a very limited server mode, enabled by default on
   port 123.  The server reports itself as strata 1 and LOCL clock.  The
   root delay and root dispersion calculation is rough at best.  Much of
@@ -242,6 +257,7 @@ Curated by [Larry Doolittle][].
 
 
 [UNRELEASED]:        https://github.com/troglobit/ntpclient/compare/v3.0...HEAD
+[v3.1]:              https://github.com/troglobit/ntpclient/compare/v3.0...v3.1
 [v3.0]:              https://github.com/troglobit/ntpclient/compare/2018_244...v3.0
 [2018_244]:          https://github.com/troglobit/ntpclient/compare/2018_176...2018_244
 [2018_176]:          https://github.com/troglobit/ntpclient/compare/2017_246...2018_176
