@@ -534,14 +534,11 @@ static int setup_socket(struct ntp_control *ntpc)
 	struct sockaddr_storage ss;
 	int sd;
 
-	while (getaddrbyname(ntpc->server, &ss)) {
-		if (EINVAL != errno && ntpc->live) {
-			/* Wait here a while, networking is probably not up yet. */
-			sleep(1);
-			continue;
-		}
+	if (getaddrbyname(ntpc->server, &ss)) {
+		if (EINVAL != errno)
+			return -1;
 
-		ERR(0, "Unable lookup %s", ntpc->server);
+		ERR(0, "Unable to look up %s address", ntpc->server);
 		exit(1);
 	}
 
@@ -653,6 +650,11 @@ static void loop(struct ntp_control *ntpc)
 
 			usd = setup_socket(ntpc);
 			if (usd == -1) {
+				/* Wait here a while, networking is probably not up yet. */
+				if (errno == ENETDOWN) {
+					sleep(1);
+					continue;
+				}
 				ERR(errno, init ? "Failed creating UDP socket()"
 				    : "Failed reopening NTP socket");
 				goto done;
