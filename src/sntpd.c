@@ -460,11 +460,11 @@ static void setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port,
 
 static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 {
-	int err;
+	struct addrinfo *result;
 	static int netdown = 0;
 	struct addrinfo hints;
-	struct addrinfo *result;
 	struct addrinfo *rp;
+	int err;
 
 	if (!host || !ss) {
 		errno = EINVAL;
@@ -485,7 +485,17 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 	memset(ss, 0, sizeof(struct sockaddr_storage));
 	err = getaddrinfo(host, NULL, &hints, &result);
 	if (err) {
-		ERR(0, "Failed resolving address to hostname %s: %s", host, gai_strerror(err));
+		switch (err) {
+		case EAI_NONAME:
+			LOG("Failed resolving %s, will try again later ...", host);
+			break;
+		case EAI_AGAIN:
+			LOG("Temporary failure resolving %s, will try again later ...", host);
+			break;
+		default:
+			LOG("Error %d resolving %s: %s", err, host, gai_strerror(err));
+			break;
+		}
 		netdown = errno = ENETDOWN;
 		return 1;
 	}
