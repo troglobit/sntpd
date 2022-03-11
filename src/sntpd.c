@@ -42,8 +42,8 @@ int daemonize = 0;
 int logging = 1;
 
 const char *prognm = PACKAGE_NAME;
-static int sighup  = 0;
-static int sigterm = 0;
+static volatile sig_atomic_t sighup  = 0;
+static volatile sig_atomic_t sigterm = 0;
 
 struct ntp_peers peer;
 double root_delay;
