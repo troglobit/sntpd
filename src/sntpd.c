@@ -27,6 +27,7 @@
 
 #include "config.h"
 #include <getopt.h>
+#include <resolv.h>
 #include <signal.h>
 #include <netdb.h>		/* getaddrinfo -> gethostbyname */
 #include <time.h>
@@ -469,6 +470,8 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 		errno = EINVAL;
 		return 1;
 	}
+
+	res_init();
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
