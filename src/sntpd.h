@@ -200,7 +200,7 @@ void logit(int severity, int syserr, const char *format, ...);
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
 
 /* sntpd.c */
-void setup_receive(int sd, sa_family_t sin_family, uint16_t port);
+int  setup_receive(int sd, sa_family_t sin_family, uint16_t port);
 void get_packet_timestamp(int usd, struct ntptime *nt);
 void ntpc_gettime(struct ntptime *nt);
 

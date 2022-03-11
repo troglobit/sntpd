@@ -392,7 +392,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	return 1;
 }
 
-void setup_receive(int usd, sa_family_t sin_family, uint16_t port)
+int setup_receive(int usd, sa_family_t sin_family, uint16_t port)
 {
 	struct sockaddr_in6 sin6;
 	struct sockaddr_in sin;
@@ -421,12 +421,14 @@ void setup_receive(int usd, sa_family_t sin_family, uint16_t port)
 
 	if (bind(usd, sa, len) == -1) {
 		ERR(errno, "Failed binding to UDP port %u", port);
-		exit(1);
+		return -1;
 	}
-	/* listen(usd,3); this isn't TCP; thanks Alexander! */
+
+	return 0;
 }
 
-static void setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port, struct ntp_control *ntpc)
+static int setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port,
+			  struct ntp_control *ntpc)
 {
 	struct sockaddr_in6 *ipv6;
 	struct sockaddr_in *ipv4;
@@ -443,19 +445,16 @@ static void setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port,
 		len = sizeof(struct sockaddr_in6);
 	} else {
 		ERR(0, "%s: Unsupported address family", __func__);
-		exit(1);
+		return -1;
 	}
 
-	while (connect(usd, (struct sockaddr *)ssp, len) == -1) {
-		if (ntpc->live) {
-			/* Wait here a while, networking is probably not up yet. */
-			sleep(1);
-			continue;
-		}
-
+	if (connect(usd, (struct sockaddr *)ssp, len) == -1) {
 		ERR(errno, "Failed connecting to NTP server");
-		exit(1);
+		return -1;
 	}
+
+	INFO("Connected to NTP server.");
+	return 0;
 }
 
 static int getaddrbyname(char *host, struct sockaddr_storage *ss)
@@ -543,19 +542,21 @@ static int setup_socket(struct ntp_control *ntpc)
 	}
 
 	/* open socket based on the server address family */
-	if (ss.ss_family == AF_INET || ss.ss_family == AF_INET6) {
-		sd = socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP);
-	} else {
-		ERR(0, "%s: Unsupported address family", __func__);
+	if (ss.ss_family != AF_INET && ss.ss_family != AF_INET6) {
+		ERR(0, "Unsupported address family %d");
 		exit(1);
 	}
 
-	if (sd == -1) {
-	    return -1;
-	}
+	sd = socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP);
+	if (sd == -1)
+		return -1;
 
-	setup_receive(sd, ss.ss_family, ntpc->local_udp_port);
-	setup_transmit(sd, &ss, ntpc->udp_port, ntpc);
+	if (setup_receive(sd, ss.ss_family, ntpc->local_udp_port) ||
+	    setup_transmit(sd, &ss, ntpc->udp_port, ntpc)) {
+		close(sd);
+		errno = ENETDOWN;
+		return -1;
+	}
 
 	/*
 	 * Every day: reopen socket and perform a new DNS lookup.
