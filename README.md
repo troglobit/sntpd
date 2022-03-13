@@ -1,6 +1,6 @@
 sntpd
 =====
-[![License Badge][]][License] [![Travis Status][]][Travis] [![Coverity Status][]][Coverity Scan]
+[![License Badge][]][License] [![GitHub Status][]][GitHub] [![Coverity Status][]][Coverity Scan]
 
 Table of Contents
 -----------------
@@ -269,8 +269,8 @@ features like syslog, background daemon, IPv6, and systemd support.
 [buildsystem]:     https://airs.com/ian/configure/
 [License]:         http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
 [License Badge]:   https://img.shields.io/badge/License-GPL%20v2-blue.svg
-[Travis]:          https://travis-ci.org/troglobit/sntpd
-[Travis Status]:   https://travis-ci.org/troglobit/sntpd.png?branch=master
+[GitHub]:          https://github.com/troglobit/sntpd/actions/workflows/build.yml/
+[GitHub Status]:   https://github.com/troglobit/sntpd/actions/workflows/build.yml/badge.svg
 [CONTRIBUTING.md]: docs/CONTRIBUTING.md
 [issue tracker]:   https://github.com/troglobit/sntpd/issues
 [HowTo]:           https://github.com/troglobit/sntpd/doc/HowTo.md
