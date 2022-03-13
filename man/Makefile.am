@@ -1,8 +1,10 @@
+EXTRA_DIST     = adjtimex.1
+
+dist_man8_MANS = sntpd.8
+
 if WITH_ADJTIMEX
 dist_man1_MANS = adjtimex.1
 endif
-
-dist_man8_MANS = sntpd.8
 
 if WITH_NTPCLIENT
 SYMLINK        = ntpclient.8
