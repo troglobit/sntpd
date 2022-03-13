@@ -6,6 +6,10 @@ if SYSTEMD
 systemd_DATA     = sntpd.service
 endif
 
+## Build .deb files
+package:
+	@debuild -uc -us -B --lintian-opts --profile debian -i -I --show-overrides
+
 ## Check if tagged in git
 release-hook:
 	@if [ ! `git tag -l v$(PACKAGE_VERSION) | grep v$(PACKAGE_VERSION)` ]; then	\
