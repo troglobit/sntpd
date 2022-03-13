@@ -5,8 +5,8 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
-[v3.1][UNRELEASED] - 2022-03-12
--------------------------------
+[v3.1][] - 2022-03-13
+---------------------
 
 ### Changes
 - Slightly improved log messages when failing to resolve DNS names
@@ -256,7 +256,7 @@ Curated by [Larry Doolittle][].
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
-[UNRELEASED]:        https://github.com/troglobit/ntpclient/compare/v3.0...HEAD
+[UNRELEASED]:        https://github.com/troglobit/ntpclient/compare/v3.1...HEAD
 [v3.1]:              https://github.com/troglobit/ntpclient/compare/v3.0...v3.1
 [v3.0]:              https://github.com/troglobit/ntpclient/compare/2018_244...v3.0
 [2018_244]:          https://github.com/troglobit/ntpclient/compare/2018_176...2018_244

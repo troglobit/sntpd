@@ -1,11 +1,11 @@
 sntpd (3.1) stable; urgency=medium
 
-  * Improved log messages on failure to reslve DNS names
+  * Improved log messages on failure to resolve DNS names
   * On failure to do DNS lookup, bind(), or connect(), sntpd now properly
     handle SIGTERM and its 1 sec retry is not as chatty in the log
   * Update co-author's last name
 
- -- Joachim Wiberg <troglobit@gmail.com>  Fri, 11 Mar 2022 19:04:29 +0100
+ -- Joachim Wiberg <troglobit@gmail.com>  Sun, 13 Mar 2022 11:02:38 +0100
 
 sntpd (3.0) stable; urgency=medium
 
