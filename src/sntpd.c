@@ -163,7 +163,7 @@ void get_packet_timestamp(int usd, struct ntptime *udp_arrival_ntp)
 #endif
 }
 
-static int check_source(int data_len, struct sockaddr_storage *sa_source, struct ntp_control *ntpc)
+static int check_source(int data_len, struct sockaddr_storage *ss, struct ntp_control *ntpc)
 {
 	struct sockaddr_in6 *ipv6;
 	struct sockaddr_in *ipv4;
@@ -175,11 +175,11 @@ static int check_source(int data_len, struct sockaddr_storage *sa_source, struct
 	DBG("packet of length %d received", data_len);
 #endif
 
-	if (sa_source->ss_family == AF_INET) {
-		ipv4 = (struct sockaddr_in *)(sa_source);
+	if (ss->ss_family == AF_INET) {
+		ipv4 = (struct sockaddr_in *)ss;
 		port = ntohs(ipv4->sin_port);
-	} else if (sa_source->ss_family == AF_INET6) {
-		ipv6 = (struct sockaddr_in6 *)(sa_source);
+	} else if (ss->ss_family == AF_INET6) {
+		ipv6 = (struct sockaddr_in6 *)ss;
 		port = ntohs(ipv6->sin6_port);
 	} else {
 		DBG("%s: Unsupported address family", __func__);
@@ -427,7 +427,7 @@ int setup_receive(int usd, sa_family_t sin_family, uint16_t port)
 	return 0;
 }
 
-static int setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port,
+static int setup_transmit(int usd, struct sockaddr_storage *ss, uint16_t port,
 			  struct ntp_control *ntpc)
 {
 	struct sockaddr_in6 *ipv6;
@@ -435,12 +435,12 @@ static int setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port,
 	socklen_t len = 0;
 
 	/* Prefer IPv4 over IPv6, for now */
-	if (ssp->ss_family == AF_INET) {
-		ipv4 = (struct sockaddr_in *)ssp;
+	if (ss->ss_family == AF_INET) {
+		ipv4 = (struct sockaddr_in *)ss;
 		ipv4->sin_port = htons(port);
 		len = sizeof(struct sockaddr_in);
-	} else if (ssp->ss_family == AF_INET6) {
-		ipv6 = (struct sockaddr_in6 *)ssp;
+	} else if (ss->ss_family == AF_INET6) {
+		ipv6 = (struct sockaddr_in6 *)ss;
 		ipv6->sin6_port = htons(port);
 		len = sizeof(struct sockaddr_in6);
 	} else {
@@ -448,7 +448,7 @@ static int setup_transmit(int usd, struct sockaddr_storage *ssp, uint16_t port,
 		return -1;
 	}
 
-	if (connect(usd, (struct sockaddr *)ssp, len) == -1) {
+	if (connect(usd, (struct sockaddr *)ss, len) == -1) {
 		ERR(errno, "Failed connecting to NTP server");
 		return -1;
 	}
