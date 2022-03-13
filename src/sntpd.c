@@ -182,7 +182,7 @@ static int check_source(int data_len, struct sockaddr_storage *ss, struct ntp_co
 		ipv6 = (struct sockaddr_in6 *)ss;
 		port = ntohs(ipv6->sin6_port);
 	} else {
-		DBG("%s: Unsupported address family", __func__);
+		ERR(0, "%s: Unsupported address family %d", __func__, ss->ss_family);
 		return 1;
 	}
 
@@ -444,7 +444,7 @@ static int setup_transmit(int usd, struct sockaddr_storage *ss, uint16_t port,
 		ipv6->sin6_port = htons(port);
 		len = sizeof(struct sockaddr_in6);
 	} else {
-		ERR(0, "%s: Unsupported address family", __func__);
+		ERR(0, "%s: Unsupported address family %d", __func__, ss->ss_family);
 		return -1;
 	}
 
