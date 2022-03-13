@@ -543,7 +543,7 @@ static int setup_socket(struct ntp_control *ntpc)
 
 	/* open socket based on the server address family */
 	if (ss.ss_family != AF_INET && ss.ss_family != AF_INET6) {
-		ERR(0, "Unsupported address family %d");
+		ERR(0, "%s: Unsupported address family %d", __func__, ss.ss_family);
 		exit(1);
 	}
 
