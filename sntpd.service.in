@@ -1,6 +1,6 @@
 [Unit]
 Description=Simple NTP daemon and client
-Documentation=man:ntpclient
+Documentation=man:sntpd
 Documentation=file:@DOCDIR@/README.md
 Documentation=https://github.com/troglobit/sntpd
 After=network-online.target
