@@ -1,6 +1,6 @@
 SUBDIRS         = src docs man
 doc_DATA        = README.md docs/HOWTO.md ChangeLog.md COPYING
-EXTRA_DIST      = README.md docs/HOWTO.md ChangeLog.md
+EXTRA_DIST      = README.md docs/HOWTO.md ChangeLog.md sntpd.service.in
 
 if SYSTEMD
 systemd_DATA     = sntpd.service
