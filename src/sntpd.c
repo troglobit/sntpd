@@ -842,7 +842,12 @@ static void run(struct ntp_control *ntpc, int log_level)
 
 static int ntpclient_usage(int code)
 {
-	fprintf(stderr,
+	FILE *fp = stdout;
+
+	if (code)
+		fp = stderr;
+
+	fprintf(fp,
 		"Usage:\n"
 		"  ntpclient [-c count] [-d] [-f frequency] [-g goodness] -h hostname\n"
 		"            [-i interval] [-l] [-p port] [-q min_delay] [-r] [-s] [-t]\n"
@@ -965,7 +970,12 @@ static int ntpclient(int argc, char *argv[])
 
 static int usage(int code)
 {
-	fprintf(stderr,
+	FILE *fp = stdout;
+
+	if (code)
+		fp = stderr;
+
+	fprintf(fp,
 		"Usage:\n"
 		"  %s [-dhn" REPLAY_OPTION "stV] [-i SEC] [-l LEVEL] [-p PORT] [-q USEC] [SERVER]\n"
 		"\n"
