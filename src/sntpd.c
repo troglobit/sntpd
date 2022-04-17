@@ -26,6 +26,7 @@
  */
 
 #include "config.h"
+#include <err.h>
 #include <getopt.h>
 #include <resolv.h>
 #include <signal.h>
@@ -1113,7 +1114,7 @@ int main(int argc, char *argv[])
 
 		arg = strdup(argv[optind]);
 		if (!arg)
-			return 1;
+			err(1, "Failed allocating memory for '%s'", argv[optind]);
 
 		ptr = strchr(arg, ':');
 		if (ptr) {
@@ -1123,8 +1124,11 @@ int main(int argc, char *argv[])
 		ntpc.server = arg;
 	}
 
-	if (ntpc.server == NULL || ntpc.server[0] == 0)
+	if (!ntpc.server || !ntpc.server[0]) {
 		ntpc.server = strdup("pool.ntp.org");
+		if (!ntpc.server)
+			err(1, "Failed allocating memory for 'pool.ntp.org'");
+	}
 	if (ntpc.udp_port == 0)
 		ntpc.udp_port = NTP_PORT;
 
