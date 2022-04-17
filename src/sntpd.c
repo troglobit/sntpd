@@ -538,7 +538,7 @@ static int setup_socket(struct ntp_control *ntpc)
 		if (EINVAL != errno)
 			return -1;
 
-		ERR(0, "Unable to look up %s address", ntpc->server);
+		ERR(0, "Unable to look up %s address", ntpc->server ?: "<nil>");
 		exit(1);
 	}
 

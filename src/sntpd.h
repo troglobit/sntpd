@@ -194,7 +194,7 @@ void log_init(int use_syslog, int level);
 void log_exit(void);
 int  log_str2lvl(char *arg);
 
-void logit(int severity, int syserr, const char *format, ...);
+void logit(int severity, int syserr, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 
 /* phaselock.c */
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
