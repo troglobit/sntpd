@@ -11,6 +11,8 @@ Changes to Larry's upstream version are interleaved.
 ### Changes
 - Slightly improved log messages when failing to resolve DNS names
 - Update co-author's last name, changed from Nilsson to Wiberg 2021
+- Update systemd unit file with new name for manual page, and make sure
+  to include it in distribution archives
 
 ### Fixes
 - Call `res_init()` when retrying resolving DNS names, this fixes long
@@ -19,6 +21,7 @@ Changes to Larry's upstream version are interleaved.
   this state (init)
 - When either of `bind()` or `connect()` fail in `setup_socket()`,
   return back to main `loop()` to handle retries, and catch signals
+- Add missing `adjtimex.1` to distribution archives
 
 
 [v3.0][] - 2020-03-22
