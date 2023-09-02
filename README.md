@@ -71,7 +71,7 @@ to be robust in any network environment, but has seen the most extensive
 testing in a low latency (less than 2 ms) Ethernet environment.  Users
 in other environments should study sntpd's behavior, and be prepared to
 adjust internal tuning parameters.  A long description of how and why to
-use sntpd and ntpclient is in the [HowTo][] file.  sntpd always sends
+use sntpd and ntpclient is in the [HowTo.md][] file.  sntpd always sends
 packets to the server's UDP port 123.
 
 One commonly needed tuning parameter for lock mode is `min_delay`, the
@@ -125,7 +125,7 @@ logging (from a variety of machines, and not continuous, unfortunately).
 If you are interested, [contact Larry][].
 
 Also included is a version of the `adjtimex(1)` tool.  See its man page
-and the [HowTo][] file for more information.
+and the [HowTo.md][] file for more information.
 
 Another tool is `envelope`, which is a perl script that was used for the
 lock studies.  It's kind of a hack and not worth documenting here.
@@ -273,7 +273,7 @@ features like syslog, background daemon, IPv6, and systemd support.
 [GitHub Status]:   https://github.com/troglobit/sntpd/actions/workflows/build.yml/badge.svg
 [CONTRIBUTING.md]: docs/CONTRIBUTING.md
 [issue tracker]:   https://github.com/troglobit/sntpd/issues
-[HowTo]:           https://github.com/troglobit/sntpd/doc/HowTo.md
+[HowTo.md]:        docs/HowTo.md
 [Joachim Wiberg]:  http://troglobit.com
 [Coverity Scan]:   https://scan.coverity.com/projects/20498
 [Coverity Status]: https://scan.coverity.com/projects/20498/badge.svg
