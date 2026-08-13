@@ -24,7 +24,7 @@ out=$("$SNTPD" -d -n -l debug -i 15 127.0.0.1 2>&1 & sntpd_pid=$!; sleep 3; kill
 # "Connected to NTP server." only means connect(2) on the UDP socket
 # succeeded, which happens whether or not anything replies.  Assert on
 # rfc1305print()'s stats line instead: it is only reached after a
-# reply has passed every RFC 4330 cross-check (src/sntpd.c:371-378).
+# reply has passed every RFC 4330 cross-check, see packet_verify().
 assert "sntpd completed a validated NTP round trip" \
        -n "$(echo "$out" | grep -F 'Day   Second      Elapsed')"
 assert "sntpd rejected no packets" \

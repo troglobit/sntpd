@@ -34,8 +34,6 @@ struct ntp_server {
 	int          burst;	/* packets left in the current burst   */
 	int          addr_idx;	/* which resolved address we are on    */
 	int          naddr;	/* addresses the last resolve returned */
-
-	struct sockaddr_storage addr;
 };
 
 extern int min_interval;	/* -m SEC, MIN_INTERVAL by default */

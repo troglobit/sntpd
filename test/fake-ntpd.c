@@ -16,20 +16,19 @@ int main(int argc, char *argv[])
 	struct sockaddr_in sin;
 	unsigned char buf[128];
 	const char *kod = NULL;
-	int port = 123, answer = -1, quiet = 0, unsync = 0, bogus = 0, mode = 4;
+	int port = 123, quiet = 0, unsync = 0, bogus = 0, mode = 4;
 	int sd, c;
 
-	while ((c = getopt(argc, argv, "p:s:k:m:bqu")) != -1) {
+	while ((c = getopt(argc, argv, "p:k:m:bqu")) != -1) {
 		switch (c) {
 		case 'p': port   = atoi(optarg); break;
-		case 's': answer = atoi(optarg); break;
 		case 'k': kod    = optarg;       break;
 		case 'b': bogus  = 1;            break;
 		case 'm': mode   = atoi(optarg); break;
 		case 'q': quiet  = 1;            break;
 		case 'u': unsync = 1;            break;
 		default:
-			fprintf(stderr, "usage: fake-ntpd [-p PORT] [-s N] [-k CODE]"
+			fprintf(stderr, "usage: fake-ntpd [-p PORT] [-k CODE]"
 				" [-m MODE] [-b] [-q] [-u]\n");
 			return 1;
 		}
@@ -61,10 +60,8 @@ int main(int argc, char *argv[])
 		if (num < 48)
 			continue;
 
-		if (quiet || answer == 0)
+		if (quiet)
 			continue;
-		if (answer > 0)
-			answer--;
 
 		secs = (uint32_t)time(NULL) + JAN_1970;
 

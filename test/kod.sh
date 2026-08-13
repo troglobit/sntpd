@@ -223,7 +223,7 @@ say "A retired name is retired whole, every address of it"
 # every address of the name, and whichever the resolver hands out first
 # answers DENY.
 #
-# Soft skipped rather than skip(), which would throw away the five cases
+# Soft skipped rather than skip(), which would throw away every case
 # above along with this one.
 hosts=$(mktemp)
 cat /etc/hosts > "$hosts"

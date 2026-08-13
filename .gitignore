@@ -1,6 +1,9 @@
 *~
 *.o
+*.log
+*.trs
 .deps
+.dirstamp
 .unpacked
 aclocal.m4
 autom4te.cache
@@ -14,6 +17,9 @@ ntpclient.service
 sntpd.service
 stamp-h1
 test-driver
+test/fake-ntpd
+test/test-parse
+test/test-peer
 TAGS
 ID
 GPATH

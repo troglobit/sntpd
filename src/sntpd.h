@@ -46,6 +46,7 @@
 #endif
 
 #define ERR(code, fmt, args...)  logit(LOG_ERR,    code, fmt, ##args)
+#define WARN(fmt, args...)       logit(LOG_WARNING,   0, fmt, ##args)
 #define LOG(fmt,  args...)       logit(LOG_NOTICE,    0, fmt, ##args)
 #define INFO(fmt, args...)       logit(LOG_INFO,      0, fmt, ##args)
 #define DBG(fmt,  args...)       logit(LOG_DEBUG,     0, fmt, ##args)

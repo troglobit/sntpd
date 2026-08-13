@@ -270,10 +270,10 @@ void peer_kod(struct ntp_server *srv, const char *code)
 	int i;
 
 	/*
-	 * Four bytes from a server that has just told us to go away, on
-	 * their way into the log.  Anything unprintable becomes a dot, or
-	 * that server gets to write newlines and terminal escapes into our
-	 * syslog for us.
+	 * Four bytes chosen by a server that has just told us to go away,
+	 * on their way into the log.  Anything unprintable becomes a dot,
+	 * or that server gets to write newlines and terminal escapes into
+	 * our syslog.
 	 */
 	for (i = 0; i < 4; i++)
 		str[i] = isprint((unsigned char)code[i]) ? code[i] : '.';
@@ -334,8 +334,8 @@ int peer_rotate(void)
 		if (servers[next].dead)
 			continue;
 
-		if (next <= active && backoff < INT_MAX / 2)
-			backoff *= 2;
+		if (next <= active)
+			backoff_double();
 
 		active = next;
 		return active;
@@ -352,10 +352,10 @@ int peer_rotate(void)
  * come back to must not be condemned before its first probe.  The
  * doubled backoff is what throttles a network that is down.
  *
- * burst is cleared for the same reason: without it, a server rotated
- * back to could inherit a stale count from the outage that took it
- * out last time, and get bursted at even though it has not missed
- * anything yet this time round.
+ * burst is cleared for the same reason: a server rotated back to would
+ * otherwise inherit a stale count from the outage that took it out
+ * last time, and be sent a burst before it has missed anything this
+ * time round.
  *
  * addr_idx is the one thing left alone.  Rotating to the next address
  * of the same server advances the cursor and then comes straight here,
@@ -437,7 +437,9 @@ int peer_switchback(void)
  * server that is answering is polled at the configured interval and
  * one that has missed anything drops to the backoff.
  *
- * Pure: safe to call every time round the loop.
+ * Safe to call as often as you like: the only state it touches is the
+ * backoff floor, and raising something to a floor twice changes
+ * nothing.
  */
 int peer_spacing(struct ntp_server *srv, int cycle_time)
 {

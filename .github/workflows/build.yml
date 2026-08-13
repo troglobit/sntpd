@@ -39,7 +39,7 @@ jobs:
           make V=1
       - name: Check
         run: |
-          make check || (cat test/test-suite.log; false)
+          make check -j$(nproc) || (cat test/test-suite.log; false)
       - name: Install
         run: |
           DESTDIR=~/tmp make install-strip

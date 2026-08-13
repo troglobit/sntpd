@@ -5,6 +5,52 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
+[UNRELEASED][]
+--------------
+
+### Changes
+- `SERVER` argument is now repeatable, up to 8, and doubles as a
+  failover list: `sntpd 192.168.1.1,prefer,iburst pool.ntp.org`.  sntpd
+  talks to one server at a time and moves on when it stops answering;
+  it does not run RFC 5905's selection and combining algorithms, so
+  several servers buy resilience, not accuracy
+  - `iburst`: burst 8 packets 2s apart while a server is unreachable,
+    for a faster first sync and faster failover
+  - `prefer`: the entry to return to once it is reachable again,
+    probed once per poll interval on its own socket; two consecutive
+    good replies are required before switching back
+- A hostname that resolves to several addresses is tried address by
+  address before sntpd moves on to the next server.  This is
+  best-effort: `getaddrinfo()` does not promise the same order between
+  resolves, so a lap visits an address, not a guaranteed one
+- IPv6 literal addresses can now be given on the command line,
+  bracketed when a port follows: `[2001:db8::1]:123`
+- New `-m SEC` option, the minimum poll interval and the floor the
+  failover backoff starts from.  Default 15, the value RFC 4330
+  section 10 requires; sntpd warns if set lower
+- Kiss-o'-Death handling, RFC 4330 section 8: `RATE` widens a server's
+  retry backoff, `DENY`/`RSTR` retire it for the rest of the run.  This
+  is the server's own request, so it applies even under `-t`.  If every
+  server ends up retired, sntpd logs it and exits non-zero, so a
+  supervisor can tell that apart from a clean shutdown and back off
+  before restarting
+- RFC 4330 cross-checks are now on by default in daemon mode, matching
+  `ntpclient`, and `-t` genuinely disables them where before it had no
+  effect in daemon mode.  A server that syncs fine today may start
+  being rejected once these checks are enforced against it
+- Giving a `SERVER` argument that is empty is now a configuration
+  error, rather than silently falling back to `pool.ntp.org`
+- New self-checking test suite covering the server list, failover,
+  `iburst`, `prefer`, IPv6 literals, multi-address hostnames, and KoD
+
+### Fixes
+- Fix `--enable-debug` build, broken by a reference to an undeclared
+  variable
+- Fix `select()` to watch every socket sntpd has open.  It was sized
+  from the client socket alone, so a server or probe socket with a
+  higher descriptor was silently left unwatched
+
+
 [v3.1][] - 2022-03-13
 ---------------------
 
@@ -260,6 +306,7 @@ Curated by [Larry Doolittle][].
 
 
 [UNRELEASED]:        https://github.com/troglobit/ntpclient/compare/v3.1...HEAD
+[v3.2]:              https://github.com/troglobit/ntpclient/compare/v3.1...v3.2
 [v3.1]:              https://github.com/troglobit/ntpclient/compare/v3.0...v3.1
 [v3.0]:              https://github.com/troglobit/ntpclient/compare/2018_244...v3.0
 [2018_244]:          https://github.com/troglobit/ntpclient/compare/2018_176...2018_244

@@ -375,10 +375,9 @@ static int packet_kod(uint32_t *data, int unmatched, struct ntp_server *srv)
  * that is up but unsynchronised, or answering a question nobody asked,
  * would otherwise win a switch it cannot sustain, and every one of its
  * packets be rejected the moment it became the association.  One
- * function rather than two call sites that agree to ask the same
- * questions in the same order, since the order is the whole subtlety:
- * a kiss o' death comes before the section 5 checks and survives -t
- * waiving them.
+ * function rather than two call sites that have to agree, because the
+ * order matters: a kiss o' death comes before the section 5 checks,
+ * and survives -t waiving them.
  */
 static const char *packet_verify(uint32_t *data, int unmatched, int cross_check,
 				 struct ntp_server *srv)
@@ -412,6 +411,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 #endif
 	struct ntptimes pkt_root_delay, pkt_root_dispersion;
 	struct ntptime orgtime, rectime, xmttime;
+	struct ntp_server *srv = peer_active();
 	double el_time, st_time, skew1, skew2, dtemp;
 	int freq, unmatched;
 	const char *drop_reason = NULL;
@@ -478,14 +478,14 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	unmatched = probe_match(ntpc, &orgtime);
 
 	/* error checking, see RFC-4330 sections 5 and 8 */
-	drop_reason = packet_verify(data, unmatched, ntpc->cross_check, peer_active());
+	drop_reason = packet_verify(data, unmatched, ntpc->cross_check, srv);
 	if (drop_reason)
 		goto fail;
 
 	if (!dry && ntpc->set_clock) {
 		/* CAP_SYS_TIME or root required, or sntpd will exit here! */
 		set_time(&xmttime);
-		LOG("Time synchronized to server %s, stratum %d", peer_active()->host, stratum);
+		LOG("Time synchronized to server %s, stratum %d", srv->host, stratum);
 	}
 
 	/* Update last time set ... */
@@ -558,7 +558,7 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	 * packet cannot drive rotation.
 	 */
 	if (!unmatched)
-		peer_timeout(peer_active());
+		peer_timeout(srv);
 
 	return 1;
 }
@@ -783,13 +783,6 @@ static int setup_socket(struct ntp_control *ntpc)
 		ERR(0, "%s: Unsupported address family %d", __func__, ss.ss_family);
 		exit(1);
 	}
-
-	/*
-	 * Remember it before setup_transmit() stamps the port into it,
-	 * so srv->addr is the address as resolved rather than one with
-	 * our own idea of the port in it.
-	 */
-	srv->addr = ss;
 
 	/*
 	 * Rotating through a name's addresses is otherwise invisible:
@@ -1053,7 +1046,6 @@ static int loop(struct ntp_control *ntpc)
 
 			if (!init)
 				DBG("Got SIGHUP, triggering resync with NTP server.");
-			init = 0;
 
 			/* Resolving can take a while, so do not schedule off a stale now. */
 			now = time(NULL);
@@ -1147,13 +1139,9 @@ static int loop(struct ntp_control *ntpc)
 
 		/*
 		 * Serviced before the association, and held to the same
-		 * standard: the question is not whether something answered
-		 * but whether this answer would survive becoming the
-		 * association.  A server that is up and unsynchronised
-		 * answers cheerfully, and a GPS receiver without a fix is
-		 * exactly that, so accepting it on length alone would switch
-		 * to it, reject every packet it then sent, rotate away, and
-		 * come straight back.
+		 * standard, which is what packet_verify() is for: the
+		 * question is not whether something answered but whether
+		 * this answer would survive becoming the association.
 		 *
 		 * A reply that fails simply does not count, and ends the run
 		 * of replies the way a timeout does.  No miss is charged:
@@ -1167,6 +1155,9 @@ static int loop(struct ntp_control *ntpc)
 			if (pack_len < 48 || (unsigned)pack_len >= sizeof_incoming)
 				why = "not an NTP reply";
 			else
+				/* Words 6 and 7 are the origin timestamp,
+				 * which must echo what probe_candidate()
+				 * sent. */
 				why = packet_verify(incoming_word,
 						    ntohl(incoming_word[6]) != rsent.coarse ||
 						    ntohl(incoming_word[7]) != rsent.fine,
@@ -1495,15 +1486,18 @@ static int usage(int code)
 
 	fprintf(fp,
 		"Usage:\n"
-		"  %s [-dhn" REPLAY_OPTION "stV] [-i SEC] [-l LEVEL] [-p PORT] [-q USEC] [SERVER]\n"
+		"  %s [-dhn" REPLAY_OPTION "stV] [-i SEC] [-l LEVEL] [-m SEC] [-p PORT]\n"
+		"        [-q USEC] [SERVER ...]\n"
 		"\n"
 		"Options:\n"
 		"  -d       Dry run, no time correction, useful for debugging\n"
 		"  -h       Show summary of command line options and exit\n"
 		"  -i SEC   Check time every interval seconds.  Default: 600\n"
 		"  -l LEVEL Set log level: none, err, warn, notice (default), info, debug\n"
-		"  -n       Don't fork.  Prevents %s from daemonizing by default\n"
-		"           Use with '-s' to use syslog as well, for Finit + systemd\n"
+		"  -m SEC   Minimum poll interval.  Default: 15, the floor RFC 4330\n"
+		"           requires.  Lower only on a network with its own time source\n"
+		"  -n       Don't fork.  Implies logging to stdout instead of syslog\n"
+		"           Add '-s' to use syslog anyway, e.g. Finit + systemd\n"
 		"  -p PORT  SNTP server mode port, default: 123, use 0 to disable\n"
 		"  -q USEC  Minimum packet delay for transaction, default: 800 usec\n"
 #ifdef ENABLE_REPLAY
@@ -1514,12 +1508,19 @@ static int usage(int code)
 		"  -v       Show program version\n"
 		"\n"
 		"Arguments:\n"
-		"  SERVER   Optional NTP server to sync with, default: pool.ntp.org\n"
+		"  SERVER   NTP server, host[:port][,iburst][,prefer].  Repeatable,\n"
+		"           at most 8.  Bracket IPv6 literals: [2001:db8::1]:123\n"
+		"           Used as a failover list.  Default: pool.ntp.org\n"
+		"\n"
+		"Server options:\n"
+		"  iburst   Burst 8 packets 2s apart while unreachable, for a\n"
+		"           faster first sync and faster failover.  Default: off\n"
+		"  prefer   Return to this server once it answers again\n"
 		"\n"
 #ifdef PACKAGE_BUGREPORT
 		"Bug report address: " PACKAGE_BUGREPORT "\n"
 #endif
-		"Project homepage: " PACKAGE_URL "\n", prognm, prognm);
+		"Project homepage: " PACKAGE_URL "\n", prognm);
 
 	return code;
 }
@@ -1594,10 +1595,10 @@ int main(int argc, char *argv[])
 			if (min_interval < 1)
 				min_interval = 1;
 			if (min_interval < MIN_INTERVAL)
-				logit(LOG_WARNING, 0, "Minimum poll interval %d sec is below the"
-				      " %d sec floor RFC 4330 section 10 requires.  Only do this"
-				      " on a network with its own time source.",
-				      min_interval, MIN_INTERVAL);
+				WARN("Minimum poll interval %d sec is below the"
+				     " %d sec floor RFC 4330 section 10 requires."
+				     "  Only do this on a network with its own"
+				     " time source.", min_interval, MIN_INTERVAL);
 			break;
 
 		case 'n':

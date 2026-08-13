@@ -1,7 +1,7 @@
 .\" man page for sntpd and Larry Doolittle's ntpclient
 .\" distributed under GPL
 .\" originally written by Walter Harms
-.Dd Mar 11, 2022
+.Dd Aug 8, 2026
 .\" Please adjust this date whenever revising the manpage.
 .Dt SNTPD 8
 .Sh NAME
@@ -11,9 +11,10 @@
 .Nm
 .Op Fl dhnrstv
 .Op Fl i Ar SEC
+.Op Fl m Ar SEC
 .Op Fl p Ar PORT
 .Op Fl q Ar USEC
-.Op SERVER
+.Op SERVER ...
 .Nm ntpclient
 .Op Fl dlrst
 .Op Fl c Ar count
@@ -73,14 +74,16 @@ only.  See the
 .Sx SYNOPSIS
 section for available options for the
 .Nm ntpclient
-compat mode.  Note, if the
+compat mode.  Note, if no
 .Ar SERVER
-argument is omitted,
+argument is given,
 .Nm
-defaults to use pool.ntp.org.  This is also the most prominent
-difference to
-.Nm ntpclient
-which requires a server hostname to be given as argument.
+defaults to pool.ntp.org.  This is also the most prominent difference
+to
+.Nm ntpclient ,
+which requires a server hostname to be given as argument.  See
+.Sx SERVERS
+below for the argument's syntax.
 .Bl -tag -width Ds
 .It Fl d
 Dry run, no time correction, useful for debugging.
@@ -107,12 +110,21 @@ Debug-level messages, like
 .Cm info
 but more, very noisy
 .El
-.It Fl n
-Don't fork.  Prevents
+.It Fl m Ar SEC
+Minimum interval between polls of the same server, default 15 seconds.
+This is also the floor the failover backoff starts from.
+.Pp
+RFC 4330 requires that an SNTP client never poll faster than every 15
+seconds, a rule meant to protect public servers such as the
+.Ar pool.ntp.org
+default.  Lowering it suits a closed network with its own time source,
+where faster convergence costs nobody anything.
 .Nm
-from daemonizing and also implies logging to stdout, use
+logs a warning when it is set below 15.
+.It Fl n
+Don't fork.  Implies logging to stdout instead of syslog.  Add
 .Fl s
-to enable syslog in this mode.
+to use syslog anyway, e.g. Finit + systemd.
 .It Fl p Ar PORT
 By default
 .Nm
@@ -130,12 +142,93 @@ Use syslog instead of stdout for log messages, default unless started
 with
 .Fl n .
 .It Fl t
-Trust network and server, no RFC-4330 recommended cross-checks.
+Trust network and server, no RFC-4330 recommended cross-checks.  A
+Kiss-o'-Death is the server's own request rather than one of those
+checks, so it is exempt: see
+.Sx SERVERS
+below.
 .It Fl v
 Display
 .Nm
 version.
 .El
+.Sh SERVERS
+One or more NTP servers may be given, each of the form
+.Pp
+.Dl host Ns Oo : Ns Ar port Oc Ns Oo , Ns Cm iburst Oc Ns Oo , Ns Cm prefer Oc
+.Pp
+repeated up to eight times.  IPv6 literals must be bracketed when a
+port follows, e.g.
+.Ar [2001:db8::1]:123 .
+Omitting SERVER defaults to pool.ntp.org; giving one and leaving it
+empty is a configuration error.
+.Pp
+.Nm
+talks to one server at a time and treats the list as a failover
+order, not a priority: it moves to the next entry only when the
+current one stops answering, never on a timer, since every switch
+resets the phase-lock loop.  A hostname that resolves to several
+addresses contributes one candidate per address, tried in turn before
+.Nm
+moves on to the next server.  Because
+.Xr getaddrinfo 3
+does not promise the same order between resolves, this is best-effort:
+each lap visits an address, not a guaranteed one.
+.Nm
+does not run the RFC 5905 selection and combining algorithms, so
+several servers buy resilience rather than better accuracy.
+.Pp
+The number of addresses per name is not capped, so a name that stops
+answering takes proportionally longer to give up on: every address gets
+its own eight chances before
+.Nm
+moves to the next server in the list.  A name behind four addresses
+therefore delays the move roughly fourfold.  The backoff bounds how
+fast the probes go out, not how long the name takes to exhaust.
+.Pp
+There is no keyword for the RFC 7317
+.Ar association-type
+leaf.  RFC 5905 distinguishes a
+.Cm server ,
+one association, from a
+.Cm pool ,
+one association per resolved address polled at the same time and chosen
+between.
+.Nm
+keeps a single association at any moment, so neither has anything to
+attach to here: the addresses behind a name are places to fail over to,
+not associations to maintain.  Symmetric-active
+.Cm peer
+mode is outside SNTP altogether.
+.Bl -tag -width iburst -offset indent
+.It Cm iburst
+Send a burst of eight packets two seconds apart while the server is
+unreachable, instead of one.  Speeds up the first sync and failover.
+Off by default.
+.It Cm prefer
+Return to this server once it is reachable again, whatever its
+position in the list.  Probed once per poll interval on its own
+socket while
+.Nm
+is otherwise occupied; two consecutive valid replies are required
+before switching, so a server answering only intermittently cannot
+steal it back and forth.  Without this keyword none of that runs.
+.El
+.Pp
+A stratum-0 reply is a Kiss-o'-Death, RFC 4330 section 8, and
+.Nm
+acts on the code the server gives: RATE widens that server's retry
+backoff, and DENY or RSTR retire it for the rest of the run.  This
+holds even under
+.Fl t :
+that flag waives the RFC 4330 section 5 checks
+.Nm
+otherwise insists on, but a Kiss-o'-Death is the server's own request
+rather than one of those, so it is not waived.  If every server ends
+up retired,
+.Nm
+logs the fact and exits with a non-zero status, so a supervisor can
+tell that apart from a clean shutdown and back off before restarting.
 .Sh AUTHORS
 Larry Doolittle maintains the original
 .Nm ntpclient,
