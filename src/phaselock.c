@@ -109,6 +109,8 @@ static struct _polygon {
 	double r_min;
 } df;
 
+static int rp = 0, valid = 0;
+
 static void polygon_reset(void)
 {
 	df.l_min = MIN_INIT;
@@ -204,13 +206,28 @@ static double find_df_center(struct _seg *min, struct _seg *max, double gross_df
 	return factor * delta;
 }
 
+/*
+ * Forget the measurement history.  Called when sntpd switches server:
+ * the ring holds skew against one reference, and a new reference puts
+ * a step in that series which would corrupt the frequency fit.
+ *
+ * The correction already handed to the kernel by set_freq() stays put,
+ * so the clock keeps its current rate; we simply stop refining it
+ * until the ring refills.
+ */
+void contemplate_reset(void)
+{
+	rp = 0;
+	valid = 0;
+	polygon_reset();
+}
+
 int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq)
 {
 	/*  Here is the actual phase lock loop.
 	 *  Need to keep a ring buffer of points to make a rational
 	 *  decision how to proceed.
 	 */
-	static int rp=0, valid=0;
 	int both_sides_now=0;
 	int j, n, c, max_avail, min_avail, dinit;
 	int nextj=0;	/* initialization not needed; but gcc can't figure out my logic */

@@ -13,7 +13,7 @@ adjtimex_SOURCES    = adjtimex.c
 endif
 
 sbin_PROGRAMS       = sntpd
-sntpd_SOURCES       = sntpd.c sntpd.h logit.c phaselock.c server.c
+sntpd_SOURCES       = sntpd.c sntpd.h logit.c peer.c peer.h phaselock.c server.c
 sntpd_LIBS          = -lrt
 
 if WITH_NTPCLIENT

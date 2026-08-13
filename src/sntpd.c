@@ -37,6 +37,7 @@
 #endif
 
 #include "sntpd.h"
+#include "peer.h"
 
 int dry = 0;			/* Dry run, no time corrections */
 int initial_freq = 0;		/* initial freq value to use */
@@ -192,7 +193,7 @@ static int check_source(int data_len, struct sockaddr_storage *ss, struct ntp_co
 	 * wrong too often.
 	 */
 	if (NTP_PORT != port) {
-		if (port != ntpc->udp_port) {
+		if (port != peer_active()->port) {
 			INFO("%s: invalid port: %u", __func__, port);
 			return 1;
 		}
@@ -218,6 +219,179 @@ static double ntpdiff(struct ntptime *start, struct ntptime *stop)
 	return a * 1.e6 + b * (1.e6 / 4294967296.0);
 }
 
+/* Remember a probe so its reply can be matched and its loss noticed. */
+static void probe_sent(struct ntp_control *ntpc, struct ntptime *ts, time_t now)
+{
+	int i;
+
+	for (i = 0; i < BCOUNT; i++) {
+		if (!ntpc->expire[i]) {
+			ntpc->sent[i]   = *ts;
+			ntpc->expire[i] = now + RESPONSE_TIMEOUT;
+			return;
+		}
+	}
+}
+
+/* Count every probe past its deadline as lost.  Returns how many. */
+static int probe_expire(struct ntp_control *ntpc, struct ntp_server *srv, time_t now)
+{
+	int i, num = 0;
+
+	for (i = 0; i < BCOUNT; i++) {
+		if (ntpc->expire[i] && ntpc->expire[i] <= now) {
+			ntpc->expire[i] = 0;
+			peer_timeout(srv);
+			num++;
+		}
+	}
+
+	return num;
+}
+
+/* Earliest outstanding deadline, 0 when nothing is in flight. */
+static time_t probe_deadline(struct ntp_control *ntpc)
+{
+	time_t next = 0;
+	int i;
+
+	for (i = 0; i < BCOUNT; i++) {
+		if (ntpc->expire[i] && (!next || ntpc->expire[i] < next))
+			next = ntpc->expire[i];
+	}
+
+	return next;
+}
+
+/* Retire a probe once its reply is in. */
+static int probe_match(struct ntp_control *ntpc, struct ntptime *org)
+{
+	int i;
+
+	for (i = 0; i < BCOUNT; i++) {
+		if (ntpc->expire[i] &&
+		    ntpc->sent[i].coarse == org->coarse &&
+		    ntpc->sent[i].fine   == org->fine) {
+			ntpc->expire[i] = 0;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+/*
+ * RFC 4330 section 5 checks, in the order the original had them.
+ * Returns NULL when the reply is usable, otherwise the name of the
+ * check it failed, for the log.  Whether the origin timestamp matched
+ * is the caller's to work out, since only the caller knows what it
+ * sent.
+ */
+static const char *packet_check(uint32_t *data, int unmatched)
+{
+	int li, vn, mode;
+	int delay, disp;
+	uint32_t xmt_coarse, xmt_fine;
+
+#define Data(i) ntohl(((uint32_t *)data)[i])
+	li         = Data(0) >> 30 & 0x03;
+	vn         = Data(0) >> 27 & 0x07;
+	mode       = Data(0) >> 24 & 0x07;
+	delay      = Data(1);
+	disp       = Data(2);
+	xmt_coarse = Data(10);
+	xmt_fine   = Data(11);
+#undef Data
+
+	if (li == 3)
+		return "LI==3";		/* unsynchronized */
+	if (vn < 3)
+		return "VN<3";		/* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
+	if (mode != 4)
+		return "MODE!=3";
+	if (unmatched)
+		return "ORG!=sent";
+	if (xmt_coarse == 0 && xmt_fine == 0)
+		return "XMT==0";
+	if (delay > 65536 || delay < -65536)
+		return "abs(DELAY)>65536";
+	if (disp > 65536 || disp < -65536)
+		return "abs(DISP)>65536";
+
+	return NULL;
+}
+
+/*
+ * A stratum 0 reply is a Kiss-o'-Death, RFC 4330 section 8, and it is
+ * for srv: the association and the candidate probe each hand in the
+ * server they asked, or a DENY meant for the one we would rather have
+ * would retire the one we are actually using.  Returns non-zero when
+ * the reply was one, since it never carries a time either way.
+ *
+ * Handled outside packet_check() because it is not one of the section 5
+ * checks: those are recommendations -t lets the operator waive, and
+ * this is the server's own request, which is not the operator's to
+ * waive.  Still held to the origin timestamp, waived or not, because
+ * retiring a server for the rest of the run on an unsolicited packet is
+ * a denial of service for anyone who can guess our source port.
+ */
+static int packet_kod(uint32_t *data, int unmatched, struct ntp_server *srv)
+{
+	char code[5] = { 0 };
+	int mode, stratum;
+
+	mode    = ntohl(data[0]) >> 24 & 0x07;
+	stratum = ntohl(data[0]) >> 16 & 0xff;
+
+	/*
+	 * Mode as well as stratum, because a stratum 0 packet that is not a
+	 * server reply is a server that is broken rather than one refusing
+	 * us, and retiring it for the rest of the run would be our mistake
+	 * and not its request.
+	 *
+	 * The leap indicator is the one field that cannot be consulted
+	 * here: a conformant kiss o' death sets it to 3, RFC 5905 section
+	 * 7.4, which is also why this has to run before packet_check()
+	 * rather than after.  After, every real one would be turned away as
+	 * LI==3 with nobody the wiser.
+	 */
+	if (mode != 4 || stratum || unmatched)
+		return 0;
+
+	/* Reference identifier, four characters on the wire. */
+	memcpy(code, &data[3], sizeof(code) - 1);
+	peer_kod(srv, code);
+
+	return 1;
+}
+
+/*
+ * Everything that decides whether a reply is usable, in the order it has
+ * to be decided.  Returns NULL when the reply is good, otherwise what it
+ * failed, for the log.
+ *
+ * Both reply paths come through here, because a reply is worth exactly
+ * as much to the candidate probe as it is to the association: a server
+ * that is up but unsynchronised, or answering a question nobody asked,
+ * would otherwise win a switch it cannot sustain, and every one of its
+ * packets be rejected the moment it became the association.  One
+ * function rather than two call sites that agree to ask the same
+ * questions in the same order, since the order is the whole subtlety:
+ * a kiss o' death comes before the section 5 checks and survives -t
+ * waiving them.
+ */
+static const char *packet_verify(uint32_t *data, int unmatched, int cross_check,
+				 struct ntp_server *srv)
+{
+	if (packet_kod(data, unmatched, srv))
+		return "KoD";
+
+	if (!cross_check)
+		return NULL;
+
+	return packet_check(data, unmatched);
+}
+
 /* Does more than print, so this name is bogus.
  * It also makes time adjustments, both sudden (-s)
  * and phase-locking (-l).
@@ -229,25 +403,26 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	static int first = 1;
 
 	/* straight out of RFC-1305 Appendix A */
-	int li, vn, mode, stratum, prec;
+	int stratum, prec;
 	int delay, disp;
 
 #ifdef ENABLE_DEBUG
-	int poll, refid;
+	int li, vn, mode, poll, refid;
 	struct ntptime reftime;
 #endif
 	struct ntptimes pkt_root_delay, pkt_root_dispersion;
 	struct ntptime orgtime, rectime, xmttime;
 	double el_time, st_time, skew1, skew2, dtemp;
-	int freq;
+	int freq, unmatched;
 	const char *drop_reason = NULL;
 
 #define Data(i) ntohl(((uint32_t *)data)[i])
+	stratum = Data(0) >> 16 & 0xff;
+#ifdef ENABLE_DEBUG
+	/* Only the log wants these now, packet_check() reads its own. */
 	li      = Data(0) >> 30 & 0x03;
 	vn      = Data(0) >> 27 & 0x07;
 	mode    = Data(0) >> 24 & 0x07;
-	stratum = Data(0) >> 16 & 0xff;
-#ifdef ENABLE_DEBUG
 	poll    = Data(0) >>  8 & 0xff;
 #endif
 	prec    = Data(0) & 0xff;
@@ -275,7 +450,6 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	DBG("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp),
 	      refid >> 24 & 0xff, refid >> 16 & 0xff, refid >> 8 & 0xff, refid & 0xff);
 	DBG("Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
-	DBG("(sent)    %u.%.6u", ntpc->time_of_send.coarse, USEC(ntpc->time_of_send.fine));
 	DBG("Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));   /* T1 */
 	DBG("Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));   /* T2 */
 	DBG("Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));   /* T3 */
@@ -296,32 +470,22 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	DBG("Frequency:     %9d", freq);
 #endif
 
-	/* error checking, see RFC-4330 section 5 */
-#define FAIL(x) do { drop_reason=(x); goto fail;} while (0)
-	if (ntpc->cross_check) {
-		if (li == 3)
-			FAIL("LI==3");	/* unsynchronized */
-		if (vn < 3)
-			FAIL("VN<3");	/* RFC-4330 documents SNTP v4, but we interoperate with NTP v3 */
-		if (mode != 4)
-			FAIL("MODE!=3");
-		if (orgtime.coarse != ntpc->time_of_send.coarse || orgtime.fine != ntpc->time_of_send.fine)
-			FAIL("ORG!=sent");
-		if (xmttime.coarse == 0 && xmttime.fine == 0)
-			FAIL("XMT==0");
-		if (delay > 65536 || delay < -65536)
-			FAIL("abs(DELAY)>65536");
-		if (disp > 65536 || disp < -65536)
-			FAIL("abs(DISP)>65536");
-		if (stratum == 0)
-			FAIL("STRATUM==0");	/* kiss o' death */
-#undef FAIL
-	}
+	/*
+	 * Retire the probe this reply answers.  Done even with the
+	 * cross-checks disabled, or an answered probe would sit in the
+	 * ring until its deadline and be counted as lost.
+	 */
+	unmatched = probe_match(ntpc, &orgtime);
+
+	/* error checking, see RFC-4330 sections 5 and 8 */
+	drop_reason = packet_verify(data, unmatched, ntpc->cross_check, peer_active());
+	if (drop_reason)
+		goto fail;
 
 	if (!dry && ntpc->set_clock) {
 		/* CAP_SYS_TIME or root required, or sntpd will exit here! */
 		set_time(&xmttime);
-		LOG("Time synchronized to server %s, stratum %d", ntpc->server, stratum);
+		LOG("Time synchronized to server %s, stratum %d", peer_active()->host, stratum);
 	}
 
 	/* Update last time set ... */
@@ -384,6 +548,17 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	ERR(0, "%d %.5d.%.3d rejected packet: %s",
 	    arrival->coarse / 86400, arrival->coarse % 86400,
 	    arrival->fine / 4294967, drop_reason);
+
+	/*
+	 * Our probe was answered, the answer was just no good, and its
+	 * slot is already retired so nothing else will notice.  Charge
+	 * it as a miss, or a server that is up but unsynchronized is
+	 * one sntpd would sit on forever.  A reply that failed the ORG
+	 * test answers no probe of ours, so a replayed or spoofed
+	 * packet cannot drive rotation.
+	 */
+	if (!unmatched)
+		peer_timeout(peer_active());
 
 	return 1;
 }
@@ -449,30 +624,52 @@ static int setup_transmit(int usd, struct sockaddr_storage *ss, uint16_t port,
 		return -1;
 	}
 
-	INFO("Connected to NTP server.");
 	return 0;
 }
 
-static int getaddrbyname(char *host, struct sockaddr_storage *ss)
+/*
+ * Resolve host and hand back the idx-th usable address, wrapping if
+ * idx runs past the end.  Returns how many usable addresses there
+ * were, or -1 on failure, so the caller can tell how many candidates
+ * this name actually represents.
+ *
+ * The order is not stable between calls: RFC 6724 sorting depends on
+ * the local addresses of the moment, and a round-robin name server
+ * shuffles the answer anyway.  So idx is a slot, not an identity, and
+ * a lap visits as many addresses as the name has rather than each
+ * address exactly once.  Good enough to find a working one, which is
+ * all a lap is for.
+ *
+ * quiet keeps the candidate probe out of the network-state reporting.
+ * It asks once per poll interval, so a name that stays broken would be
+ * a notice per interval forever, and its answers must not decide when
+ * the association says the network came back.
+ */
+static int getaddrbyname(char *host, struct sockaddr_storage *ss, int idx, int quiet)
 {
 	struct addrinfo *result;
 	static int netdown = 0;
 	struct addrinfo hints;
 	struct addrinfo *rp;
-	int err;
+	int err, num, want;
 
 	if (!host || !ss) {
 		errno = EINVAL;
-		return 1;
+		return -1;
 	}
 
 	res_init();
 
 	memset(&hints, 0, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = 0;
+	/*
+	 * Without a socket type getaddrinfo() returns every address once
+	 * per type, which would count one address as three candidates.
+	 * NTP is UDP, so ask for what we are actually going to open.
+	 */
+	hints.ai_socktype = SOCK_DGRAM;
 	hints.ai_flags = AI_PASSIVE;
-	hints.ai_protocol = 0;
+	hints.ai_protocol = IPPROTO_UDP;
 	hints.ai_canonname = NULL;
 	hints.ai_addr = NULL;
 	hints.ai_next = NULL;
@@ -480,6 +677,11 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 	memset(ss, 0, sizeof(struct sockaddr_storage));
 	err = getaddrinfo(host, NULL, &hints, &result);
 	if (err) {
+		if (quiet) {
+			errno = ENETDOWN;
+			return -1;
+		}
+
 		switch (err) {
 		case EAI_NONAME:
 			LOG("Failed resolving %s, will try again later ...", host);
@@ -492,50 +694,89 @@ static int getaddrbyname(char *host, struct sockaddr_storage *ss)
 			break;
 		}
 		netdown = errno = ENETDOWN;
-		return 1;
+		return -1;
 	}
 
-	/* The first result will be used. IPV4 has higher priority */
-	err = 1;
+	num = 0;
 	for (rp = result; rp; rp = rp->ai_next) {
-		if (rp->ai_family == AF_INET) {
-			memcpy(ss, (struct sockaddr_in *)(rp->ai_addr), sizeof(struct sockaddr_in));
-			err = 0;
-			break;
-		}
-		if (rp->ai_family == AF_INET6) {
-			memcpy(ss, (struct sockaddr_in6 *)(rp->ai_addr), sizeof(struct sockaddr_in6));
-			err = 0;
+		if (rp->ai_family == AF_INET || rp->ai_family == AF_INET6)
+			num++;
+	}
+
+	if (num == 0) {
+		freeaddrinfo(result);
+		errno = EAGAIN;
+		return -1;
+	}
+
+	want = idx % num;
+	for (rp = result; rp; rp = rp->ai_next) {
+		if (rp->ai_family != AF_INET && rp->ai_family != AF_INET6)
+			continue;
+		if (want-- == 0) {
+			memcpy(ss, rp->ai_addr, rp->ai_addrlen);
 			break;
 		}
 	}
+
 	freeaddrinfo(result);
 
-	if (err) {
-		errno = EAGAIN;
-		return 1;
-	}
-
-	if (netdown) {
+	if (netdown && !quiet) {
 		LOG("Network up, resolved address to hostname %s", host);
 		netdown = 0;
 	}
 
-	return 0;
+	return num;
+}
+
+/* Numeric form of ss, for the log.  Never fails, worst case "?". */
+static char *addr2str(struct sockaddr_storage *ss, char *buf, size_t len)
+{
+	const void *src;
+
+	if (ss->ss_family == AF_INET)
+		src = &((struct sockaddr_in *)ss)->sin_addr;
+	else
+		src = &((struct sockaddr_in6 *)ss)->sin6_addr;
+
+	if (!inet_ntop(ss->ss_family, src, buf, len))
+		snprintf(buf, len, "?");
+
+	return buf;
 }
 
 static int setup_socket(struct ntp_control *ntpc)
 {
+	struct ntp_server *srv = peer_active();
 	struct sockaddr_storage ss;
-	int sd;
+	char addr[INET6_ADDRSTRLEN];
+	int num, sd;
 
-	if (getaddrbyname(ntpc->server, &ss)) {
-		if (EINVAL != errno)
-			return -1;
-
-		ERR(0, "Unable to look up %s address", ntpc->server ?: "<nil>");
+	if (!srv || !srv->host) {
+		ERR(0, "No NTP server to connect to");
 		exit(1);
 	}
+
+	num = getaddrbyname(srv->host, &ss, srv->addr_idx, 0);
+	if (num < 0) {
+		if (EINVAL == errno) {
+			ERR(0, "Unable to look up %s address", srv->host);
+			exit(1);
+		}
+
+		/*
+		 * A name that will not resolve is a candidate that will
+		 * not answer, so charge it a miss the way a lost probe
+		 * is charged one.  It then runs out of chances and
+		 * rotation moves on, instead of one bad name blocking
+		 * the whole list.
+		 */
+		peer_timeout(srv);
+		errno = ENETDOWN;
+		return -1;
+	}
+
+	peer_naddr(srv, num);
 
 	/* open socket based on the server address family */
 	if (ss.ss_family != AF_INET && ss.ss_family != AF_INET6) {
@@ -543,21 +784,87 @@ static int setup_socket(struct ntp_control *ntpc)
 		exit(1);
 	}
 
+	/*
+	 * Remember it before setup_transmit() stamps the port into it,
+	 * so srv->addr is the address as resolved rather than one with
+	 * our own idea of the port in it.
+	 */
+	srv->addr = ss;
+
+	/*
+	 * Rotating through a name's addresses is otherwise invisible:
+	 * every lap logs the same host:port.  Say which address it is.
+	 */
+	DBG("Resolved %s to %s, address %d of %d", srv->host,
+	    addr2str(&ss, addr, sizeof(addr)), srv->addr_idx + 1, num);
+
 	sd = socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP);
 	if (sd == -1)
 		return -1;
 
 	if (setup_receive(sd, ss.ss_family, ntpc->local_udp_port) ||
-	    setup_transmit(sd, &ss, ntpc->udp_port, ntpc)) {
+	    setup_transmit(sd, &ss, srv->port, ntpc)) {
 		close(sd);
+		/* An address we cannot even reach is a candidate that will
+		 * not answer, same as a name we cannot resolve. */
+		peer_timeout(srv);
 		errno = ENETDOWN;
 		return -1;
 	}
+
+	/* Only the association, which setup_transmit() no longer knows it
+	 * is being used for; the candidate probe below is not one. */
+	INFO("Connected to NTP server.");
 
 	/*
 	 * Every day: reopen socket and perform a new DNS lookup.
 	 */
 	alarm(60 * 60 * 24);
+
+	return sd;
+}
+
+/*
+ * Probe a server we are not synced to.  It gets its own short-lived
+ * socket so the active association keeps the connected one, and with
+ * it ICMP error reporting.
+ *
+ * The probe goes to the address the candidate's own cursor points at,
+ * which is the one setup_socket() would use if the probe wins, and is
+ * address zero for any server rotation has stepped away from.  Nothing
+ * here touches that cursor or the resolved address count: those belong
+ * to the active association, and rotation is the only thing that may
+ * move them.
+ */
+static int probe_candidate(struct ntp_server *srv, struct ntptime *sent,
+			   struct ntp_control *ntpc)
+{
+	struct sockaddr_storage ss;
+	char addr[INET6_ADDRSTRLEN];
+	int sd;
+
+	if (getaddrbyname(srv->host, &ss, srv->addr_idx, 1) < 0) {
+		DBG("Cannot resolve preferred server %s", srv->host);
+		return -1;
+	}
+
+	sd = socket(ss.ss_family, SOCK_DGRAM, IPPROTO_UDP);
+	if (sd == -1)
+		return -1;
+
+	/*
+	 * The origin timestamp goes back to the caller: only one probe is
+	 * ever outstanding, so that one timestamp is the whole ring the
+	 * association needs BCOUNT slots for, and it is what lets the
+	 * reply be held to the ORG check.
+	 */
+	if (setup_transmit(sd, &ss, srv->port, ntpc) || send_packet(sd, sent) == -1) {
+		close(sd);
+		return -1;
+	}
+
+	DBG("Probing preferred server %s:%u at %s", srv->host, srv->port,
+	    addr2str(&ss, addr, sizeof(addr)));
 
 	return sd;
 }
@@ -601,7 +908,12 @@ static void setup_signals(void)
 	sigaction(SIGALRM, &sa, NULL);
 }
 
-static void loop(struct ntp_control *ntpc)
+/*
+ * Returns non-zero when it gave up rather than was asked to stop, so a
+ * supervisor can tell "nothing left to sync to" from a clean exit and
+ * back off and retry instead of considering the job done.
+ */
+static int loop(struct ntp_control *ntpc)
 {
 	fd_set fds;
 	struct sockaddr_storage sa_xmit;
@@ -610,8 +922,19 @@ static void loop(struct ntp_control *ntpc)
 	struct timeval to;
 	struct ntptime udp_arrival_ntp;
 	static uint32_t incoming_word[325];
+	struct ntp_server *srv;
+	struct ntptime ts;
+	time_t now, t_send = 0, t_last = 0, deadline;
+	struct ntp_server *cand = NULL;	/* what an outstanding probe asks   */
+	struct ntptime rsent;		/* and the timestamp it asked with  */
+	time_t t_retry = 0;		/* when to probe the candidate      */
+	time_t t_candidate = 0;		/* when that probe is given up on   */
+	int nfds;
+	int rc = 0;
+	int retired;
 	int usd = -1;
 	int sd = -1;
+	int rsd = -1;			/* transient candidate probe socket */
 
 #define incoming ((char *) incoming_word)
 #define sizeof_incoming (sizeof incoming_word)
@@ -624,25 +947,97 @@ static void loop(struct ntp_control *ntpc)
 #endif
 	probes_sent = 0;
 	sa_xmit_len = sizeof(sa_xmit);
-	to.tv_sec = 0;
-	to.tv_usec = 0;
 
 	while (1) {
 		if (sigterm) {
 			ntpc->live = 0;
 			break;
 		}
+
+		now = time(NULL);
+		srv = peer_active();
+
+		/*
+		 * A probe past its deadline is a probe lost.  Losing one
+		 * tightens the schedule, so recompute from the last send.
+		 */
+		if (probe_expire(ntpc, srv, now))
+			t_send = t_last + peer_spacing(srv, ntpc->cycle_time);
+
+		/*
+		 * Out of chances, or told to go away for good.  This has to
+		 * come before the socket block: a name that will not resolve
+		 * fails in there and loops straight back round, so a check
+		 * placed after it would never run.  Dropping the socket here
+		 * lets the block below build one for the new candidate in
+		 * this same pass.
+		 */
+		retired = peer_retired(srv);
+		if (retired || peer_unreachable(srv)) {
+			LOG("Server %s:%u %s, rotating", srv->host, srv->port,
+			    retired ? "retired" : "unreachable");
+			if (peer_rotate() == -1) {
+				ERR(0, "No usable NTP server left");
+				rc = 1;
+				goto done;
+			}
+
+			srv = peer_activate();
+			LOG("Trying NTP server %s:%u", srv->host, srv->port);
+
+			contemplate_reset();
+			if (usd != -1)
+				close(usd);
+			usd = -1;
+
+			/*
+			 * An outstanding probe asks whether to come back to
+			 * a server.  If the ring just landed on that server
+			 * the question is answered, and counting the reply
+			 * would bank a hit against the association itself.
+			 */
+			if (rsd != -1 && cand == srv) {
+				close(rsd);
+				rsd = -1;
+				cand = NULL;
+			}
+		}
+
+		/*
+		 * Give up on a candidate probe past its deadline, and on the
+		 * run of replies it was part of.  Above the socket block:
+		 * that block can loop straight back round for a whole
+		 * outage, and an expired probe must not be held open, and
+		 * its run left standing, for the length of one.
+		 */
+		if (rsd > -1 && now >= t_candidate) {
+			DBG("Preferred server %s:%u did not answer", cand->host, cand->port);
+			peer_candidate_timeout();
+			close(rsd);
+			rsd = -1;
+			cand = NULL;
+		}
+
 		if (sighup || usd == -1) {
 			int init;
 
 			sighup = 0;
-			to.tv_sec = 0;
-			to.tv_usec = 0;
+
+			/*
+			 * Probes sent on the old socket can no longer be
+			 * answered, so drop them instead of blaming the
+			 * address we are about to start using.  Then probe
+			 * at once, SIGHUP means "resync now".
+			 */
+			memset(ntpc->expire, 0, sizeof(ntpc->expire));
+			t_send = 0;
 
 			if (usd == -1)
 				init = 1;
-			else
+			else {
+				init = 0;	/* SIGHUP with a live socket */
 				close(usd);
+			}
 
 			usd = setup_socket(ntpc);
 			if (usd == -1) {
@@ -659,40 +1054,151 @@ static void loop(struct ntp_control *ntpc)
 			if (!init)
 				DBG("Got SIGHUP, triggering resync with NTP server.");
 			init = 0;
+
+			/* Resolving can take a while, so do not schedule off a stale now. */
+			now = time(NULL);
 		}
+
+		if (now >= t_send) {
+			if (probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)
+				break;
+
+			if (send_packet(usd, &ts) == -1) {
+				ERR(errno, "Failed sending probe");
+				peer_timeout(srv);	/* a probe that never left is lost */
+			} else {
+				probe_sent(ntpc, &ts, now);
+				peer_probed(srv);
+				probes_sent++;
+			}
+
+			t_last = now;
+			t_send = now + peer_spacing(srv, ntpc->cycle_time);
+		}
+
+		/*
+		 * Ask the server we would rather be using whether it is
+		 * back, once per poll cycle.  This is where all of it
+		 * starts: only an explicit prefer names such a server, so on
+		 * a plain list peer_candidate() returns NULL, rsd stays -1,
+		 * and every other piece of the machinery is gated on that.
+		 * After the active probe, because resolving the candidate
+		 * can block and the association comes first.
+		 */
+		if (rsd == -1 && now >= t_retry) {
+			cand = peer_candidate();
+			if (cand) {
+				rsd = probe_candidate(cand, &rsent, ntpc);
+				now = time(NULL); /* resolving can take a while */
+				if (rsd == -1) {
+					peer_candidate_timeout();
+					cand = NULL;
+				} else
+					t_candidate = now + RESPONSE_TIMEOUT;
+			}
+
+			/* Off the refreshed clock: a resolve that blocked
+			 * for longer than the cycle would otherwise retry on
+			 * every iteration instead of once per cycle. */
+			t_retry = now + ntpc->cycle_time;
+		}
+
+		deadline = probe_deadline(ntpc);
+		if (!deadline || t_send < deadline)
+			deadline = t_send;
+
+		/*
+		 * The candidate probe is the third clock, and it joins the
+		 * other two here.  Without it the socket would sit open, and
+		 * the run of replies stay uncharged, until the next poll --
+		 * ten minutes later by default.  Its deadline was still in
+		 * the future at the top of the pass, so the wait only comes
+		 * out as zero if the socket rebuild in between blocked past
+		 * it, and then select() returns at once and the next pass
+		 * gives the probe up.
+		 */
+		if (rsd > -1 && t_candidate < deadline)
+			deadline = t_candidate;
+
+		to.tv_sec  = deadline > now ? deadline - now : 0;
+		to.tv_usec = 0;
 
 		FD_ZERO(&fds);
 		FD_SET(usd, &fds);
 		if (sd > -1)
 			FD_SET(sd, &fds);
+		if (rsd > -1)
+			FD_SET(rsd, &fds);
 
-		i = select(usd + 1, &fds, NULL, NULL, &to);	/* Wait on read or error */
+		nfds = usd > sd ? usd : sd;
+		if (rsd > nfds)
+			nfds = rsd;
+		i = select(nfds + 1, &fds, NULL, NULL, &to);	/* Wait on read or error */
 		if (i <= 0) {
-			if (i < 0) {
-				if (errno != EINTR)
-					ERR(errno, "Failed select()");
-				continue;
-			}
-
-			if (to.tv_sec == 0) {
-				if (probes_sent >= ntpc->probe_count && ntpc->probe_count != 0)
-					break;
-
-				if (send_packet(usd, &ntpc->time_of_send) == -1) {
-					ERR(errno, "Failed sending probe");
-					to.tv_sec = MIN_INTERVAL;
-					to.tv_usec = 0;
-				} else {
-					++probes_sent;
-					to.tv_sec = ntpc->cycle_time;
-					to.tv_usec = 0;
-				}
-			}
+			if (i < 0 && errno != EINTR)
+				ERR(errno, "Failed select()");
 			continue;
 		}
 
 		if (sd > -1 && FD_ISSET(sd, &fds)) {
 			server_recv(sd);
+			continue;
+		}
+
+		/*
+		 * Serviced before the association, and held to the same
+		 * standard: the question is not whether something answered
+		 * but whether this answer would survive becoming the
+		 * association.  A server that is up and unsynchronised
+		 * answers cheerfully, and a GPS receiver without a fix is
+		 * exactly that, so accepting it on length alone would switch
+		 * to it, reject every packet it then sent, rotate away, and
+		 * come straight back.
+		 *
+		 * A reply that fails simply does not count, and ends the run
+		 * of replies the way a timeout does.  No miss is charged:
+		 * misses drive rotation, and rotation is about the server we
+		 * are synced to, not the one we are asking after.
+		 */
+		if (rsd > -1 && FD_ISSET(rsd, &fds)) {
+			const char *why;
+
+			pack_len = recv(rsd, incoming, sizeof_incoming, 0);
+			if (pack_len < 48 || (unsigned)pack_len >= sizeof_incoming)
+				why = "not an NTP reply";
+			else
+				why = packet_verify(incoming_word,
+						    ntohl(incoming_word[6]) != rsent.coarse ||
+						    ntohl(incoming_word[7]) != rsent.fine,
+						    ntpc->cross_check, cand);
+
+			if (why) {
+				DBG("Preferred server %s:%u unusable: %s",
+				    cand->host, cand->port, why);
+				peer_candidate_timeout();
+			} else {
+				DBG("Preferred server %s:%u answered",
+				    cand->host, cand->port);
+				peer_candidate_rx();
+			}
+
+			close(rsd);
+			rsd = -1;
+			cand = NULL;
+
+			if (peer_switchback()) {
+				/* peer_activate() for the same reason
+				 * rotation calls it: unactivated, the server
+				 * arrives still carrying the misses it was
+				 * dropped for. */
+				srv = peer_activate();
+				LOG("Switching back to preferred server %s:%u",
+				    srv->host, srv->port);
+
+				contemplate_reset();
+				close(usd);
+				usd = -1;
+			}
 			continue;
 		}
 
@@ -704,8 +1210,20 @@ static void loop(struct ntp_control *ntpc)
 			get_packet_timestamp(usd, &udp_arrival_ntp);
 			if (check_source(pack_len, &sa_xmit, ntpc))
 				continue;
-			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0)
+			if (rfc1305print(incoming_word, &udp_arrival_ntp, ntpc, &error) != 0) {
+				/*
+				 * A rejected answer is charged as a miss, so
+				 * the schedule has to tighten the same way it
+				 * does for a lost probe -- its slot is gone
+				 * from the ring and will not expire.  While
+				 * nothing is lost peer_spacing() still returns
+				 * the cycle time, so a spoofed packet, which
+				 * is charged to nobody, cannot speed us up.
+				 */
+				t_send = t_last + peer_spacing(srv, ntpc->cycle_time);
 				continue;
+			}
+			peer_rx(srv);
 		} else {
 			ERR(0, "Ooops.  pack_len=%d", pack_len);
 		}
@@ -729,6 +1247,10 @@ done:
 		close(usd);
 	if (sd != -1)
 		close(sd);
+	if (rsd != -1)
+		close(rsd);
+
+	return rc;
 }
 
 #ifdef ENABLE_REPLAY
@@ -772,8 +1294,10 @@ static int do_replay(void)
 }
 #endif
 
-static void run(struct ntp_control *ntpc, int log_level)
+static int run(struct ntp_control *ntpc, int log_level)
 {
+	int rc;
+
 	if (daemonize) {
 		/*
 		 * Force output to syslog, we have no other way of
@@ -796,15 +1320,15 @@ static void run(struct ntp_control *ntpc, int log_level)
 		ntpc->live = 0;
 
 	/* respect only applicable MUST of RFC-4330 */
-	if (ntpc->probe_count != 1 && ntpc->cycle_time < MIN_INTERVAL)
-		ntpc->cycle_time = MIN_INTERVAL;
+	if (ntpc->probe_count != 1 && ntpc->cycle_time < min_interval)
+		ntpc->cycle_time = min_interval;
 
 #ifdef ENABLE_DEBUG
 	DBG("Configuration:");
 	DBG("  probe_count %d", ntpc->probe_count);
 	DBG("  Dry run     %d", dry);
 	DBG("  goodness    %d", ntpc->goodness);
-	DBG("  hostname    %s", ntpc->server);
+	DBG("  hostname    %s", peer_active()->host);
 	DBG("  interval    %d", ntpc->cycle_time);
 	DBG("  live        %d", ntpc->live);
 	DBG("  local_port  %d", ntpc->local_udp_port);
@@ -825,14 +1349,16 @@ static void run(struct ntp_control *ntpc, int log_level)
 		LOG("Starting " PACKAGE_NAME " v" PACKAGE_VERSION);
 	setup_signals();
 
-	INFO("Using time sync server: %s", ntpc->server);
+	INFO("Using time sync server: %s", peer_active()->host);
 
-	loop(ntpc);
+	rc = loop(ntpc);
 
 	if (!ntpc->usermode)
 		LOG("Stopping " PACKAGE_NAME " v" PACKAGE_VERSION);
 
 	log_exit();
+
+	return rc;
 }
 
 static int ntpclient_usage(int code)
@@ -886,7 +1412,6 @@ static int ntpclient(int argc, char *argv[])
 	ntpc.usermode    = 1;
 	ntpc.live        = 0;
 	ntpc.cross_check = 1;
-	ntpc.udp_port    = NTP_PORT;
 	daemonize        = 0;
 	logging          = 0;
 
@@ -915,7 +1440,7 @@ static int ntpclient(int argc, char *argv[])
 			break;
 
 		case 'h':
-			ntpc.server = optarg;
+			peer_add(optarg);
 			break;
 
 		case 'i':
@@ -955,12 +1480,10 @@ static int ntpclient(int argc, char *argv[])
 		}
 	}
 
-	if (!ntpc.server)
+	if (peer_count() == 0)
 		return ntpclient_usage(1);
 
-	run(&ntpc, dry ? LOG_DEBUG : LOG_INFO);
-
-	return 0;
+	return run(&ntpc, dry ? LOG_DEBUG : LOG_INFO);
 }
 
 static int usage(int code)
@@ -999,52 +1522,6 @@ static int usage(int code)
 		"Project homepage: " PACKAGE_URL "\n", prognm, prognm);
 
 	return code;
-}
-
-/*
- * Split SERVER into host and port.  Accepted forms:
- *
- *     host              host, default port
- *     host:123          host, port 123
- *     2001:db8::1       literal address, default port
- *     [2001:db8::1]     literal address, default port
- *     [2001:db8::1]:123 literal address, port 123
- *
- * An unbracketed string with more than one colon is a literal IPv6
- * address, so the last colon does not introduce a port.  Modifies arg
- * in place and points *host into it.
- */
-static int split_hostport(char *arg, char **host, uint16_t *port)
-{
-	char *ptr;
-
-	*port = 0;
-
-	if (*arg == '[') {
-		ptr = strchr(arg, ']');
-		if (!ptr)
-			return -1;
-
-		*ptr++ = 0;
-		*host = arg + 1;
-
-		if (*ptr == ':')
-			*port = atoi(ptr + 1);
-		else if (*ptr)
-			return -1;
-
-		return 0;
-	}
-
-	*host = arg;
-
-	ptr = strchr(arg, ':');
-	if (ptr && !strchr(ptr + 1, ':')) {
-		*ptr++ = 0;
-		*port = atoi(ptr);
-	}
-
-	return 0;
 }
 
 static const char *progname(const char *arg0)
@@ -1087,7 +1564,7 @@ int main(int argc, char *argv[])
 	daemonize        = 1;
 
 	while (1) {
-		char opts[] = "dhi:l:np:q:" REPLAY_OPTION "stv?";
+		char opts[] = "dhi:l:m:np:q:" REPLAY_OPTION "stv?";
 		int c;
 
 		c = getopt(argc, argv, opts);
@@ -1110,6 +1587,17 @@ int main(int argc, char *argv[])
 			log_level = log_str2lvl(optarg);
 			if (log_level == -1)
 				return usage(1);
+			break;
+
+		case 'm':
+			min_interval = atoi(optarg);
+			if (min_interval < 1)
+				min_interval = 1;
+			if (min_interval < MIN_INTERVAL)
+				logit(LOG_WARNING, 0, "Minimum poll interval %d sec is below the"
+				      " %d sec floor RFC 4330 section 10 requires.  Only do this"
+				      " on a network with its own time source.",
+				      min_interval, MIN_INTERVAL);
 			break;
 
 		case 'n':
@@ -1148,34 +1636,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (optind < argc) {
-		char *arg, *host;
-		uint16_t port;
-
-		arg = strdup(argv[optind]);
-		if (!arg)
-			err(1, "Failed allocating memory for '%s'", argv[optind]);
-
-		if (split_hostport(arg, &host, &port)) {
-			free(arg);
-			errx(1, "Malformed server '%s'", argv[optind]);
-		}
-
-		ntpc.server   = host;
-		ntpc.udp_port = port;
+	for (; optind < argc; optind++) {
+		if (peer_add(argv[optind]))
+			return 1;
 	}
 
-	if (!ntpc.server || !ntpc.server[0]) {
-		ntpc.server = strdup("pool.ntp.org");
-		if (!ntpc.server)
-			err(1, "Failed allocating memory for 'pool.ntp.org'");
-	}
-	if (ntpc.udp_port == 0)
-		ntpc.udp_port = NTP_PORT;
+	if (peer_count() == 0 && peer_add("pool.ntp.org"))
+		return 1;
 
-	run(&ntpc, log_level);
-
-	return 0;
+	return run(&ntpc, log_level);
 }
 
 /**

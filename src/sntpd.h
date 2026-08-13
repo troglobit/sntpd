@@ -73,6 +73,25 @@ char __hstrerror_buf[10];
 #define MIN_DISP 0.01
 #endif
 
+/* RFC 5905 reference skeleton: packets per burst, seconds between them */
+#define BCOUNT       8
+#define BTIME        2
+
+/*
+ * Seconds a probe is given to answer before it counts as lost.
+ *
+ * This also has to fit the outstanding-probe ring, which is BCOUNT
+ * deep.  Occupancy peaks at RESPONSE_TIMEOUT divided by the spacing
+ * between probes, and the tightest spacing sntpd will use is the -m
+ * floor, one second.  So the ring holds only because RESPONSE_TIMEOUT
+ * (8) <= BCOUNT (8) * 1, which is exact, with no margin, and only by
+ * coincidence of two unrelated constants.  probe_sent() drops silently
+ * when the ring is full, so raising this means deepening the ring.
+ */
+#ifndef RESPONSE_TIMEOUT
+#define RESPONSE_TIMEOUT 8
+#endif
+
 #define JAN_1970        0x83aa7e80	/* 2208988800 1970 - 1900 in seconds */
 #define NTP_PORT (123)
 
@@ -142,7 +161,9 @@ struct ntptimes {
 };
 
 struct ntp_control {
-	struct ntptime time_of_send;
+	struct ntptime sent[BCOUNT];	/* origin timestamps in flight */
+	time_t         expire[BCOUNT];	/* deadline each, 0 when free  */
+
 	int usermode;		/* 0: sntpd, 1: ntpclient */
 	int live;
 	int set_clock;		/* non-zero presumably needs CAP_SYS_TIME or root */
@@ -152,9 +173,7 @@ struct ntp_control {
 	int cross_check;
 
 	uint16_t local_udp_port;
-	uint16_t udp_port;	/* remote port on 'server' */
 	uint16_t server_port;
-	char *server;		/* must be set in client mode */
 	char serv_addr[4];
 };
 
@@ -197,7 +216,8 @@ int  log_str2lvl(char *arg);
 void logit(int severity, int syserr, const char *format, ...) __attribute__ ((format (printf, 3, 4)));
 
 /* phaselock.c */
-int contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
+int  contemplate_data(unsigned int absolute, double skew, double errorbar, int freq);
+void contemplate_reset(void);
 
 /* sntpd.c */
 int  setup_receive(int sd, sa_family_t sin_family, uint16_t port);

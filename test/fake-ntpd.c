@@ -16,17 +16,21 @@ int main(int argc, char *argv[])
 	struct sockaddr_in sin;
 	unsigned char buf[128];
 	const char *kod = NULL;
-	int port = 123, answer = -1, quiet = 0;
+	int port = 123, answer = -1, quiet = 0, unsync = 0, bogus = 0, mode = 4;
 	int sd, c;
 
-	while ((c = getopt(argc, argv, "p:s:k:q")) != -1) {
+	while ((c = getopt(argc, argv, "p:s:k:m:bqu")) != -1) {
 		switch (c) {
 		case 'p': port   = atoi(optarg); break;
 		case 's': answer = atoi(optarg); break;
 		case 'k': kod    = optarg;       break;
+		case 'b': bogus  = 1;            break;
+		case 'm': mode   = atoi(optarg); break;
 		case 'q': quiet  = 1;            break;
+		case 'u': unsync = 1;            break;
 		default:
-			fprintf(stderr, "usage: fake-ntpd [-p PORT] [-s N] [-k CODE] [-q]\n");
+			fprintf(stderr, "usage: fake-ntpd [-p PORT] [-s N] [-k CODE]"
+				" [-m MODE] [-b] [-q] [-u]\n");
 			return 1;
 		}
 	}
@@ -64,15 +68,24 @@ int main(int argc, char *argv[])
 
 		secs = (uint32_t)time(NULL) + JAN_1970;
 
-		/* li:0 vn:4 mode:4 (server) */
-		buf[0] = 0 << 6 | 4 << 3 | 4;
+		/* li:0 vn:4 mode:4 (server), li:3 says unsynchronised, which
+		 * is a server answering while its own clock is no good --
+		 * a GPS receiver that has not got a fix yet.  -m sends some
+		 * other mode, which no server would, to stand in for one that
+		 * is broken rather than refusing us. */
+		buf[0] = (unsync ? 3 : 0) << 6 | 4 << 3 | (mode & 7);
 		buf[1] = kod ? 0 : 1;		/* stratum, 0 signals KoD */
 		buf[2] = 4;			/* poll */
 		buf[3] = (unsigned char)-9;	/* precision */
 		memset(&buf[4], 0, 8);		/* root delay, dispersion */
 		memcpy(&buf[12], kod ? kod : "LOCL", 4);
 
-		memcpy(&buf[24], &buf[40], 8);	/* origin  := client transmit */
+		/* origin := client transmit, or zero to answer a question
+		 * nobody asked, the way a spoofed or replayed packet does */
+		if (bogus)
+			memset(&buf[24], 0, 8);
+		else
+			memcpy(&buf[24], &buf[40], 8);
 		memset(&buf[16], 0, 8);		/* reference */
 		secs = htonl(secs);
 		memcpy(&buf[32], &secs, 4);	/* receive  */
