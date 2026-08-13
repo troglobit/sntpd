@@ -1034,7 +1034,7 @@ int main(int argc, char *argv[])
 	ntpc.set_clock   = 0;
 	ntpc.usermode    = 0;
 	ntpc.live        = 1;
-	ntpc.cross_check = 0;
+	ntpc.cross_check = 1;
 	ntpc.server_port = NTP_PORT; /* Server mode enabled by default */
 
 	/* Default to daemon mode for sntpd */
