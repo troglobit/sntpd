@@ -257,6 +257,32 @@ and works reasonably well with any Linux kernel.
 Solaris and other UNIX users may need to adjust the `CFLAGS` slightly.
 For other options, see <kbd>./configure --help</kbd>
 
+To run the test suite:
+
+```sh
+    make check -j
+```
+
+Each integration test gets a network namespace of its own, so it can bind
+UDP port 123 without root and without the tests tripping over each other.
+That needs unprivileged user namespaces, which Debian and Ubuntu disable:
+
+```sh
+    sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+```
+
+Without it the tests report SKIP rather than FAIL and `make check` still
+succeeds, so look for `# SKIP: 0` in the summary before trusting a green
+run.  Details of any failure land in `test/test-suite.log`.
+
+To build Debian packages, into the parent directory:
+
+```sh
+    sudo apt install devscripts debhelper lintian systemd-dev
+    ./configure
+    make package
+```
+
 
 Building from GIT
 -----------------
