@@ -5,8 +5,8 @@ All notable changes to the project are documented in this file.
 Changes to Larry's upstream version are interleaved.
 
 
-[UNRELEASED][]
---------------
+[v3.2][] - 2026-08-16
+---------------------
 
 ### Changes
 - `SERVER` argument is now repeatable, up to 8, and doubles as a
@@ -305,7 +305,7 @@ Curated by [Larry Doolittle][].
   offset, which turns days-since-1900-epoch into Modified Julian Day)
 
 
-[UNRELEASED]:        https://github.com/troglobit/ntpclient/compare/v3.1...HEAD
+[UNRELEASED]:        https://github.com/troglobit/ntpclient/compare/v3.2...HEAD
 [v3.2]:              https://github.com/troglobit/ntpclient/compare/v3.1...v3.2
 [v3.1]:              https://github.com/troglobit/ntpclient/compare/v3.0...v3.1
 [v3.0]:              https://github.com/troglobit/ntpclient/compare/2018_244...v3.0

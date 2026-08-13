@@ -1,4 +1,4 @@
-AC_INIT([sntpd],[3.1],[https://github.com/troglobit/sntpd/issues],[],[https://github.com/troglobit/sntpd])
+AC_INIT([sntpd],[3.2],[https://github.com/troglobit/sntpd/issues],[],[https://github.com/troglobit/sntpd])
 AC_CONFIG_AUX_DIR(aux)
 AM_INIT_AUTOMAKE([1.11 foreign subdir-objects])
 AM_SILENT_RULES([yes])

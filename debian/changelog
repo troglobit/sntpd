@@ -1,3 +1,16 @@
+sntpd (3.2) stable; urgency=medium
+
+  * The SERVER argument is now repeatable and acts as a failover list,
+    with per-server iburst and prefer options
+  * Every address a server name resolves to is tried in turn
+  * IPv6 literal addresses can now be given on the command line
+  * New -m option, the minimum poll interval
+  * Kiss-o'-Death handling, RFC 4330 section 8
+  * RFC 4330 cross-checks are now enabled by default in daemon mode
+  * Fix --enable-debug build, and select() now watches every socket
+
+ -- Joachim Wiberg <troglobit@gmail.com>  Sun, 16 Aug 2026 07:39:00 +0200
+
 sntpd (3.1) stable; urgency=medium
 
   * Improved log messages on failure to resolve DNS names
