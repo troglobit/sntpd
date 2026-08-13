@@ -14,11 +14,12 @@ on:
 jobs:
   build:
     # Verify we can build on latest Ubuntu with both gcc and clang
-    name: ${{ matrix.compiler }}
+    name: ${{ matrix.compiler }} ${{ matrix.config }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
         compiler: [gcc, clang]
+        config: ['', '--enable-debug']
       fail-fast: false
     env:
       MAKEFLAGS: -j3
@@ -32,7 +33,7 @@ jobs:
       - name: Configure
         run: |
           ./autogen.sh
-          ./configure --prefix=
+          ./configure --prefix= ${{ matrix.config }}
       - name: Build
         run: |
           make V=1

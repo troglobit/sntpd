@@ -126,8 +126,7 @@ static int send_packet(int usd, struct ntptime *time_sent)
 #define PREC -6
 
 #ifdef ENABLE_DEBUG
-	if (debug)
-		DBG("Sending packet ...");
+	DBG("Sending packet ...");
 #endif
 	if (sizeof(data) != 48) {
 		ERR(0, "Packet size error");
@@ -272,17 +271,15 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 #undef Data
 
 #ifdef ENABLE_DEBUG
-	if (debug) {
-		DBG("LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d", li, vn, mode, stratum, poll, prec);
-		DBG("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp),
-		      refid >> 24 & 0xff, refid >> 16 & 0xff, refid >> 8 & 0xff, refid & 0xff);
-		DBG("Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
-		DBG("(sent)    %u.%.6u", ntpc->time_of_send.coarse, USEC(ntpc->time_of_send.fine));
-		DBG("Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));   /* T1 */
-		DBG("Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));   /* T2 */
-		DBG("Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));   /* T3 */
-		DBG("Our recv  %u.%.6u", arrival->coarse, USEC(arrival->fine)); /* T4 */
-	}
+	DBG("LI=%d  VN=%d  Mode=%d  Stratum=%d  Poll=%d  Precision=%d", li, vn, mode, stratum, poll, prec);
+	DBG("Delay=%.1f  Dispersion=%.1f  Refid=%u.%u.%u.%u", sec2u(delay), sec2u(disp),
+	      refid >> 24 & 0xff, refid >> 16 & 0xff, refid >> 8 & 0xff, refid & 0xff);
+	DBG("Reference %u.%.6u", reftime.coarse, USEC(reftime.fine));
+	DBG("(sent)    %u.%.6u", ntpc->time_of_send.coarse, USEC(ntpc->time_of_send.fine));
+	DBG("Originate %u.%.6u", orgtime.coarse, USEC(orgtime.fine));   /* T1 */
+	DBG("Receive   %u.%.6u", rectime.coarse, USEC(rectime.fine));   /* T2 */
+	DBG("Transmit  %u.%.6u", xmttime.coarse, USEC(xmttime.fine));   /* T3 */
+	DBG("Our recv  %u.%.6u", arrival->coarse, USEC(arrival->fine)); /* T4 */
 #endif
 
 	el_time = ntpdiff(&orgtime, arrival);	/* elapsed: (T4 - T1)*/
@@ -292,13 +289,11 @@ static int rfc1305print(uint32_t *data, struct ntptime *arrival, struct ntp_cont
 	freq = get_current_freq();
 
 #ifdef ENABLE_DEBUG
-	if (debug) {
-		DBG("Total elapsed: %9.2f", el_time);
-		DBG("Server stall:  %9.2f", st_time);
-		DBG("Slop:          %9.2f", el_time - st_time);
-		DBG("Skew:          %9.2f", (skew1 - skew2) / 2);
-		DBG("Frequency:     %9d", freq);
-	}
+	DBG("Total elapsed: %9.2f", el_time);
+	DBG("Server stall:  %9.2f", st_time);
+	DBG("Slop:          %9.2f", el_time - st_time);
+	DBG("Skew:          %9.2f", (skew1 - skew2) / 2);
+	DBG("Frequency:     %9d", freq);
 #endif
 
 	/* error checking, see RFC-4330 section 5 */
@@ -625,8 +620,7 @@ static void loop(struct ntp_control *ntpc)
 		sd = server_init(ntpc->server_port);
 
 #ifdef ENABLE_DEBUG
-	if (debug)
-		DBG("Listening...");
+	DBG("Listening...");
 #endif
 	probes_sent = 0;
 	sa_xmit_len = sizeof(sa_xmit);
