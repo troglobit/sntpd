@@ -1,4 +1,4 @@
-SUBDIRS         = src docs man
+SUBDIRS         = src docs man test
 doc_DATA        = README.md docs/HOWTO.md ChangeLog.md COPYING
 EXTRA_DIST      = README.md docs/HOWTO.md ChangeLog.md sntpd.service.in
 

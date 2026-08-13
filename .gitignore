@@ -13,6 +13,7 @@ missing
 ntpclient.service
 sntpd.service
 stamp-h1
+test-driver
 TAGS
 ID
 GPATH
