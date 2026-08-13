@@ -8,6 +8,6 @@ fake_ntpd_SOURCES    = fake-ntpd.c
 AM_TESTS_ENVIRONMENT = top_builddir='$(top_builddir)'; export top_builddir;
 AM_TESTS_ENVIRONMENT+= builddir='$(builddir)'; export builddir;
 
-TESTS                = selfcheck.sh
+TESTS                = selfcheck.sh ipv6.sh
 
 EXTRA_DIST           = $(TESTS) lib/setup.sh lib/start.sh

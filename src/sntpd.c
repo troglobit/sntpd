@@ -1001,6 +1001,52 @@ static int usage(int code)
 	return code;
 }
 
+/*
+ * Split SERVER into host and port.  Accepted forms:
+ *
+ *     host              host, default port
+ *     host:123          host, port 123
+ *     2001:db8::1       literal address, default port
+ *     [2001:db8::1]     literal address, default port
+ *     [2001:db8::1]:123 literal address, port 123
+ *
+ * An unbracketed string with more than one colon is a literal IPv6
+ * address, so the last colon does not introduce a port.  Modifies arg
+ * in place and points *host into it.
+ */
+static int split_hostport(char *arg, char **host, uint16_t *port)
+{
+	char *ptr;
+
+	*port = 0;
+
+	if (*arg == '[') {
+		ptr = strchr(arg, ']');
+		if (!ptr)
+			return -1;
+
+		*ptr++ = 0;
+		*host = arg + 1;
+
+		if (*ptr == ':')
+			*port = atoi(ptr + 1);
+		else if (*ptr)
+			return -1;
+
+		return 0;
+	}
+
+	*host = arg;
+
+	ptr = strchr(arg, ':');
+	if (ptr && !strchr(ptr + 1, ':')) {
+		*ptr++ = 0;
+		*port = atoi(ptr);
+	}
+
+	return 0;
+}
+
 static const char *progname(const char *arg0)
 {
 	const char *nm;
@@ -1103,19 +1149,20 @@ int main(int argc, char *argv[])
 	}
 
 	if (optind < argc) {
-		char *arg;
-		char *ptr;
+		char *arg, *host;
+		uint16_t port;
 
 		arg = strdup(argv[optind]);
 		if (!arg)
 			err(1, "Failed allocating memory for '%s'", argv[optind]);
 
-		ptr = strchr(arg, ':');
-		if (ptr) {
-			*ptr++ = 0;
-			ntpc.udp_port = atoi(ptr);
+		if (split_hostport(arg, &host, &port)) {
+			free(arg);
+			errx(1, "Malformed server '%s'", argv[optind]);
 		}
-		ntpc.server = arg;
+
+		ntpc.server   = host;
+		ntpc.udp_port = port;
 	}
 
 	if (!ntpc.server || !ntpc.server[0]) {
