@@ -3,7 +3,7 @@ Section: net
 Priority: optional
 Maintainer: Joachim Wiberg <troglobit@gmail.com>
 Homepage: https://github.com/troglobit/sntpd
-Build-Depends: debhelper (>= 10), systemd
+Build-Depends: debhelper (>= 10), systemd-dev
 Standards-Version: 4.3.0
 Vcs-Browser: https://github.com/troglobit/sntpd
 Vcs-Git: https://github.com/troglobit/sntpd.git
