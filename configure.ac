@@ -1,15 +1,13 @@
-AC_PREREQ(2.61)
-AC_INIT(sntpd, 3.1, https://github.com/troglobit/sntpd/issues,, https://github.com/troglobit/sntpd)
+AC_INIT([sntpd],[3.1],[https://github.com/troglobit/sntpd/issues],[],[https://github.com/troglobit/sntpd])
 AC_CONFIG_AUX_DIR(aux)
 AM_INIT_AUTOMAKE([1.11 foreign subdir-objects])
 AM_SILENT_RULES([yes])
 
 AC_CONFIG_SRCDIR([src/sntpd.c])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile src/Makefile docs/Makefile man/Makefile test/Makefile sntpd.service])
 
 # Define necessary build flags
-AC_GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
 
 # Checks for programs.
@@ -18,11 +16,12 @@ AM_PROG_CC_C_O
 AC_PROG_GCC_TRADITIONAL
 AC_PROG_LN_S
 AC_PROG_INSTALL
+AC_PROG_EGREP
 
 PKG_PROG_PKG_CONFIG
 
 # Checks for header files.
-AC_HEADER_STDC
+AC_CHECK_INCLUDES_DEFAULT
 AC_CHECK_HEADERS([arpa/inet.h netinet/in.h sys/ioctl.h sys/socket.h syslog.h],
                   [], [],
 		  [
